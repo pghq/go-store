@@ -307,8 +307,8 @@ github.com/opencontainers/selinux v1.8.2/go.mod h1:MUIHuUEvKB1wtJjQdOyYRgOnLD2xA
 github.com/ory/dockertest/v3 v3.8.0 h1:i5b0cJCd801qw0cVQUOH6dSpI9fT3j5tdWu0jKu90ks=
 github.com/ory/dockertest/v3 v3.8.0/go.mod h1:9zPATATlWQru+ynXP+DytBQrsXV7Tmlx7K86H6fQaDo=
 github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=
-github.com/pghq/go-museum v0.0.16 h1:/H3kawkdvlMXlYvRrc3x25CSSCKTK6DrevrFGy8ih/o=
-github.com/pghq/go-museum v0.0.16/go.mod h1:+1gUca5388mTu0XF5OcD3RIONs8TawPsjPa2N39vKhw=
+github.com/pghq/go-museum v0.0.17 h1:xIw8pujpAeLtMBXlBdFXoQvxq+27yFAfNl3MuKkZXm4=
+github.com/pghq/go-museum v0.0.17/go.mod h1:+1gUca5388mTu0XF5OcD3RIONs8TawPsjPa2N39vKhw=
 github.com/pierrec/lz4 v2.0.5+incompatible/go.mod h1:pdkljMzZIN41W+lC3N2tnIh5sFi+IEE17M5jbnwPHcY=
 github.com/pingcap/errors v0.11.4 h1:lFuQV/oaUMGcD2tqt+01ROSmJs75VG1ToEOkZIZ4nE4=
 github.com/pingcap/errors v0.11.4/go.mod h1:Oi8TUi2kEtXXLMJk9l1cGmz20kV3TaQ0usTwv5KuLY8=
