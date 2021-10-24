@@ -17,7 +17,7 @@ func (c *Client) Update() client.Update {
 // Update is an instance of the update repository command using Postgres.
 type Update struct {
 	client *Client
-	opts  []func(builder squirrel.UpdateBuilder) squirrel.UpdateBuilder
+	opts   []func(builder squirrel.UpdateBuilder) squirrel.UpdateBuilder
 }
 
 func (a *Update) In(collection string) client.Update {

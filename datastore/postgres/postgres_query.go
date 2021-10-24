@@ -18,7 +18,7 @@ func (c *Client) Query() client.Query {
 // Query is an instance of the repository query for Postgres.
 type Query struct {
 	client *Client
-	opts  []func(builder squirrel.SelectBuilder) squirrel.SelectBuilder
+	opts   []func(builder squirrel.SelectBuilder) squirrel.SelectBuilder
 }
 
 func (q *Query) Secondary() client.Query {

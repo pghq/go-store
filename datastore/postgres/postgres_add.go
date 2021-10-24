@@ -17,7 +17,7 @@ func (c *Client) Add() client.Add {
 // Add is an instance of the add repository command using Postgres.
 type Add struct {
 	client *Client
-	opts  []func(builder squirrel.InsertBuilder) squirrel.InsertBuilder
+	opts   []func(builder squirrel.InsertBuilder) squirrel.InsertBuilder
 }
 
 func (a *Add) To(collection string) client.Add {
