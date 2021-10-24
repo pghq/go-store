@@ -6,24 +6,24 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/pghq/go-datastore/datastore"
+	"github.com/pghq/go-datastore/datastore/client"
 )
 
 var (
-	_ datastore.Remove = NewRemove(nil)
+	_ client.Remove = NewRemove(nil)
 )
 
-func (s *Store) Remove() datastore.Remove {
-	s.t.Helper()
-	res := s.Call(s.t)
+func (c *Client) Remove() client.Remove {
+	c.t.Helper()
+	res := c.Call(c.t)
 	if len(res) != 1 {
-		s.fail(s.t, "unexpected length of return values")
+		c.fail(c.t, "unexpected length of return values")
 		return nil
 	}
 
-	remove, ok := res[0].(datastore.Remove)
+	remove, ok := res[0].(client.Remove)
 	if !ok {
-		s.fail(s.t, "unexpected type of return value")
+		c.fail(c.t, "unexpected type of return value")
 		return nil
 	}
 
@@ -72,7 +72,7 @@ func (r *Remove) Statement() (string, []interface{}, error) {
 	return statement, nil, nil
 }
 
-func (r *Remove) Filter(filter datastore.Filter) datastore.Remove {
+func (r *Remove) Filter(filter client.Filter) client.Remove {
 	r.t.Helper()
 	res := r.Call(r.t, filter)
 	if len(res) != 1 {
@@ -80,7 +80,7 @@ func (r *Remove) Filter(filter datastore.Filter) datastore.Remove {
 		return nil
 	}
 
-	remove, ok := res[0].(datastore.Remove)
+	remove, ok := res[0].(client.Remove)
 	if !ok {
 		r.fail(r.t, "unexpected type of return value")
 		return nil
@@ -89,7 +89,7 @@ func (r *Remove) Filter(filter datastore.Filter) datastore.Remove {
 	return remove
 }
 
-func (r *Remove) Order(by string) datastore.Remove {
+func (r *Remove) Order(by string) client.Remove {
 	r.t.Helper()
 	res := r.Call(r.t, by)
 	if len(res) != 1 {
@@ -97,7 +97,7 @@ func (r *Remove) Order(by string) datastore.Remove {
 		return nil
 	}
 
-	remove, ok := res[0].(datastore.Remove)
+	remove, ok := res[0].(client.Remove)
 	if !ok {
 		r.fail(r.t, "unexpected type of return value")
 		return nil
@@ -106,7 +106,7 @@ func (r *Remove) Order(by string) datastore.Remove {
 	return remove
 }
 
-func (r *Remove) First(first int) datastore.Remove {
+func (r *Remove) First(first int) client.Remove {
 	r.t.Helper()
 	res := r.Call(r.t, first)
 	if len(res) != 1 {
@@ -114,7 +114,7 @@ func (r *Remove) First(first int) datastore.Remove {
 		return nil
 	}
 
-	remove, ok := res[0].(datastore.Remove)
+	remove, ok := res[0].(client.Remove)
 	if !ok {
 		r.fail(r.t, "unexpected type of return value")
 		return nil
@@ -123,7 +123,7 @@ func (r *Remove) First(first int) datastore.Remove {
 	return remove
 }
 
-func (r *Remove) After(key string, value interface{}) datastore.Remove {
+func (r *Remove) After(key string, value interface{}) client.Remove {
 	r.t.Helper()
 	res := r.Call(r.t, key, value)
 	if len(res) != 1 {
@@ -131,7 +131,7 @@ func (r *Remove) After(key string, value interface{}) datastore.Remove {
 		return nil
 	}
 
-	remove, ok := res[0].(datastore.Remove)
+	remove, ok := res[0].(client.Remove)
 	if !ok {
 		r.fail(r.t, "unexpected type of return value")
 		return nil
@@ -166,7 +166,7 @@ func (r *Remove) Execute(ctx context.Context) (int, error) {
 	return count, nil
 }
 
-func (r *Remove) From(collection string) datastore.Remove {
+func (r *Remove) From(collection string) client.Remove {
 	r.t.Helper()
 	res := r.Call(r.t, collection)
 	if len(res) != 1 {
@@ -174,7 +174,7 @@ func (r *Remove) From(collection string) datastore.Remove {
 		return nil
 	}
 
-	remove, ok := res[0].(datastore.Remove)
+	remove, ok := res[0].(client.Remove)
 	if !ok {
 		r.fail(r.t, "unexpected type of return value")
 		return nil

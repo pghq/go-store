@@ -5,24 +5,24 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/pghq/go-datastore/datastore"
+	"github.com/pghq/go-datastore/datastore/client"
 )
 
 var (
-	_ datastore.Filter = NewFilter(nil)
+	_ client.Filter = NewFilter(nil)
 )
 
-func (s *Store) Filter() datastore.Filter {
-	s.t.Helper()
-	res := s.Call(s.t)
+func (c *Client) Filter() client.Filter {
+	c.t.Helper()
+	res := c.Call(c.t)
 	if len(res) != 1 {
-		s.fail(s.t, "unexpected length of return values")
+		c.fail(c.t, "unexpected length of return values")
 		return nil
 	}
 
-	filter, ok := res[0].(datastore.Filter)
+	filter, ok := res[0].(client.Filter)
 	if !ok {
-		s.fail(s.t, "unexpected type of return value")
+		c.fail(c.t, "unexpected type of return value")
 		return nil
 	}
 
@@ -36,7 +36,7 @@ type Filter struct {
 	fail func(v ...interface{})
 }
 
-func (f *Filter) BeginsWith(key string, prefix string) datastore.Filter {
+func (f *Filter) BeginsWith(key string, prefix string) client.Filter {
 	f.t.Helper()
 	res := f.Call(f.t, key, prefix)
 	if len(res) != 1 {
@@ -44,7 +44,7 @@ func (f *Filter) BeginsWith(key string, prefix string) datastore.Filter {
 		return nil
 	}
 
-	filter, ok := res[0].(datastore.Filter)
+	filter, ok := res[0].(client.Filter)
 	if !ok {
 		f.fail(f.t, "unexpected type of return value")
 		return nil
@@ -53,7 +53,7 @@ func (f *Filter) BeginsWith(key string, prefix string) datastore.Filter {
 	return filter
 }
 
-func (f *Filter) EndsWith(key string, suffix string) datastore.Filter {
+func (f *Filter) EndsWith(key string, suffix string) client.Filter {
 	f.t.Helper()
 	res := f.Call(f.t, key, suffix)
 	if len(res) != 1 {
@@ -61,7 +61,7 @@ func (f *Filter) EndsWith(key string, suffix string) datastore.Filter {
 		return nil
 	}
 
-	filter, ok := res[0].(datastore.Filter)
+	filter, ok := res[0].(client.Filter)
 	if !ok {
 		f.fail(f.t, "unexpected type of return value")
 		return nil
@@ -70,7 +70,7 @@ func (f *Filter) EndsWith(key string, suffix string) datastore.Filter {
 	return filter
 }
 
-func (f *Filter) Contains(key string, value interface{}) datastore.Filter {
+func (f *Filter) Contains(key string, value interface{}) client.Filter {
 	f.t.Helper()
 	res := f.Call(f.t, key, value)
 	if len(res) != 1 {
@@ -78,7 +78,7 @@ func (f *Filter) Contains(key string, value interface{}) datastore.Filter {
 		return nil
 	}
 
-	filter, ok := res[0].(datastore.Filter)
+	filter, ok := res[0].(client.Filter)
 	if !ok {
 		f.fail(f.t, "unexpected type of return value")
 		return nil
@@ -87,7 +87,7 @@ func (f *Filter) Contains(key string, value interface{}) datastore.Filter {
 	return filter
 }
 
-func (f *Filter) NotContains(key string, value interface{}) datastore.Filter {
+func (f *Filter) NotContains(key string, value interface{}) client.Filter {
 	f.t.Helper()
 	res := f.Call(f.t, key, value)
 	if len(res) != 1 {
@@ -95,7 +95,7 @@ func (f *Filter) NotContains(key string, value interface{}) datastore.Filter {
 		return nil
 	}
 
-	filter, ok := res[0].(datastore.Filter)
+	filter, ok := res[0].(client.Filter)
 	if !ok {
 		f.fail(f.t, "unexpected type of return value")
 		return nil
@@ -104,7 +104,7 @@ func (f *Filter) NotContains(key string, value interface{}) datastore.Filter {
 	return filter
 }
 
-func (f *Filter) Eq(key string, value interface{}) datastore.Filter {
+func (f *Filter) Eq(key string, value interface{}) client.Filter {
 	f.t.Helper()
 	res := f.Call(f.t, key, value)
 	if len(res) != 1 {
@@ -112,7 +112,7 @@ func (f *Filter) Eq(key string, value interface{}) datastore.Filter {
 		return nil
 	}
 
-	filter, ok := res[0].(datastore.Filter)
+	filter, ok := res[0].(client.Filter)
 	if !ok {
 		f.fail(f.t, "unexpected type of return value")
 		return nil
@@ -121,7 +121,7 @@ func (f *Filter) Eq(key string, value interface{}) datastore.Filter {
 	return filter
 }
 
-func (f *Filter) Lt(key string, value interface{}) datastore.Filter {
+func (f *Filter) Lt(key string, value interface{}) client.Filter {
 	f.t.Helper()
 	res := f.Call(f.t, key, value)
 	if len(res) != 1 {
@@ -129,7 +129,7 @@ func (f *Filter) Lt(key string, value interface{}) datastore.Filter {
 		return nil
 	}
 
-	filter, ok := res[0].(datastore.Filter)
+	filter, ok := res[0].(client.Filter)
 	if !ok {
 		f.fail(f.t, "unexpected type of return value")
 		return nil
@@ -138,7 +138,7 @@ func (f *Filter) Lt(key string, value interface{}) datastore.Filter {
 	return filter
 }
 
-func (f *Filter) Gt(key string, value interface{}) datastore.Filter {
+func (f *Filter) Gt(key string, value interface{}) client.Filter {
 	f.t.Helper()
 	res := f.Call(f.t, key, value)
 	if len(res) != 1 {
@@ -146,7 +146,7 @@ func (f *Filter) Gt(key string, value interface{}) datastore.Filter {
 		return nil
 	}
 
-	filter, ok := res[0].(datastore.Filter)
+	filter, ok := res[0].(client.Filter)
 	if !ok {
 		f.fail(f.t, "unexpected type of return value")
 		return nil
@@ -155,7 +155,7 @@ func (f *Filter) Gt(key string, value interface{}) datastore.Filter {
 	return filter
 }
 
-func (f *Filter) NotEq(key string, value interface{}) datastore.Filter {
+func (f *Filter) NotEq(key string, value interface{}) client.Filter {
 	f.t.Helper()
 	res := f.Call(f.t, key, value)
 	if len(res) != 1 {
@@ -163,7 +163,7 @@ func (f *Filter) NotEq(key string, value interface{}) datastore.Filter {
 		return nil
 	}
 
-	filter, ok := res[0].(datastore.Filter)
+	filter, ok := res[0].(client.Filter)
 	if !ok {
 		f.fail(f.t, "unexpected type of return value")
 		return nil
@@ -172,7 +172,7 @@ func (f *Filter) NotEq(key string, value interface{}) datastore.Filter {
 	return filter
 }
 
-func (f *Filter) Or(another datastore.Filter) datastore.Filter {
+func (f *Filter) Or(another client.Filter) client.Filter {
 	f.t.Helper()
 	res := f.Call(f.t, another)
 	if len(res) != 1 {
@@ -180,7 +180,7 @@ func (f *Filter) Or(another datastore.Filter) datastore.Filter {
 		return nil
 	}
 
-	filter, ok := res[0].(datastore.Filter)
+	filter, ok := res[0].(client.Filter)
 	if !ok {
 		f.fail(f.t, "unexpected type of return value")
 		return nil
@@ -189,7 +189,7 @@ func (f *Filter) Or(another datastore.Filter) datastore.Filter {
 	return filter
 }
 
-func (f *Filter) And(another datastore.Filter) datastore.Filter {
+func (f *Filter) And(another client.Filter) client.Filter {
 	f.t.Helper()
 	res := f.Call(f.t, another)
 	if len(res) != 1 {
@@ -197,7 +197,7 @@ func (f *Filter) And(another datastore.Filter) datastore.Filter {
 		return nil
 	}
 
-	filter, ok := res[0].(datastore.Filter)
+	filter, ok := res[0].(client.Filter)
 	if !ok {
 		f.fail(f.t, "unexpected type of return value")
 		return nil

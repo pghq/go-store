@@ -13,14 +13,14 @@ go get github.com/pghq/go-datastore
 ```
 import (
     "github.com/pghq/go-datastore/datastore/postgres"
-    "github.com/pghq/go-datastore/datastore/repository"
+    "github.com/pghq/go-datastore/datastore"
 )
 ```
 
 To create a new repo:
 
 ```
-repo, err := repository.New(postgres.New("postgres://postgres:postgres@db:5432"))
+repo, err := datastore.New(postgres.New("postgres://postgres:postgres@db:5432"))
 if err != nil{
     panic(err)
 }

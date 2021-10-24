@@ -1,4 +1,4 @@
-package repository
+package datastore
 
 import (
 	"context"
@@ -17,7 +17,7 @@ func TestRepository(t *testing.T) {
 	})
 
 	t.Run("raises error on disconnected client", func(t *testing.T) {
-		client := mock.NewDisconnectedStore(t)
+		client := mock.NewDisconnectedClient(t)
 		client.Expect("Connect").Return(errors.New("an error has occurred"))
 		defer client.Assert(t)
 
@@ -26,7 +26,7 @@ func TestRepository(t *testing.T) {
 	})
 
 	t.Run("can create instance", func(t *testing.T) {
-		client := mock.NewStore(t)
+		client := mock.NewClient(t)
 		defer client.Assert(t)
 
 		r, err := New(client)
@@ -37,7 +37,7 @@ func TestRepository(t *testing.T) {
 
 func TestRepository_Add(t *testing.T) {
 	t.Run("ignores undefined items", func(t *testing.T) {
-		client := mock.NewStore(t)
+		client := mock.NewClient(t)
 		defer client.Assert(t)
 
 		r, _ := New(client)
@@ -46,7 +46,7 @@ func TestRepository_Add(t *testing.T) {
 	})
 
 	t.Run("raises transaction errors", func(t *testing.T) {
-		client := mock.NewStore(t)
+		client := mock.NewClient(t)
 		client.Expect("Transaction", context.TODO()).
 			Return(nil, errors.New("an error has occurred"))
 		defer client.Assert(t)
@@ -86,7 +86,7 @@ func TestRepository_Add(t *testing.T) {
 			Return(add)
 		defer add.Assert(t)
 
-		client := mock.NewStore(t)
+		client := mock.NewClient(t)
 		client.Expect("Transaction", context.TODO()).
 			Return(transaction, nil)
 		client.Expect("Add").
@@ -127,7 +127,7 @@ func TestRepository_Add(t *testing.T) {
 			Return(map[string]interface{}{"key": 1337})
 		defer item.Assert(t)
 
-		client := mock.NewStore(t)
+		client := mock.NewClient(t)
 		client.Expect("Transaction", context.TODO()).
 			Return(transaction, nil)
 		client.Expect("Add").
@@ -168,7 +168,7 @@ func TestRepository_Add(t *testing.T) {
 			Return(map[string]interface{}{"key": 1337})
 		defer item.Assert(t)
 
-		client := mock.NewStore(t)
+		client := mock.NewClient(t)
 		client.Expect("Transaction", context.TODO()).
 			Return(transaction, nil)
 		client.Expect("Add").
@@ -184,7 +184,7 @@ func TestRepository_Add(t *testing.T) {
 
 func TestRepository_Search(t *testing.T) {
 	t.Run("can create instance", func(t *testing.T) {
-		client := mock.NewStore(t)
+		client := mock.NewClient(t)
 		client.Expect("Query").
 			Return(mock.NewQuery(t))
 		defer client.Assert(t)
@@ -199,7 +199,7 @@ func TestRepository_Search(t *testing.T) {
 			Return(mock.NewCursor(t), nil)
 		defer query.Assert(t)
 
-		client := mock.NewStore(t)
+		client := mock.NewClient(t)
 		defer client.Assert(t)
 
 		r, _ := New(client)
@@ -221,7 +221,7 @@ func TestRepository_Remove(t *testing.T) {
 			Return(0, nil)
 		defer remove.Assert(t)
 
-		client := mock.NewStore(t)
+		client := mock.NewClient(t)
 		client.Expect("Remove").
 			Return(remove)
 		defer client.Assert(t)
@@ -234,7 +234,7 @@ func TestRepository_Remove(t *testing.T) {
 
 func TestRepository_Filter(t *testing.T) {
 	t.Run("can create instance", func(t *testing.T) {
-		client := mock.NewStore(t)
+		client := mock.NewClient(t)
 		client.Expect("Filter").
 			Return(mock.NewFilter(t))
 		defer client.Assert(t)
@@ -262,7 +262,7 @@ func TestRepository_Update(t *testing.T) {
 			Return(0, nil)
 		defer update.Assert(t)
 
-		client := mock.NewStore(t)
+		client := mock.NewClient(t)
 		client.Expect("Update").
 			Return(update)
 		defer client.Assert(t)

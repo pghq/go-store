@@ -1,13 +1,13 @@
-package repository
+package datastore
 
 import (
 	"context"
 
-	"github.com/pghq/go-datastore/datastore"
+	"github.com/pghq/go-datastore/datastore/client"
 )
 
 // Remove removes items from the repository matching criteria.
-func (r *Repository) Remove(ctx context.Context, collection string, filter datastore.Filter, first int) (int, error) {
+func (r *Repository) Remove(ctx context.Context, collection string, filter client.Filter, first int) (int, error) {
 	command := r.client.Remove().From(collection).Filter(filter)
 	if first != 0 {
 		command = command.First(first)

@@ -1,15 +1,15 @@
-package repository
+package datastore
 
 import (
 	"context"
 
 	"github.com/pghq/go-museum/museum/diagnostic/errors"
 
-	"github.com/pghq/go-datastore/datastore"
+	"github.com/pghq/go-datastore/datastore/client"
 )
 
 // Add adds items(s) to the repository
-func (r *Repository) Add(ctx context.Context, collection string, items ...datastore.Snapper) error {
+func (r *Repository) Add(ctx context.Context, collection string, items ...client.Snapper) error {
 	if len(items) == 0 {
 		return nil
 	}

@@ -33,81 +33,81 @@ var (
 func TestStore(t *testing.T) {
 	t.Run("can create new database", func(t *testing.T) {
 		dsn := "postgres://postgres:postgres@db:5432"
-		s := New(dsn)
-		assert.Equal(t, dsn, s.primaryDSN)
-		assert.NotNil(t, dsn, s.secondaryDSN)
-		assert.Equal(t, DefaultSQLMaxOpenConns, s.maxConns)
-		assert.Equal(t, time.Duration(0), s.maxConnLifetime)
+		client := New(dsn)
+		assert.Equal(t, dsn, client.primaryDSN)
+		assert.NotNil(t, dsn, client.secondaryDSN)
+		assert.Equal(t, DefaultSQLMaxOpenConns, client.maxConns)
+		assert.Equal(t, time.Duration(0), client.maxConnLifetime)
 	})
 
-	s := New("postgres://postgres:postgres@db:5432")
+	client := New("postgres://postgres:postgres@db:5432")
 	t.Run("can set max connection lifetime", func(t *testing.T) {
 		lifetime := time.Second
-		s = s.MaxConnLifetime(lifetime)
-		assert.NotNil(t, s)
-		assert.Equal(t, lifetime, s.maxConnLifetime)
+		client = client.MaxConnLifetime(lifetime)
+		assert.NotNil(t, client)
+		assert.Equal(t, lifetime, client.maxConnLifetime)
 	})
 
 	t.Run("can set max connections", func(t *testing.T) {
 		conns := 5
-		s = s.MaxConns(conns)
-		assert.NotNil(t, s)
-		assert.Equal(t, conns, s.maxConns)
+		client = client.MaxConns(conns)
+		assert.NotNil(t, client)
+		assert.Equal(t, conns, client.maxConns)
 	})
 
 	t.Run("can connect", func(t *testing.T) {
 		log.Writer(io.Discard)
 		defer log.Reset()
-		s := New("")
-		err := s.Connect()
+		client := New("")
+		err := client.Connect()
 		assert.NotNil(t, err)
 	})
 
 	t.Run("can not set a bad secondary", func(t *testing.T) {
-		s := New("postgres://postgres:postgres@db:5432")
-		s.connect = func(ctx context.Context, config *pgxpool.Config) (*pgxpool.Pool, error) {
+		client := New("postgres://postgres:postgres@db:5432")
+		client.connect = func(ctx context.Context, config *pgxpool.Config) (*pgxpool.Pool, error) {
 			if config.ConnString() == "secondary" {
 				return nil, errors.New("bad secondary")
 			}
 			return &pgxpool.Pool{}, nil
 		}
-		err := s.Secondary("secondary").Connect()
+		err := client.Secondary("secondary").Connect()
 		assert.NotNil(t, err)
 	})
 
 	t.Run("can set secondary database client", func(t *testing.T) {
-		s, _, _ := setup(t)
-		assert.NotNil(t, s.pool)
-		assert.NotNil(t, s.secondary)
+		client, _, _ := setup(t)
+		assert.NotNil(t, client.pool)
+		assert.NotNil(t, client.secondary)
 	})
 
 	t.Run("raises sql open errors on migration", func(t *testing.T) {
-		s := New("postgres://postgres:postgres@db:5432").
+		client := New("postgres://postgres:postgres@db:5432").
 			Migrations(embed.FS{}, "migrations")
-		s.connect = func(ctx context.Context, config *pgxpool.Config) (*pgxpool.Pool, error) {
+		client.connect = func(ctx context.Context, config *pgxpool.Config) (*pgxpool.Pool, error) {
 			return &pgxpool.Pool{}, nil
 		}
-		s.migrations.open = func(driverName, dataSourceName string) (*sql.DB, error) {
+		client.migrations.open = func(driverName, dataSourceName string) (*sql.DB, error) {
 			return &sql.DB{}, errors.New("an error has occurred")
 		}
-		assert.NotNil(t, s)
+		assert.NotNil(t, client)
 
-		err := s.Connect()
+		err := client.Connect()
 		assert.NotNil(t, err)
 	})
 
 	t.Run("raises migration errors", func(t *testing.T) {
-		s := New("postgres://postgres:postgres@db:5432").
+		client := New("postgres://postgres:postgres@db:5432").
 			Migrations(embed.FS{}, "migrations")
-		s.connect = func(ctx context.Context, config *pgxpool.Config) (*pgxpool.Pool, error) {
+		client.connect = func(ctx context.Context, config *pgxpool.Config) (*pgxpool.Pool, error) {
 			return &pgxpool.Pool{}, nil
 		}
-		s.migrations.open = func(driverName, dataSourceName string) (*sql.DB, error) {
+		client.migrations.open = func(driverName, dataSourceName string) (*sql.DB, error) {
 			return sql.OpenDB(ErrConnector{}), nil
 		}
-		assert.NotNil(t, s)
+		assert.NotNil(t, client)
 
-		err := s.Connect()
+		err := client.Connect()
 		assert.NotNil(t, err)
 	})
 
@@ -247,13 +247,13 @@ func TestStore(t *testing.T) {
 
 func TestStore_Add(t *testing.T) {
 	t.Run("can create new instance", func(t *testing.T) {
-		s, _, _ := setup(t)
-		assert.NotNil(t, s.Add())
+		client, _, _ := setup(t)
+		assert.NotNil(t, client.Add())
 	})
 
 	t.Run("raises bad request errors on execute", func(t *testing.T) {
-		s, _, _ := setup(t)
-		add := NewAdd(s)
+		client, _, _ := setup(t)
+		add := NewAdd(client)
 
 		_, err := add.Execute(context.TODO())
 		assert.NotNil(t, err)
@@ -261,8 +261,8 @@ func TestStore_Add(t *testing.T) {
 	})
 
 	t.Run("raises fatal errors on execute", func(t *testing.T) {
-		s, primary, _ := setup(t)
-		add := NewAdd(s)
+		client, primary, _ := setup(t)
+		add := NewAdd(client)
 
 		primary.Expect("Exec", context.TODO(), "INSERT INTO tests (coverage) VALUES ($1)", 50).
 			Return(nil, errors.New("an error has occurred"))
@@ -277,8 +277,8 @@ func TestStore_Add(t *testing.T) {
 	})
 
 	t.Run("raises integrity errors on execute", func(t *testing.T) {
-		s, primary, _ := setup(t)
-		add := NewAdd(s)
+		client, primary, _ := setup(t)
+		add := NewAdd(client)
 
 		primary.Expect("Exec", context.TODO(), "INSERT INTO tests (coverage) VALUES ($1)", 50).
 			Return(nil, &pgconn.PgError{Code: pgerrcode.IntegrityConstraintViolation})
@@ -293,8 +293,8 @@ func TestStore_Add(t *testing.T) {
 	})
 
 	t.Run("can execute", func(t *testing.T) {
-		s, primary, _ := setup(t)
-		add := NewAdd(s)
+		client, primary, _ := setup(t)
+		add := NewAdd(client)
 
 		primary.Expect("Exec", context.TODO(), "INSERT INTO tests (coverage) SELECT coverage FROM units LIMIT 1").
 			Return(pgconn.CommandTag{}, nil)
@@ -302,7 +302,7 @@ func TestStore_Add(t *testing.T) {
 
 		_, err := add.
 			Item(map[string]interface{}{"coverage": 0}).
-			Query(s.Query().From("units").Return("coverage").First(1)).
+			Query(client.Query().From("units").Return("coverage").First(1)).
 			To("tests").
 			Execute(context.TODO())
 		assert.Nil(t, err)
@@ -311,13 +311,13 @@ func TestStore_Add(t *testing.T) {
 
 func TestStore_Query(t *testing.T) {
 	t.Run("can create new instance", func(t *testing.T) {
-		s, _, _ := setup(t)
-		assert.NotNil(t, s.Query())
+		client, _, _ := setup(t)
+		assert.NotNil(t, client.Query())
 	})
 
 	t.Run("raises bad request errors", func(t *testing.T) {
-		s, _, _ := setup(t)
-		query := NewQuery(s)
+		client, _, _ := setup(t)
+		query := NewQuery(client)
 
 		_, err := query.Execute(context.TODO())
 		assert.NotNil(t, err)
@@ -325,8 +325,8 @@ func TestStore_Query(t *testing.T) {
 	})
 
 	t.Run("raises no content errors", func(t *testing.T) {
-		s, primary, _ := setup(t)
-		query := NewQuery(s)
+		client, primary, _ := setup(t)
+		query := NewQuery(client)
 
 		primary.Expect("Query", context.TODO(), "SELECT coverage FROM tests").
 			Return(nil, pgx.ErrNoRows)
@@ -341,8 +341,8 @@ func TestStore_Query(t *testing.T) {
 	})
 
 	t.Run("raises fatal errors", func(t *testing.T) {
-		s, primary, _ := setup(t)
-		query := NewQuery(s)
+		client, primary, _ := setup(t)
+		query := NewQuery(client)
 
 		primary.Expect("Query", context.TODO(), "SELECT coverage FROM tests").
 			Return(nil, errors.New("an error has occurred"))
@@ -357,8 +357,8 @@ func TestStore_Query(t *testing.T) {
 	})
 
 	t.Run("can execute on primary", func(t *testing.T) {
-		s, primary, _ := setup(t)
-		query := NewQuery(s)
+		client, primary, _ := setup(t)
+		query := NewQuery(client)
 
 		primary.Expect("Query", context.TODO(), "SELECT runs FROM tests JOIN units ON runs.id = units.id WHERE coverage > $1 AND id >= $2 ORDER BY coverage DESC LIMIT 5", 50, 2).
 			Return(NewPostgresRows(t), nil)
@@ -366,7 +366,7 @@ func TestStore_Query(t *testing.T) {
 
 		_, err := query.From("tests").
 			And("units ON runs.id = units.id").
-			Filter(s.Filter().Gt("coverage", 50)).
+			Filter(client.Filter().Gt("coverage", 50)).
 			Order("coverage DESC").
 			Return("runs").
 			First(5).
@@ -376,8 +376,8 @@ func TestStore_Query(t *testing.T) {
 	})
 
 	t.Run("can execute on secondary", func(t *testing.T) {
-		s, _, secondary := setup(t)
-		query := NewQuery(s)
+		client, _, secondary := setup(t)
+		query := NewQuery(client)
 		secondary.Expect("Query", context.TODO(), "SELECT runs FROM tests").
 			Return(NewPostgresRows(t), nil)
 		defer secondary.Assert(t)
@@ -393,13 +393,13 @@ func TestStore_Query(t *testing.T) {
 
 func TestStore_Remove(t *testing.T) {
 	t.Run("can create new instance", func(t *testing.T) {
-		s, _, _ := setup(t)
-		assert.NotNil(t, s.Remove())
+		client, _, _ := setup(t)
+		assert.NotNil(t, client.Remove())
 	})
 
 	t.Run("raises bad request errors", func(t *testing.T) {
-		s, _, _ := setup(t)
-		remove := NewRemove(s)
+		client, _, _ := setup(t)
+		remove := NewRemove(client)
 
 		_, err := remove.Execute(context.TODO())
 		assert.NotNil(t, err)
@@ -407,8 +407,8 @@ func TestStore_Remove(t *testing.T) {
 	})
 
 	t.Run("raises integrity errors", func(t *testing.T) {
-		s, primary, _ := setup(t)
-		remove := NewRemove(s)
+		client, primary, _ := setup(t)
+		remove := NewRemove(client)
 
 		primary.Expect("Exec", context.TODO(), "DELETE FROM tests").
 			Return(nil, &pgconn.PgError{Code: pgerrcode.IntegrityConstraintViolation})
@@ -422,8 +422,8 @@ func TestStore_Remove(t *testing.T) {
 	})
 
 	t.Run("raises fatal errors", func(t *testing.T) {
-		s, primary, _ := setup(t)
-		remove := NewRemove(s)
+		client, primary, _ := setup(t)
+		remove := NewRemove(client)
 
 		primary.Expect("Exec", context.TODO(), "DELETE FROM tests").
 			Return(nil, errors.New("an error has occurred"))
@@ -437,8 +437,8 @@ func TestStore_Remove(t *testing.T) {
 	})
 
 	t.Run("can execute", func(t *testing.T) {
-		s, primary, _ := setup(t)
-		remove := NewRemove(s)
+		client, primary, _ := setup(t)
+		remove := NewRemove(client)
 
 		primary.Expect("Exec", context.TODO(), "DELETE FROM tests WHERE coverage > $1 AND id >= $2 ORDER BY coverage DESC LIMIT 5", 50, 2).
 			Return(pgconn.CommandTag{}, nil)
@@ -446,7 +446,7 @@ func TestStore_Remove(t *testing.T) {
 
 		_, err := remove.
 			From("tests").
-			Filter(s.Filter().Gt("coverage", 50)).
+			Filter(client.Filter().Gt("coverage", 50)).
 			Order("coverage DESC").
 			First(5).
 			After("id", 2).
@@ -457,22 +457,22 @@ func TestStore_Remove(t *testing.T) {
 
 func TestStore_Transaction(t *testing.T) {
 	t.Run("handles new transaction errors", func(t *testing.T) {
-		s, primary, _ := setup(t)
+		client, primary, _ := setup(t)
 		primary.Expect("Begin", context.TODO()).
 			Return(nil, errors.New("an error occurred"))
 		defer primary.Assert(t)
 
-		_, err := s.Transaction(context.TODO())
+		_, err := client.Transaction(context.TODO())
 		assert.NotNil(t, err)
 	})
 
 	t.Run("can create new instance", func(t *testing.T) {
-		s, primary, _ := setup(t)
+		client, primary, _ := setup(t)
 		primary.Expect("Begin", context.TODO()).
 			Return(NewPostgresTx(t), nil)
 		defer primary.Assert(t)
 
-		tx, err := s.Transaction(context.TODO())
+		tx, err := client.Transaction(context.TODO())
 		assert.Nil(t, err)
 		assert.NotNil(t, tx)
 	})
@@ -574,13 +574,13 @@ func TestStore_Transaction(t *testing.T) {
 
 func TestStore_Update(t *testing.T) {
 	t.Run("can create new instance", func(t *testing.T) {
-		s, _, _ := setup(t)
-		assert.NotNil(t, s.Update())
+		client, _, _ := setup(t)
+		assert.NotNil(t, client.Update())
 	})
 
 	t.Run("raises bad request errors", func(t *testing.T) {
-		s, _, _ := setup(t)
-		update := NewUpdate(s)
+		client, _, _ := setup(t)
+		update := NewUpdate(client)
 
 		_, err := update.Execute(context.TODO())
 		assert.NotNil(t, err)
@@ -588,8 +588,8 @@ func TestStore_Update(t *testing.T) {
 	})
 
 	t.Run("raises integrity errors", func(t *testing.T) {
-		s, primary, _ := setup(t)
-		update := NewUpdate(s)
+		client, primary, _ := setup(t)
+		update := NewUpdate(client)
 
 		primary.Expect("Exec", context.TODO(), "UPDATE tests SET coverage = $1", 0).
 			Return(nil, &pgconn.PgError{Code: pgerrcode.IntegrityConstraintViolation})
@@ -604,8 +604,8 @@ func TestStore_Update(t *testing.T) {
 	})
 
 	t.Run("raises fatal errors", func(t *testing.T) {
-		s, primary, _ := setup(t)
-		update := NewUpdate(s)
+		client, primary, _ := setup(t)
+		update := NewUpdate(client)
 
 		primary.Expect("Exec", context.TODO(), "UPDATE tests SET coverage = $1", 0).
 			Return(nil, errors.New("an error has occurred"))
@@ -620,8 +620,8 @@ func TestStore_Update(t *testing.T) {
 	})
 
 	t.Run("can execute", func(t *testing.T) {
-		s, primary, _ := setup(t)
-		update := NewUpdate(s)
+		client, primary, _ := setup(t)
+		update := NewUpdate(client)
 
 		primary.Expect("Exec", context.TODO(), "UPDATE tests SET coverage = $1 WHERE coverage > $2", 0, 50).
 			Return(pgconn.CommandTag{}, nil)
@@ -629,7 +629,7 @@ func TestStore_Update(t *testing.T) {
 
 		_, err := update.
 			In("tests").
-			Filter(s.Filter().Gt("coverage", 50)).
+			Filter(client.Filter().Gt("coverage", 50)).
 			Item(map[string]interface{}{"coverage": 0}).
 			Execute(context.TODO())
 		assert.Nil(t, err)
@@ -728,28 +728,28 @@ func NewPostgresPool(t *testing.T) *PostgresPool {
 	return &p
 }
 
-func setup(t *testing.T) (*Store, *PostgresPool, *PostgresPool) {
+func setup(t *testing.T) (*Client, *PostgresPool, *PostgresPool) {
 	t.Helper()
 
-	s := New("postgres://postgres:postgres@db:5432")
-	s.connect = func(ctx context.Context, config *pgxpool.Config) (*pgxpool.Pool, error) {
+	c := New("postgres://postgres:postgres@db:5432")
+	c.connect = func(ctx context.Context, config *pgxpool.Config) (*pgxpool.Pool, error) {
 		t.Helper()
 		assert.NotNil(t, config)
 		assert.IsType(t, &PGXLogger{}, config.ConnConfig.Logger)
 		assert.Equal(t, int32(DefaultSQLMaxOpenConns), config.MaxConns)
 		assert.Equal(t, time.Duration(0), config.MaxConnLifetime)
-		assert.Equal(t, s.primaryDSN, config.ConnString())
+		assert.Equal(t, c.primaryDSN, config.ConnString())
 
 		return &pgxpool.Pool{}, nil
 	}
-	err := s.Connect()
+	err := c.Connect()
 	assert.Nil(t, err)
 	primary := NewPostgresPool(t)
 	secondary := NewPostgresPool(t)
-	s.pool = primary
-	s.secondary = secondary
+	c.pool = primary
+	c.secondary = secondary
 
-	return s, primary, secondary
+	return c, primary, secondary
 }
 
 func (p *PostgresPool) Begin(ctx context.Context) (pgx.Tx, error) {
