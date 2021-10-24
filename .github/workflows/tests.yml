@@ -1,0 +1,34 @@
+name: tests
+on:
+  push:
+    branches:
+      - develop
+      - master
+
+  pull_request:
+    branches:
+      - develop
+      - master
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-go@v2
+        with:
+          go-version: 1.17.x
+
+      - run: go version
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test
+        run: go test -v -race -timeout 60s -coverprofile coverage.txt -covermode atomic ./... && go tool cover -func=coverage.txt
+
+      - name: Codecov
+        uses: codecov/codecov-action@v1
+
+      - run: rm -rf coverage.txt
