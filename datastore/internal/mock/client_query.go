@@ -6,24 +6,24 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/pghq/go-datastore/datastore"
+	"github.com/pghq/go-datastore/datastore/client"
 )
 
 var (
-	_ datastore.Query = NewQuery(nil)
+	_ client.Query = NewQuery(nil)
 )
 
-func (s *Store) Query() datastore.Query {
-	s.t.Helper()
-	res := s.Call(s.t)
+func (c *Client) Query() client.Query {
+	c.t.Helper()
+	res := c.Call(c.t)
 	if len(res) != 1 {
-		s.fail(s.t, "unexpected length of return values")
+		c.fail(c.t, "unexpected length of return values")
 		return nil
 	}
 
-	query, ok := res[0].(datastore.Query)
+	query, ok := res[0].(client.Query)
 	if !ok {
-		s.fail(s.t, "unexpected type of return value")
+		c.fail(c.t, "unexpected type of return value")
 		return nil
 	}
 
@@ -72,7 +72,7 @@ func (q *Query) Statement() (string, []interface{}, error) {
 	return statement, nil, nil
 }
 
-func (q *Query) Secondary() datastore.Query {
+func (q *Query) Secondary() client.Query {
 	q.t.Helper()
 	res := q.Call(q.t)
 	if len(res) != 1 {
@@ -80,7 +80,7 @@ func (q *Query) Secondary() datastore.Query {
 		return nil
 	}
 
-	query, ok := res[0].(datastore.Query)
+	query, ok := res[0].(client.Query)
 	if !ok {
 		q.fail(q.t, "unexpected type of return value")
 		return nil
@@ -89,7 +89,7 @@ func (q *Query) Secondary() datastore.Query {
 	return query
 }
 
-func (q *Query) From(collection string) datastore.Query {
+func (q *Query) From(collection string) client.Query {
 	q.t.Helper()
 	res := q.Call(q.t, collection)
 	if len(res) != 1 {
@@ -97,7 +97,7 @@ func (q *Query) From(collection string) datastore.Query {
 		return nil
 	}
 
-	query, ok := res[0].(datastore.Query)
+	query, ok := res[0].(client.Query)
 	if !ok {
 		q.fail(q.t, "unexpected type of return value")
 		return nil
@@ -106,7 +106,7 @@ func (q *Query) From(collection string) datastore.Query {
 	return query
 }
 
-func (q *Query) And(collection string, args ...interface{}) datastore.Query {
+func (q *Query) And(collection string, args ...interface{}) client.Query {
 	q.t.Helper()
 	res := q.Call(q.t, append([]interface{}{collection}, args...)...)
 	if len(res) != 1 {
@@ -114,7 +114,7 @@ func (q *Query) And(collection string, args ...interface{}) datastore.Query {
 		return nil
 	}
 
-	query, ok := res[0].(datastore.Query)
+	query, ok := res[0].(client.Query)
 	if !ok {
 		q.fail(q.t, "unexpected type of return value")
 		return nil
@@ -123,7 +123,7 @@ func (q *Query) And(collection string, args ...interface{}) datastore.Query {
 	return query
 }
 
-func (q *Query) Filter(filter datastore.Filter) datastore.Query {
+func (q *Query) Filter(filter client.Filter) client.Query {
 	q.t.Helper()
 	res := q.Call(q.t, filter)
 	if len(res) != 1 {
@@ -131,7 +131,7 @@ func (q *Query) Filter(filter datastore.Filter) datastore.Query {
 		return nil
 	}
 
-	query, ok := res[0].(datastore.Query)
+	query, ok := res[0].(client.Query)
 	if !ok {
 		q.fail(q.t, "unexpected type of return value")
 		return nil
@@ -140,7 +140,7 @@ func (q *Query) Filter(filter datastore.Filter) datastore.Query {
 	return query
 }
 
-func (q *Query) Order(by string) datastore.Query {
+func (q *Query) Order(by string) client.Query {
 	q.t.Helper()
 	res := q.Call(q.t, by)
 	if len(res) != 1 {
@@ -148,7 +148,7 @@ func (q *Query) Order(by string) datastore.Query {
 		return nil
 	}
 
-	query, ok := res[0].(datastore.Query)
+	query, ok := res[0].(client.Query)
 	if !ok {
 		q.fail(q.t, "unexpected type of return value")
 		return nil
@@ -157,7 +157,7 @@ func (q *Query) Order(by string) datastore.Query {
 	return query
 }
 
-func (q *Query) First(first int) datastore.Query {
+func (q *Query) First(first int) client.Query {
 	q.t.Helper()
 	res := q.Call(q.t, first)
 	if len(res) != 1 {
@@ -165,7 +165,7 @@ func (q *Query) First(first int) datastore.Query {
 		return nil
 	}
 
-	query, ok := res[0].(datastore.Query)
+	query, ok := res[0].(client.Query)
 	if !ok {
 		q.fail(q.t, "unexpected type of return value")
 		return nil
@@ -174,7 +174,7 @@ func (q *Query) First(first int) datastore.Query {
 	return query
 }
 
-func (q *Query) After(key string, value interface{}) datastore.Query {
+func (q *Query) After(key string, value interface{}) client.Query {
 	q.t.Helper()
 	res := q.Call(q.t, key, value)
 	if len(res) != 1 {
@@ -182,7 +182,7 @@ func (q *Query) After(key string, value interface{}) datastore.Query {
 		return nil
 	}
 
-	query, ok := res[0].(datastore.Query)
+	query, ok := res[0].(client.Query)
 	if !ok {
 		q.fail(q.t, "unexpected type of return value")
 		return nil
@@ -191,7 +191,7 @@ func (q *Query) After(key string, value interface{}) datastore.Query {
 	return query
 }
 
-func (q *Query) Return(key string, args ...interface{}) datastore.Query {
+func (q *Query) Return(key string, args ...interface{}) client.Query {
 	q.t.Helper()
 	res := q.Call(q.t, append([]interface{}{key}, args...)...)
 	if len(res) != 1 {
@@ -199,7 +199,7 @@ func (q *Query) Return(key string, args ...interface{}) datastore.Query {
 		return nil
 	}
 
-	query, ok := res[0].(datastore.Query)
+	query, ok := res[0].(client.Query)
 	if !ok {
 		q.fail(q.t, "unexpected type of return value")
 		return nil
@@ -208,7 +208,7 @@ func (q *Query) Return(key string, args ...interface{}) datastore.Query {
 	return query
 }
 
-func (q *Query) Execute(ctx context.Context) (datastore.Cursor, error) {
+func (q *Query) Execute(ctx context.Context) (client.Cursor, error) {
 	q.t.Helper()
 	res := q.Call(q.t, ctx)
 	if len(res) != 2 {
@@ -225,7 +225,7 @@ func (q *Query) Execute(ctx context.Context) (datastore.Cursor, error) {
 		return nil, err
 	}
 
-	cursor, ok := res[0].(datastore.Cursor)
+	cursor, ok := res[0].(client.Cursor)
 	if !ok {
 		q.fail(q.t, "unexpected type of return value")
 		return nil, nil

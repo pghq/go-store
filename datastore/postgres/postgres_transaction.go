@@ -6,12 +6,12 @@ import (
 	"github.com/jackc/pgx/v4"
 	"github.com/pghq/go-museum/museum/diagnostic/errors"
 
-	"github.com/pghq/go-datastore/datastore"
+	"github.com/pghq/go-datastore/datastore/client"
 )
 
 // Transaction creates a database transaction for Postgres.
-func (s *Store) Transaction(ctx context.Context) (datastore.Transaction, error) {
-	tx, err := s.pool.Begin(ctx)
+func (c *Client) Transaction(ctx context.Context) (client.Transaction, error) {
+	tx, err := c.pool.Begin(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err)
 	}
@@ -25,7 +25,7 @@ type transaction struct {
 	tx  pgx.Tx
 }
 
-func (t *transaction) Execute(statement datastore.Encoder) (int, error) {
+func (t *transaction) Execute(statement client.Encoder) (int, error) {
 	sql, args, err := statement.Statement()
 	if err != nil {
 		return 0, errors.BadRequest(err)

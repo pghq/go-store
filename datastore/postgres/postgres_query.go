@@ -7,29 +7,29 @@ import (
 	"github.com/jackc/pgx/v4"
 	"github.com/pghq/go-museum/museum/diagnostic/errors"
 
-	"github.com/pghq/go-datastore/datastore"
+	"github.com/pghq/go-datastore/datastore/client"
 )
 
 // Query creates a query for the database.
-func (s *Store) Query() datastore.Query {
-	return NewQuery(s)
+func (c *Client) Query() client.Query {
+	return NewQuery(c)
 }
 
 // Query is an instance of the repository query for Postgres.
 type Query struct {
-	store *Store
+	client *Client
 	opts  []func(builder squirrel.SelectBuilder) squirrel.SelectBuilder
 }
 
-func (q *Query) Secondary() datastore.Query {
-	if q.store != nil {
-		q.store.pool = q.store.secondary
+func (q *Query) Secondary() client.Query {
+	if q.client != nil {
+		q.client.pool = q.client.secondary
 	}
 
 	return q
 }
 
-func (q *Query) From(collection string) datastore.Query {
+func (q *Query) From(collection string) client.Query {
 	q.opts = append(q.opts, func(builder squirrel.SelectBuilder) squirrel.SelectBuilder {
 		return builder.From(collection)
 	})
@@ -37,7 +37,7 @@ func (q *Query) From(collection string) datastore.Query {
 	return q
 }
 
-func (q *Query) And(collection string, args ...interface{}) datastore.Query {
+func (q *Query) And(collection string, args ...interface{}) client.Query {
 	q.opts = append(q.opts, func(builder squirrel.SelectBuilder) squirrel.SelectBuilder {
 		return builder.Join(collection, args...)
 	})
@@ -45,7 +45,7 @@ func (q *Query) And(collection string, args ...interface{}) datastore.Query {
 	return q
 }
 
-func (q *Query) Filter(filter datastore.Filter) datastore.Query {
+func (q *Query) Filter(filter client.Filter) client.Query {
 	q.opts = append(q.opts, func(builder squirrel.SelectBuilder) squirrel.SelectBuilder {
 		return builder.Where(filter)
 	})
@@ -53,7 +53,7 @@ func (q *Query) Filter(filter datastore.Filter) datastore.Query {
 	return q
 }
 
-func (q *Query) Order(by string) datastore.Query {
+func (q *Query) Order(by string) client.Query {
 	q.opts = append(q.opts, func(builder squirrel.SelectBuilder) squirrel.SelectBuilder {
 		return builder.OrderBy(by)
 	})
@@ -61,7 +61,7 @@ func (q *Query) Order(by string) datastore.Query {
 	return q
 }
 
-func (q *Query) First(first int) datastore.Query {
+func (q *Query) First(first int) client.Query {
 	q.opts = append(q.opts, func(builder squirrel.SelectBuilder) squirrel.SelectBuilder {
 		return builder.Limit(uint64(first))
 	})
@@ -69,7 +69,7 @@ func (q *Query) First(first int) datastore.Query {
 	return q
 }
 
-func (q *Query) After(key string, value interface{}) datastore.Query {
+func (q *Query) After(key string, value interface{}) client.Query {
 	q.opts = append(q.opts, func(builder squirrel.SelectBuilder) squirrel.SelectBuilder {
 		return builder.Where(squirrel.GtOrEq{key: value})
 	})
@@ -77,7 +77,7 @@ func (q *Query) After(key string, value interface{}) datastore.Query {
 	return q
 }
 
-func (q *Query) Return(key string, args ...interface{}) datastore.Query {
+func (q *Query) Return(key string, args ...interface{}) client.Query {
 	q.opts = append(q.opts, func(builder squirrel.SelectBuilder) squirrel.SelectBuilder {
 		return builder.Column(key, args...)
 	})
@@ -97,13 +97,13 @@ func (q *Query) Statement() (string, []interface{}, error) {
 	return builder.ToSql()
 }
 
-func (q *Query) Execute(ctx context.Context) (datastore.Cursor, error) {
+func (q *Query) Execute(ctx context.Context) (client.Cursor, error) {
 	sql, args, err := q.Statement()
 	if err != nil {
 		return nil, errors.BadRequest(err)
 	}
 
-	rows, err := q.store.pool.Query(ctx, sql, args...)
+	rows, err := q.client.pool.Query(ctx, sql, args...)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, errors.NoContent(err)
@@ -116,9 +116,9 @@ func (q *Query) Execute(ctx context.Context) (datastore.Cursor, error) {
 }
 
 // NewQuery creates a new query for the Postgres database.
-func NewQuery(store *Store) *Query {
+func NewQuery(client *Client) *Query {
 	q := Query{
-		store: store,
+		client: client,
 	}
 
 	return &q

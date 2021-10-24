@@ -5,34 +5,34 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/pghq/go-datastore/datastore"
+	"github.com/pghq/go-datastore/datastore/client"
 )
 
 var (
-	_ datastore.Client  = NewStore(nil)
-	_ datastore.Snapper = NewSnapper(nil)
-	_ datastore.Cursor  = NewCursor(nil)
+	_ client.Client  = NewClient(nil)
+	_ client.Snapper = NewSnapper(nil)
+	_ client.Cursor  = NewCursor(nil)
 )
 
-// Store is a mock datastore.Client
-type Store struct {
+// Client is a mock datastore.Client
+type Client struct {
 	Mock
 	t    *testing.T
 	fail func(v ...interface{})
 }
 
-func (s *Store) Connect() error {
-	s.t.Helper()
-	res := s.Call(s.t)
+func (c *Client) Connect() error {
+	c.t.Helper()
+	res := c.Call(c.t)
 	if len(res) != 1 {
-		s.fail(s.t, "unexpected length of return values")
+		c.fail(c.t, "unexpected length of return values")
 		return nil
 	}
 
-	if res[0] != nil{
+	if res[0] != nil {
 		err, ok := res[0].(error)
 		if !ok {
-			s.fail(s.t, "unexpected type of return value")
+			c.fail(c.t, "unexpected type of return value")
 			return nil
 		}
 		return err
@@ -41,36 +41,36 @@ func (s *Store) Connect() error {
 	return nil
 }
 
-// NewDisconnectedStore creates a new disconnected mock store
-func NewDisconnectedStore(t *testing.T) *Store {
-	s := Store{
+// NewDisconnectedClient creates a new disconnected mock store
+func NewDisconnectedClient(t *testing.T) *Client {
+	c := Client{
 		t: t,
 	}
 
 	if t != nil {
-		s.fail = t.Fatal
+		c.fail = t.Fatal
 	}
 
-	return &s
+	return &c
 }
 
-// NewStore creates a connected mock store
-func NewStore(t *testing.T) *Store {
-	s := NewDisconnectedStore(t)
-	s.Expect("Connect").Return(nil)
+// NewClient creates a connected mock store
+func NewClient(t *testing.T) *Client {
+	c := NewDisconnectedClient(t)
+	c.Expect("Connect").Return(nil)
 
-	return s
+	return c
 }
 
-// NewDisconnectedStoreWithFail creates a disconnected store with an expected failure
-func NewDisconnectedStoreWithFail(t *testing.T, expect ...interface{}) *Store {
-	s := NewDisconnectedStore(t)
-	s.fail = func(v ...interface{}) {
+// NewDisconnectedClientWithFail creates a disconnected store with an expected failure
+func NewDisconnectedClientWithFail(t *testing.T, expect ...interface{}) *Client {
+	c := NewDisconnectedClient(t)
+	c.fail = func(v ...interface{}) {
 		t.Helper()
 		assert.Equal(t, append([]interface{}{t}, expect...), v)
 	}
 
-	return s
+	return c
 }
 
 // Snapper is a mock datastore.Snapper

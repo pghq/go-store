@@ -6,33 +6,33 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/pghq/go-datastore/datastore"
+	"github.com/pghq/go-datastore/datastore/client"
 )
 
 var (
-	_ datastore.Transaction = NewTransaction(nil)
+	_ client.Transaction = NewTransaction(nil)
 )
 
-func (s *Store) Transaction(ctx context.Context) (datastore.Transaction, error) {
-	s.t.Helper()
-	res := s.Call(s.t, ctx)
+func (c *Client) Transaction(ctx context.Context) (client.Transaction, error) {
+	c.t.Helper()
+	res := c.Call(c.t, ctx)
 	if len(res) != 2 {
-		s.fail(s.t, "unexpected length of return values")
+		c.fail(c.t, "unexpected length of return values")
 		return nil, nil
 	}
 
 	if res[1] != nil {
 		err, ok := res[1].(error)
 		if !ok {
-			s.fail(s.t, "unexpected type of return value")
+			c.fail(c.t, "unexpected type of return value")
 			return nil, nil
 		}
 		return nil, err
 	}
 
-	transaction, ok := res[0].(datastore.Transaction)
+	transaction, ok := res[0].(client.Transaction)
 	if !ok {
-		s.fail(s.t, "unexpected type of return value")
+		c.fail(c.t, "unexpected type of return value")
 		return nil, nil
 	}
 
@@ -86,7 +86,7 @@ func (tx *Transaction) Rollback() error {
 	return nil
 }
 
-func (tx *Transaction) Execute(statement datastore.Encoder) (int, error) {
+func (tx *Transaction) Execute(statement client.Encoder) (int, error) {
 	tx.t.Helper()
 	res := tx.Call(tx.t, statement)
 	if len(res) != 2 {

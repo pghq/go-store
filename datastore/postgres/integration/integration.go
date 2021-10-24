@@ -27,8 +27,8 @@ import (
 	"github.com/pghq/go-museum/museum/diagnostic/log"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/pghq/go-datastore/datastore"
 	"github.com/pghq/go-datastore/datastore/postgres"
-	"github.com/pghq/go-datastore/datastore/repository"
 )
 
 const (
@@ -47,7 +47,7 @@ const (
 
 // Postgres is an integration for running postgres tests using docker
 type Postgres struct {
-	Repository *repository.Repository
+	Repository *datastore.Repository
 	Migration  struct {
 		FS        fs.FS
 		Directory string
@@ -144,7 +144,7 @@ func RunPostgres(integration *Postgres) {
 		primary := fmt.Sprintf("postgres://test:test@localhost:%s/test?sslmode=disable", resource.GetPort("5432/tcp"))
 		store := postgres.New(primary).Migrations(integration.Migration.FS, integration.Migration.Directory)
 
-		integration.Repository, err = repository.New(store)
+		integration.Repository, err = datastore.New(store)
 		return err
 	}
 

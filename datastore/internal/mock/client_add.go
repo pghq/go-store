@@ -6,24 +6,24 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/pghq/go-datastore/datastore"
+	"github.com/pghq/go-datastore/datastore/client"
 )
 
 var (
-	_ datastore.Add = NewAdd(nil)
+	_ client.Add = NewAdd(nil)
 )
 
-func (s *Store) Add() datastore.Add {
-	s.t.Helper()
-	res := s.Call(s.t)
+func (c *Client) Add() client.Add {
+	c.t.Helper()
+	res := c.Call(c.t)
 	if len(res) != 1 {
-		s.fail(s.t, "unexpected length of return values")
+		c.fail(c.t, "unexpected length of return values")
 		return nil
 	}
 
-	add, ok := res[0].(datastore.Add)
+	add, ok := res[0].(client.Add)
 	if !ok {
-		s.fail(s.t, "unexpected type of return value")
+		c.fail(c.t, "unexpected type of return value")
 		return nil
 	}
 
@@ -37,7 +37,7 @@ type Add struct {
 	fail func(v ...interface{})
 }
 
-func (a *Add) Query(query datastore.Query) datastore.Add {
+func (a *Add) Query(query client.Query) client.Add {
 	a.t.Helper()
 	res := a.Call(a.t, query)
 	if len(res) != 1 {
@@ -45,7 +45,7 @@ func (a *Add) Query(query datastore.Query) datastore.Add {
 		return nil
 	}
 
-	add, ok := res[0].(datastore.Add)
+	add, ok := res[0].(client.Add)
 	if !ok {
 		a.fail(a.t, "unexpected type of return value")
 		return nil
@@ -115,7 +115,7 @@ func (a *Add) Statement() (string, []interface{}, error) {
 	return statement, nil, nil
 }
 
-func (a *Add) To(collection string) datastore.Add {
+func (a *Add) To(collection string) client.Add {
 	a.t.Helper()
 	res := a.Call(a.t, collection)
 	if len(res) != 1 {
@@ -123,7 +123,7 @@ func (a *Add) To(collection string) datastore.Add {
 		return nil
 	}
 
-	add, ok := res[0].(datastore.Add)
+	add, ok := res[0].(client.Add)
 	if !ok {
 		a.fail(a.t, "unexpected type of return value")
 		return nil
@@ -132,7 +132,7 @@ func (a *Add) To(collection string) datastore.Add {
 	return add
 }
 
-func (a *Add) Item(value map[string]interface{}) datastore.Add {
+func (a *Add) Item(value map[string]interface{}) client.Add {
 	a.t.Helper()
 	res := a.Call(a.t, value)
 	if len(res) != 1 {
@@ -140,7 +140,7 @@ func (a *Add) Item(value map[string]interface{}) datastore.Add {
 		return nil
 	}
 
-	add, ok := res[0].(datastore.Add)
+	add, ok := res[0].(client.Add)
 	if !ok {
 		a.fail(a.t, "unexpected type of return value")
 		return nil

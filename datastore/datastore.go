@@ -10,100 +10,38 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package datastore provides resources for data persistence and retrieval.
+// Package datastore provides a repository implementation.
 package datastore
 
-import "context"
+import (
+	"github.com/pghq/go-museum/museum/diagnostic/errors"
 
-// Client represents a client for operating on a database.
-type Client interface {
-	Connect() error
-	Filter() Filter
-	Query() Query
-	Add() Add
-	Update() Update
-	Remove() Remove
-	Transaction(ctx context.Context) (Transaction, error)
+	"github.com/pghq/go-datastore/datastore/client"
+)
+
+// Repository is an instance of a postgres Database
+type Repository struct {
+	client client.Client
 }
 
-// Transaction represents a database transaction.
-type Transaction interface {
-	Execute(statement Encoder) (int, error)
-	Commit() error
-	Rollback() error
+// Filter gets a new filter for searching the repository.
+func (r *Repository) Filter() client.Filter {
+	return r.client.Filter()
 }
 
-// Add represents a command to add items to the collection
-type Add interface {
-	Encoder
-	To(collection string) Add
-	Item(snapshot map[string]interface{}) Add
-	Query(query Query) Add
-	Execute(ctx context.Context) (int, error)
-}
+// New creates a new postgres database
+func New(client client.Client) (*Repository, error) {
+	if client == nil {
+		return nil, errors.New("no database client provided")
+	}
 
-// Update represents a command to update items in the collection
-type Update interface {
-	Encoder
-	In(collection string) Update
-	Item(snapshot map[string]interface{}) Update
-	Filter(filter Filter) Update
-	Execute(ctx context.Context) (int, error)
-}
+	if err := client.Connect(); err != nil {
+		return nil, errors.Wrap(err)
+	}
 
-// Remove represents a command to remove items from the collection
-type Remove interface {
-	Encoder
-	From(collection string) Remove
-	Filter(filter Filter) Remove
-	Order(by string) Remove
-	First(first int) Remove
-	After(key string, value interface{}) Remove
-	Execute(ctx context.Context) (int, error)
-}
+	r := Repository{
+		client: client,
+	}
 
-// Snapper is an interface for any single object in the database.
-type Snapper interface {
-	Snapshot() map[string]interface{}
-}
-
-// Encoder represents a statement encoder
-type Encoder interface {
-	Statement() (string, []interface{}, error)
-}
-
-// Cursor represents an iterator like object for paginated db responses
-type Cursor interface {
-	Next() bool
-	Decode(values ...interface{}) error
-	Close()
-	Error() error
-}
-
-// Query represents a query builder
-type Query interface {
-	Encoder
-	Secondary() Query
-	From(collection string) Query
-	And(collection string, args ...interface{}) Query
-	Filter(filter Filter) Query
-	Order(by string) Query
-	First(first int) Query
-	After(key string, value interface{}) Query
-	Return(key string, args ...interface{}) Query
-	Execute(ctx context.Context) (Cursor, error)
-}
-
-// Filter represents criteria for querying the collection
-type Filter interface {
-	Eq(key string, value interface{}) Filter
-	Lt(key string, value interface{}) Filter
-	Gt(key string, value interface{}) Filter
-	NotEq(key string, value interface{}) Filter
-	BeginsWith(key string, prefix string) Filter
-	EndsWith(key string, suffix string) Filter
-	Contains(key string, value interface{}) Filter
-	NotContains(key string, value interface{}) Filter
-	Or(another Filter) Filter
-	And(another Filter) Filter
+	return &r, nil
 }

@@ -6,21 +6,21 @@ import (
 	"github.com/Masterminds/squirrel"
 	"github.com/pghq/go-museum/museum/diagnostic/errors"
 
-	"github.com/pghq/go-datastore/datastore"
+	"github.com/pghq/go-datastore/datastore/client"
 )
 
 // Add creates an add command for the database.
-func (s *Store) Add() datastore.Add {
-	return NewAdd(s)
+func (c *Client) Add() client.Add {
+	return NewAdd(c)
 }
 
 // Add is an instance of the add repository command using Postgres.
 type Add struct {
-	store *Store
+	client *Client
 	opts  []func(builder squirrel.InsertBuilder) squirrel.InsertBuilder
 }
 
-func (a *Add) To(collection string) datastore.Add {
+func (a *Add) To(collection string) client.Add {
 	a.opts = append(a.opts, func(builder squirrel.InsertBuilder) squirrel.InsertBuilder {
 		return builder.Into(collection)
 	})
@@ -28,7 +28,7 @@ func (a *Add) To(collection string) datastore.Add {
 	return a
 }
 
-func (a *Add) Item(snapshot map[string]interface{}) datastore.Add {
+func (a *Add) Item(snapshot map[string]interface{}) client.Add {
 	a.opts = append(a.opts, func(builder squirrel.InsertBuilder) squirrel.InsertBuilder {
 		return builder.SetMap(snapshot)
 	})
@@ -36,7 +36,7 @@ func (a *Add) Item(snapshot map[string]interface{}) datastore.Add {
 	return a
 }
 
-func (a *Add) Query(q datastore.Query) datastore.Add {
+func (a *Add) Query(q client.Query) client.Add {
 	if q, ok := q.(*Query); ok {
 		s := squirrel.StatementBuilder.
 			PlaceholderFormat(squirrel.Dollar).
@@ -59,7 +59,7 @@ func (a *Add) Execute(ctx context.Context) (int, error) {
 		return 0, errors.BadRequest(err)
 	}
 
-	tag, err := a.store.pool.Exec(ctx, sql, args...)
+	tag, err := a.client.pool.Exec(ctx, sql, args...)
 	if err != nil {
 		if IsIntegrityConstraintViolation(err) {
 			return 0, errors.BadRequest(err)
@@ -83,7 +83,7 @@ func (a *Add) Statement() (string, []interface{}, error) {
 }
 
 // NewAdd creates a new add command for the Postgres database.
-func NewAdd(store *Store) *Add {
-	a := Add{store: store}
+func NewAdd(client *Client) *Add {
+	a := Add{client: client}
 	return &a
 }

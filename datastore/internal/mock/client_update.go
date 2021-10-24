@@ -6,24 +6,24 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/pghq/go-datastore/datastore"
+	"github.com/pghq/go-datastore/datastore/client"
 )
 
 var (
-	_ datastore.Update = NewUpdate(nil)
+	_ client.Update = NewUpdate(nil)
 )
 
-func (s *Store) Update() datastore.Update {
-	s.t.Helper()
-	res := s.Call(s.t)
+func (c *Client) Update() client.Update {
+	c.t.Helper()
+	res := c.Call(c.t)
 	if len(res) != 1 {
-		s.fail(s.t, "unexpected length of return values")
+		c.fail(c.t, "unexpected length of return values")
 		return nil
 	}
 
-	update, ok := res[0].(datastore.Update)
+	update, ok := res[0].(client.Update)
 	if !ok {
-		s.fail(s.t, "unexpected type of return value")
+		c.fail(c.t, "unexpected type of return value")
 		return nil
 	}
 
@@ -72,7 +72,7 @@ func (u *Update) Statement() (string, []interface{}, error) {
 	return statement, nil, nil
 }
 
-func (u *Update) In(collection string) datastore.Update {
+func (u *Update) In(collection string) client.Update {
 	u.t.Helper()
 	res := u.Call(u.t, collection)
 	if len(res) != 1 {
@@ -80,7 +80,7 @@ func (u *Update) In(collection string) datastore.Update {
 		return nil
 	}
 
-	update, ok := res[0].(datastore.Update)
+	update, ok := res[0].(client.Update)
 	if !ok {
 		u.fail(u.t, "unexpected type of return value")
 		return nil
@@ -89,7 +89,7 @@ func (u *Update) In(collection string) datastore.Update {
 	return update
 }
 
-func (u *Update) Item(snapshot map[string]interface{}) datastore.Update {
+func (u *Update) Item(snapshot map[string]interface{}) client.Update {
 	u.t.Helper()
 	res := u.Call(u.t, snapshot)
 	if len(res) != 1 {
@@ -97,7 +97,7 @@ func (u *Update) Item(snapshot map[string]interface{}) datastore.Update {
 		return nil
 	}
 
-	update, ok := res[0].(datastore.Update)
+	update, ok := res[0].(client.Update)
 	if !ok {
 		u.fail(u.t, "unexpected type of return value")
 		return nil
@@ -106,7 +106,7 @@ func (u *Update) Item(snapshot map[string]interface{}) datastore.Update {
 	return update
 }
 
-func (u *Update) Filter(filter datastore.Filter) datastore.Update {
+func (u *Update) Filter(filter client.Filter) client.Update {
 	u.t.Helper()
 	res := u.Call(u.t, filter)
 	if len(res) != 1 {
@@ -114,7 +114,7 @@ func (u *Update) Filter(filter datastore.Filter) datastore.Update {
 		return nil
 	}
 
-	update, ok := res[0].(datastore.Update)
+	update, ok := res[0].(client.Update)
 	if !ok {
 		u.fail(u.t, "unexpected type of return value")
 		return nil
