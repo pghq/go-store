@@ -18,6 +18,7 @@ import (
 	"database/sql"
 	"fmt"
 	"io/fs"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgconn"
@@ -193,17 +194,33 @@ func NewCursor(rows pgx.Rows) client.Cursor {
 // PGXLogger is an instance of the pgx Logger
 type PGXLogger struct{}
 
-func (l *PGXLogger) Log(_ context.Context, level pgx.LogLevel, msg string, _ map[string]interface{}) {
+func (l *PGXLogger) Log(_ context.Context, level pgx.LogLevel, msg string, data map[string]interface{}) {
 	switch level {
 	case pgx.LogLevelDebug:
-		log.Debug(msg)
+		log.Debugf("%s\n%s", msg, l.pretty(data))
 	case pgx.LogLevelInfo:
-		log.Info(msg)
+		log.Infof("%s\n%s", msg, l.pretty(data))
 	case pgx.LogLevelWarn:
-		log.Warn(msg)
+		log.Warnf("%s\n%s", msg, l.pretty(data))
 	default:
-		errors.Send(errors.New(msg))
+		errors.Send(errors.Newf("%s\n%s", msg, l.pretty(data)))
 	}
+}
+
+func (l *PGXLogger) pretty(data map[string]interface{}) string {
+	var spaces int
+	for k, _ := range data {
+		if len(k) > spaces {
+			spaces = len(k)
+		}
+	}
+
+	var sb strings.Builder
+	for k, v := range data {
+		sb.WriteString(fmt.Sprintf("%*s: %+v\n", spaces, k, v))
+	}
+
+	return strings.TrimSuffix(sb.String(), "\n")
 }
 
 // NewPGXLogger creates a new database pgx Logger
@@ -223,11 +240,11 @@ func (g *GooseLogger) Fatalf(format string, v ...interface{}) {
 }
 
 func (g *GooseLogger) Print(v ...interface{}) {
-	log.Info(fmt.Sprint(v...))
+	log.Info(v...)
 }
 
 func (g *GooseLogger) Println(v ...interface{}) {
-	log.Info(fmt.Sprintln(v...))
+	log.Info(v...)
 }
 
 func (g *GooseLogger) Printf(format string, v ...interface{}) {

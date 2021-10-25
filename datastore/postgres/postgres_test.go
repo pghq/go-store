@@ -55,7 +55,7 @@ func TestStore(t *testing.T) {
 		assert.Equal(t, conns, client.maxConns)
 	})
 
-	t.Run("can connect", func(t *testing.T) {
+	t.Run("raises connect errors", func(t *testing.T) {
 		log.Writer(io.Discard)
 		defer log.Reset()
 		client := New("")
@@ -198,23 +198,27 @@ func TestStore(t *testing.T) {
 		defer log.Reset()
 
 		log.Level("debug")
-		l.Log(context.TODO(), pgx.LogLevelDebug, "an error has occurred", nil)
+		l.Log(context.TODO(), pgx.LogLevelDebug, "an error has occurred", map[string]interface{}{"test": "value"})
 		assert.True(t, strings.Contains(buf.String(), "debug"))
+		assert.True(t, strings.Contains(buf.String(), "test: value"))
 
 		buf.Reset()
 		log.Level("info")
-		l.Log(context.TODO(), pgx.LogLevelInfo, "an error has occurred", nil)
+		l.Log(context.TODO(), pgx.LogLevelInfo, "an error has occurred", map[string]interface{}{"test": "value"})
 		assert.True(t, strings.Contains(buf.String(), "info"))
+		assert.True(t, strings.Contains(buf.String(), "test: value"))
 
 		buf.Reset()
 		log.Level("warn")
-		l.Log(context.TODO(), pgx.LogLevelWarn, "an error has occurred", nil)
+		l.Log(context.TODO(), pgx.LogLevelWarn, "an error has occurred", map[string]interface{}{"test": "value"})
 		assert.True(t, strings.Contains(buf.String(), "warn"))
+		assert.True(t, strings.Contains(buf.String(), "test: value"))
 
 		buf.Reset()
 		log.Level("error")
-		l.Log(context.TODO(), pgx.LogLevelError, "an error has occurred", nil)
+		l.Log(context.TODO(), pgx.LogLevelError, "an error has occurred", map[string]interface{}{"test": "value"})
 		assert.True(t, strings.Contains(buf.String(), "error"))
+		assert.True(t, strings.Contains(buf.String(), "test: value"))
 	})
 
 	t.Run("can send goose logs", func(t *testing.T) {
