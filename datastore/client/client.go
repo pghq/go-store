@@ -107,3 +107,18 @@ type Filter interface {
 	Or(another Filter) Filter
 	And(another Filter) Filter
 }
+
+// Keys gets the keys from a snapper
+func Keys(snapper Snapper) []string {
+	if snapper == nil {
+		return nil
+	}
+
+	snapshot := snapper.Snapshot()
+	keys := make([]string, 0, len(snapshot))
+	for k := range snapshot {
+		keys = append(keys, k)
+	}
+
+	return keys
+}
