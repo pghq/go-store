@@ -109,8 +109,8 @@ type Filter interface {
 }
 
 // Keys gets the keys from a snapper
-func Keys(snapper Snapper) []string{
-	if snapper == nil{
+func Keys(snapper Snapper) []string {
+	if snapper == nil {
 		return nil
 	}
 

@@ -22,7 +22,7 @@ func TestKeys(t *testing.T) {
 
 		keys := Keys(snapper)
 		assert.Contains(t, keys, "key1")
-		assert.Contains(t, keys,"key2")
+		assert.Contains(t, keys, "key2")
 	})
 }
 
@@ -30,6 +30,6 @@ type snapper struct {
 	Value map[string]interface{}
 }
 
-func (s *snapper) Snapshot() map[string]interface{}{
+func (s *snapper) Snapshot() map[string]interface{} {
 	return s.Value
 }
