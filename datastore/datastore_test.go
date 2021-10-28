@@ -36,13 +36,13 @@ func TestRepository(t *testing.T) {
 }
 
 func TestRepository_Add(t *testing.T) {
-	t.Run("ignores undefined items", func(t *testing.T) {
+	t.Run("raises nil item errors", func(t *testing.T) {
 		client := mock.NewClient(t)
 		defer client.Assert(t)
 
 		r, _ := New(client)
-		err := r.Add(context.TODO(), "tests")
-		assert.Nil(t, err)
+		err := r.Add(context.TODO(), "tests", nil)
+		assert.NotNil(t, err)
 	})
 
 	t.Run("raises transaction errors", func(t *testing.T) {
@@ -132,32 +132,44 @@ func TestRepository_Add(t *testing.T) {
 	})
 
 	t.Run("raises bad item errors", func(t *testing.T) {
-		transaction := mock.NewTransaction(t)
-		transaction.Expect("Rollback").
-			Return(nil)
-		defer transaction.Assert(t)
-
 		client := mock.NewClient(t)
-		client.Expect("Transaction", context.TODO()).
-			Return(transaction, nil)
-		defer client.Assert(t)
-
 		r, _ := New(client)
-
-		err := r.Add(context.TODO(), "tests", nil)
+		err := r.Add(context.TODO(), "tests", "item")
 		assert.NotNil(t, err)
 	})
 
-	t.Run("can add", func(t *testing.T) {
-		expect := mock.NewAdd(t)
-		expect.Expect("To", "tests").
-			Return(expect)
-		expect.Expect("Item", map[string]interface{}{"key": 1337}).
-			Return(expect)
+	t.Run("raises bad slice errors", func(t *testing.T) {
+		client := mock.NewClient(t)
+		r, _ := New(client)
+		err := r.Add(context.TODO(), "tests", []string{"item"})
+		assert.NotNil(t, err)
+	})
+
+	t.Run("raises empty slice errors", func(t *testing.T) {
+		client := mock.NewClient(t)
+		r, _ := New(client)
+		err := r.Add(context.TODO(), "tests", []interface{}{})
+		assert.NotNil(t, err)
+	})
+
+	t.Run("can add one", func(t *testing.T) {
+		items := []map[string]interface{}{
+			{"key": 1337},
+		}
+
+		execute := mock.NewAdd(t)
+		for _, item := range items{
+			execute.Expect("To", "tests").
+				Return(execute)
+			execute.Expect("Item", item).
+				Return(execute)
+		}
 
 		transaction := mock.NewTransaction(t)
-		transaction.Expect("Execute", expect.To("tests").Item(map[string]interface{}{"key": 1337})).
-			Return(0, nil)
+		for range items{
+			transaction.Expect("Execute", execute).
+				Return(0, nil)
+		}
 		transaction.Expect("Commit").
 			Return(nil)
 		transaction.Expect("Rollback").
@@ -165,17 +177,21 @@ func TestRepository_Add(t *testing.T) {
 		defer transaction.Assert(t)
 
 		add := mock.NewAdd(t)
-		add.Expect("To", "tests").
-			Return(add)
-		add.Expect("Item", map[string]interface{}{"key": 1337}).
-			Return(add)
+		for _, item := range items{
+			add.Expect("To", "tests").
+				Return(add)
+			add.Expect("Item", item).
+				Return(add)
+		}
 		defer add.Assert(t)
 
 		client := mock.NewClient(t)
 		client.Expect("Transaction", context.TODO()).
 			Return(transaction, nil)
-		client.Expect("Add").
-			Return(add)
+		for range items{
+			client.Expect("Add").
+				Return(add)
+		}
 		defer client.Assert(t)
 
 		r, _ := New(client)
@@ -186,6 +202,114 @@ func TestRepository_Add(t *testing.T) {
 
 		item.Key = 1337
 		err := r.Add(context.TODO(), "tests", &item)
+		assert.Nil(t, err)
+	})
+
+	t.Run("can add many", func(t *testing.T) {
+		items := []map[string]interface{}{
+			{"key": 1337},
+			{"key": 1337},
+		}
+
+		execute := mock.NewAdd(t)
+		for _, item := range items{
+			execute.Expect("To", "tests").
+				Return(execute)
+			execute.Expect("Item", item).
+				Return(execute)
+		}
+
+		transaction := mock.NewTransaction(t)
+		for range items{
+			transaction.Expect("Execute", execute).
+				Return(0, nil)
+		}
+		transaction.Expect("Commit").
+			Return(nil)
+		transaction.Expect("Rollback").
+			Return(nil)
+		defer transaction.Assert(t)
+
+		add := mock.NewAdd(t)
+		for _, item := range items{
+			add.Expect("To", "tests").
+				Return(add)
+			add.Expect("Item", item).
+				Return(add)
+		}
+		defer add.Assert(t)
+
+		client := mock.NewClient(t)
+		client.Expect("Transaction", context.TODO()).
+			Return(transaction, nil)
+		for range items{
+			client.Expect("Add").
+				Return(add)
+		}
+		defer client.Assert(t)
+
+		r, _ := New(client)
+
+		var item struct {
+			Key int `db:"key"`
+		}
+
+		item.Key = 1337
+
+		var item2 struct {
+			Key int `db:"key"`
+		}
+
+		item2.Key = 1337
+		err := r.Add(context.TODO(), "tests", []interface{}{&item, &item2})
+		assert.Nil(t, err)
+	})
+
+	t.Run("can add map slice", func(t *testing.T) {
+		items := []map[string]interface{}{
+			{"key": 1337},
+			{"key": 1337},
+		}
+
+		execute := mock.NewAdd(t)
+		for _, item := range items{
+			execute.Expect("To", "tests").
+				Return(execute)
+			execute.Expect("Item", item).
+				Return(execute)
+		}
+
+		transaction := mock.NewTransaction(t)
+		for range items{
+			transaction.Expect("Execute", execute).
+				Return(0, nil)
+		}
+		transaction.Expect("Commit").
+			Return(nil)
+		transaction.Expect("Rollback").
+			Return(nil)
+		defer transaction.Assert(t)
+
+		add := mock.NewAdd(t)
+		for _, item := range items{
+			add.Expect("To", "tests").
+				Return(add)
+			add.Expect("Item", item).
+				Return(add)
+		}
+		defer add.Assert(t)
+
+		client := mock.NewClient(t)
+		client.Expect("Transaction", context.TODO()).
+			Return(transaction, nil)
+		for range items{
+			client.Expect("Add").
+				Return(add)
+		}
+		defer client.Assert(t)
+
+		r, _ := New(client)
+		err := r.Add(context.TODO(), "tests", items)
 		assert.Nil(t, err)
 	})
 }

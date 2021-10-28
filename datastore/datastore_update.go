@@ -9,8 +9,8 @@ import (
 )
 
 // Update updates an item matching a filter
-func (r *Repository) Update(ctx context.Context, collection string, filter client.Filter, i interface{}) (int, error) {
-	item, err := r.item(i)
+func (r *Repository) Update(ctx context.Context, collection string, filter client.Filter, data interface{}) (int, error) {
+	item, err := r.item(data)
 	if err != nil {
 		return 0, errors.Wrap(err)
 	}
