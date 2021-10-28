@@ -158,7 +158,7 @@ func TestRepository_Add(t *testing.T) {
 		}
 
 		execute := mock.NewAdd(t)
-		for _, item := range items{
+		for _, item := range items {
 			execute.Expect("To", "tests").
 				Return(execute)
 			execute.Expect("Item", item).
@@ -166,7 +166,7 @@ func TestRepository_Add(t *testing.T) {
 		}
 
 		transaction := mock.NewTransaction(t)
-		for range items{
+		for range items {
 			transaction.Expect("Execute", execute).
 				Return(0, nil)
 		}
@@ -177,7 +177,7 @@ func TestRepository_Add(t *testing.T) {
 		defer transaction.Assert(t)
 
 		add := mock.NewAdd(t)
-		for _, item := range items{
+		for _, item := range items {
 			add.Expect("To", "tests").
 				Return(add)
 			add.Expect("Item", item).
@@ -188,7 +188,7 @@ func TestRepository_Add(t *testing.T) {
 		client := mock.NewClient(t)
 		client.Expect("Transaction", context.TODO()).
 			Return(transaction, nil)
-		for range items{
+		for range items {
 			client.Expect("Add").
 				Return(add)
 		}
@@ -212,7 +212,7 @@ func TestRepository_Add(t *testing.T) {
 		}
 
 		execute := mock.NewAdd(t)
-		for _, item := range items{
+		for _, item := range items {
 			execute.Expect("To", "tests").
 				Return(execute)
 			execute.Expect("Item", item).
@@ -220,7 +220,7 @@ func TestRepository_Add(t *testing.T) {
 		}
 
 		transaction := mock.NewTransaction(t)
-		for range items{
+		for range items {
 			transaction.Expect("Execute", execute).
 				Return(0, nil)
 		}
@@ -231,7 +231,7 @@ func TestRepository_Add(t *testing.T) {
 		defer transaction.Assert(t)
 
 		add := mock.NewAdd(t)
-		for _, item := range items{
+		for _, item := range items {
 			add.Expect("To", "tests").
 				Return(add)
 			add.Expect("Item", item).
@@ -242,7 +242,7 @@ func TestRepository_Add(t *testing.T) {
 		client := mock.NewClient(t)
 		client.Expect("Transaction", context.TODO()).
 			Return(transaction, nil)
-		for range items{
+		for range items {
 			client.Expect("Add").
 				Return(add)
 		}
@@ -272,7 +272,7 @@ func TestRepository_Add(t *testing.T) {
 		}
 
 		execute := mock.NewAdd(t)
-		for _, item := range items{
+		for _, item := range items {
 			execute.Expect("To", "tests").
 				Return(execute)
 			execute.Expect("Item", item).
@@ -280,7 +280,7 @@ func TestRepository_Add(t *testing.T) {
 		}
 
 		transaction := mock.NewTransaction(t)
-		for range items{
+		for range items {
 			transaction.Expect("Execute", execute).
 				Return(0, nil)
 		}
@@ -291,7 +291,7 @@ func TestRepository_Add(t *testing.T) {
 		defer transaction.Assert(t)
 
 		add := mock.NewAdd(t)
-		for _, item := range items{
+		for _, item := range items {
 			add.Expect("To", "tests").
 				Return(add)
 			add.Expect("Item", item).
@@ -302,7 +302,7 @@ func TestRepository_Add(t *testing.T) {
 		client := mock.NewClient(t)
 		client.Expect("Transaction", context.TODO()).
 			Return(transaction, nil)
-		for range items{
+		for range items {
 			client.Expect("Add").
 				Return(add)
 		}

@@ -10,7 +10,7 @@ import (
 // Add adds items(s) to the repository
 func (r *Repository) Add(ctx context.Context, collection string, data interface{}) error {
 	items, err := r.items(data)
-	if err != nil{
+	if err != nil {
 		return errors.Wrap(err)
 	}
 
@@ -36,11 +36,11 @@ func (r *Repository) Add(ctx context.Context, collection string, data interface{
 
 // items converts an interface to a slice of maps using reflection
 func (r *Repository) items(in interface{}) ([]map[string]interface{}, error) {
-	if in == nil{
+	if in == nil {
 		return nil, errors.New("nil value passed")
 	}
 
-	if v, ok := in.([]map[string]interface{}); ok{
+	if v, ok := in.([]map[string]interface{}); ok {
 		return v, nil
 	}
 
@@ -49,9 +49,9 @@ func (r *Repository) items(in interface{}) ([]map[string]interface{}, error) {
 		v = v.Elem()
 	}
 
-	if v.Kind() != reflect.Slice{
+	if v.Kind() != reflect.Slice {
 		item, err := r.item(v.Interface())
-		if err != nil{
+		if err != nil {
 			return nil, errors.Wrap(err)
 		}
 		return []map[string]interface{}{item}, nil
@@ -64,7 +64,7 @@ func (r *Repository) items(in interface{}) ([]map[string]interface{}, error) {
 	res := make([]map[string]interface{}, v.Len())
 	for i := 0; i < v.Len(); i++ {
 		item, err := r.item(v.Index(i).Interface())
-		if err != nil{
+		if err != nil {
 			return nil, errors.Wrap(err)
 		}
 		res[i] = item
@@ -75,7 +75,7 @@ func (r *Repository) items(in interface{}) ([]map[string]interface{}, error) {
 
 // item converts a struct to a map using reflection
 // variation of: https://play.golang.org/p/2Qi3thFf--
-func (r *Repository) item(in interface{}) (map[string]interface{}, error){
+func (r *Repository) item(in interface{}) (map[string]interface{}, error) {
 	if v, ok := in.(map[string]interface{}); ok {
 		return v, nil
 	}
