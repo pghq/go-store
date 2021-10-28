@@ -3,6 +3,7 @@ package mock
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -174,7 +175,7 @@ func (q *Query) First(first int) client.Query {
 	return query
 }
 
-func (q *Query) After(key string, value interface{}) client.Query {
+func (q *Query) After(key string, value time.Time) client.Query {
 	q.t.Helper()
 	res := q.Call(q.t, key, value)
 	if len(res) != 1 {
@@ -208,30 +209,24 @@ func (q *Query) Return(key string, args ...interface{}) client.Query {
 	return query
 }
 
-func (q *Query) Execute(ctx context.Context) (client.Cursor, error) {
+func (q *Query) Execute(ctx context.Context, dst interface{}) error {
 	q.t.Helper()
-	res := q.Call(q.t, ctx)
-	if len(res) != 2 {
+	res := q.Call(q.t, ctx, dst)
+	if len(res) != 1 {
 		q.fail(q.t, "unexpected length of return values")
-		return nil, nil
+		return nil
 	}
 
-	if res[1] != nil {
-		err, ok := res[1].(error)
+	if res[0] != nil {
+		err, ok := res[0].(error)
 		if !ok {
 			q.fail(q.t, "unexpected type of return value")
-			return nil, nil
+			return nil
 		}
-		return nil, err
+		return err
 	}
 
-	cursor, ok := res[0].(client.Cursor)
-	if !ok {
-		q.fail(q.t, "unexpected type of return value")
-		return nil, nil
-	}
-
-	return cursor, nil
+	return nil
 }
 
 // NewQuery creates a mock datastore.Query

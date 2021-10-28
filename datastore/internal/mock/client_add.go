@@ -4,8 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/pghq/go-datastore/datastore/client"
 )
 
@@ -160,15 +158,4 @@ func NewAdd(t *testing.T) *Add {
 	}
 
 	return &a
-}
-
-// NewAddWithFail creates a mock datastore.Add with an expected failure
-func NewAddWithFail(t *testing.T, expect ...interface{}) *Add {
-	a := NewAdd(t)
-	a.fail = func(v ...interface{}) {
-		t.Helper()
-		assert.Equal(t, append([]interface{}{t}, expect...), v)
-	}
-
-	return a
 }

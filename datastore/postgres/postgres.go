@@ -29,8 +29,6 @@ import (
 	"github.com/pghq/go-museum/museum/diagnostic/errors"
 	"github.com/pghq/go-museum/museum/diagnostic/log"
 	"github.com/pressly/goose/v3"
-
-	"github.com/pghq/go-datastore/datastore/client"
 )
 
 const (
@@ -152,43 +150,6 @@ type Pool interface {
 	Query(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error)
 	Exec(ctx context.Context, sql string, args ...interface{}) (pgconn.CommandTag, error)
 	Begin(ctx context.Context) (pgx.Tx, error)
-}
-
-// Cursor represents an instance of a Cursor
-type Cursor struct {
-	dest []interface{}
-	rows pgx.Rows
-}
-
-func (c *Cursor) Next() bool {
-	return c.rows.Next()
-}
-
-func (c *Cursor) Decode(values ...interface{}) error {
-	if err := c.rows.Scan(values...); err != nil {
-		return errors.Wrap(err)
-	}
-
-	return nil
-}
-
-func (c *Cursor) Close() {
-	c.rows.Close()
-}
-
-func (c *Cursor) Error() error {
-	if err := c.rows.Err(); err != nil {
-		return errors.Wrap(err)
-	}
-
-	return nil
-}
-
-// NewCursor constructs a new cursor instance.
-func NewCursor(rows pgx.Rows) client.Cursor {
-	return &Cursor{
-		rows: rows,
-	}
 }
 
 // PGXLogger is an instance of the pgx Logger

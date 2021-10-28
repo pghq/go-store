@@ -12,6 +12,6 @@ func (r *Repository) Query() client.Query {
 }
 
 // Search retrieves items from the repository matching criteria.
-func (r *Repository) Search(ctx context.Context, query client.Query) (client.Cursor, error) {
-	return query.Execute(ctx)
+func (r *Repository) Search(ctx context.Context, query client.Query, dst interface{}) error {
+	return query.Execute(ctx, dst)
 }

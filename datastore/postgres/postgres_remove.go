@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"time"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/pghq/go-museum/museum/diagnostic/errors"
@@ -21,41 +22,51 @@ type Remove struct {
 }
 
 func (r *Remove) From(collection string) client.Remove {
-	r.opts = append(r.opts, func(builder squirrel.DeleteBuilder) squirrel.DeleteBuilder {
-		return builder.From(collection)
-	})
+	if collection != "" {
+		r.opts = append(r.opts, func(builder squirrel.DeleteBuilder) squirrel.DeleteBuilder {
+			return builder.From(collection)
+		})
+	}
 
 	return r
 }
 
 func (r *Remove) Filter(filter client.Filter) client.Remove {
-	r.opts = append(r.opts, func(builder squirrel.DeleteBuilder) squirrel.DeleteBuilder {
-		return builder.Where(filter)
-	})
+	if filter != nil {
+		r.opts = append(r.opts, func(builder squirrel.DeleteBuilder) squirrel.DeleteBuilder {
+			return builder.Where(filter)
+		})
+	}
 
 	return r
 }
 
 func (r *Remove) Order(by string) client.Remove {
-	r.opts = append(r.opts, func(builder squirrel.DeleteBuilder) squirrel.DeleteBuilder {
-		return builder.OrderBy(by)
-	})
+	if by != "" {
+		r.opts = append(r.opts, func(builder squirrel.DeleteBuilder) squirrel.DeleteBuilder {
+			return builder.OrderBy(by)
+		})
+	}
 
 	return r
 }
 
 func (r *Remove) First(first int) client.Remove {
-	r.opts = append(r.opts, func(builder squirrel.DeleteBuilder) squirrel.DeleteBuilder {
-		return builder.Limit(uint64(first))
-	})
+	if first > 0 {
+		r.opts = append(r.opts, func(builder squirrel.DeleteBuilder) squirrel.DeleteBuilder {
+			return builder.Limit(uint64(first))
+		})
+	}
 
 	return r
 }
 
-func (r *Remove) After(key string, value interface{}) client.Remove {
-	r.opts = append(r.opts, func(builder squirrel.DeleteBuilder) squirrel.DeleteBuilder {
-		return builder.Where(squirrel.GtOrEq{key: value})
-	})
+func (r *Remove) After(key string, value time.Time) client.Remove {
+	if key != "" && !value.IsZero() {
+		r.opts = append(r.opts, func(builder squirrel.DeleteBuilder) squirrel.DeleteBuilder {
+			return builder.Where(squirrel.GtOrEq{key: value})
+		})
+	}
 
 	return r
 }

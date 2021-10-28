@@ -13,7 +13,10 @@
 // Package client provides resources for data persistence and retrieval.
 package client
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 // Client represents a client for operating on a database.
 type Client interface {
@@ -37,7 +40,7 @@ type Transaction interface {
 type Add interface {
 	Encoder
 	To(collection string) Add
-	Item(snapshot map[string]interface{}) Add
+	Item(value map[string]interface{}) Add
 	Query(query Query) Add
 	Execute(ctx context.Context) (int, error)
 }
@@ -46,7 +49,7 @@ type Add interface {
 type Update interface {
 	Encoder
 	In(collection string) Update
-	Item(snapshot map[string]interface{}) Update
+	Item(value map[string]interface{}) Update
 	Filter(filter Filter) Update
 	Execute(ctx context.Context) (int, error)
 }
@@ -58,26 +61,13 @@ type Remove interface {
 	Filter(filter Filter) Remove
 	Order(by string) Remove
 	First(first int) Remove
-	After(key string, value interface{}) Remove
+	After(key string, value time.Time) Remove
 	Execute(ctx context.Context) (int, error)
-}
-
-// Snapper is an interface for any single object in the database.
-type Snapper interface {
-	Snapshot() map[string]interface{}
 }
 
 // Encoder represents a statement encoder
 type Encoder interface {
 	Statement() (string, []interface{}, error)
-}
-
-// Cursor represents an iterator like object for paginated db responses
-type Cursor interface {
-	Next() bool
-	Decode(values ...interface{}) error
-	Close()
-	Error() error
 }
 
 // Query represents a query builder
@@ -89,9 +79,9 @@ type Query interface {
 	Filter(filter Filter) Query
 	Order(by string) Query
 	First(first int) Query
-	After(key string, value interface{}) Query
+	After(key string, value time.Time) Query
 	Return(key string, args ...interface{}) Query
-	Execute(ctx context.Context) (Cursor, error)
+	Execute(ctx context.Context, dst interface{}) error
 }
 
 // Filter represents criteria for querying the collection
@@ -106,19 +96,4 @@ type Filter interface {
 	NotContains(key string, value interface{}) Filter
 	Or(another Filter) Filter
 	And(another Filter) Filter
-}
-
-// Keys gets the keys from a snapper
-func Keys(snapper Snapper) []string {
-	if snapper == nil {
-		return nil
-	}
-
-	snapshot := snapper.Snapshot()
-	keys := make([]string, 0, len(snapshot))
-	for k := range snapshot {
-		keys = append(keys, k)
-	}
-
-	return keys
 }

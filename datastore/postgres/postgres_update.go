@@ -21,25 +21,31 @@ type Update struct {
 }
 
 func (a *Update) In(collection string) client.Update {
-	a.opts = append(a.opts, func(builder squirrel.UpdateBuilder) squirrel.UpdateBuilder {
-		return builder.Table(collection)
-	})
+	if collection != "" {
+		a.opts = append(a.opts, func(builder squirrel.UpdateBuilder) squirrel.UpdateBuilder {
+			return builder.Table(collection)
+		})
+	}
 
 	return a
 }
 
-func (a *Update) Item(snapshot map[string]interface{}) client.Update {
-	a.opts = append(a.opts, func(builder squirrel.UpdateBuilder) squirrel.UpdateBuilder {
-		return builder.SetMap(snapshot)
-	})
+func (a *Update) Item(value map[string]interface{}) client.Update {
+	if value != nil {
+		a.opts = append(a.opts, func(builder squirrel.UpdateBuilder) squirrel.UpdateBuilder {
+			return builder.SetMap(value)
+		})
+	}
 
 	return a
 }
 
 func (a *Update) Filter(filter client.Filter) client.Update {
-	a.opts = append(a.opts, func(builder squirrel.UpdateBuilder) squirrel.UpdateBuilder {
-		return builder.Where(filter)
-	})
+	if filter != nil {
+		a.opts = append(a.opts, func(builder squirrel.UpdateBuilder) squirrel.UpdateBuilder {
+			return builder.Where(filter)
+		})
+	}
 
 	return a
 }

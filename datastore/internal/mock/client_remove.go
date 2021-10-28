@@ -3,8 +3,7 @@ package mock
 import (
 	"context"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
+	"time"
 
 	"github.com/pghq/go-datastore/datastore/client"
 )
@@ -123,7 +122,7 @@ func (r *Remove) First(first int) client.Remove {
 	return remove
 }
 
-func (r *Remove) After(key string, value interface{}) client.Remove {
+func (r *Remove) After(key string, value time.Time) client.Remove {
 	r.t.Helper()
 	res := r.Call(r.t, key, value)
 	if len(res) != 1 {
@@ -194,15 +193,4 @@ func NewRemove(t *testing.T) *Remove {
 	}
 
 	return &r
-}
-
-// NewRemoveWithFail creates a mock datastore.Remove with an expected failure
-func NewRemoveWithFail(t *testing.T, expect ...interface{}) *Remove {
-	r := NewRemove(t)
-	r.fail = func(v ...interface{}) {
-		t.Helper()
-		assert.Equal(t, append([]interface{}{t}, expect...), v)
-	}
-
-	return r
 }

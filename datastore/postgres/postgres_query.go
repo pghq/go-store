@@ -2,8 +2,10 @@ package postgres
 
 import (
 	"context"
+	"time"
 
 	"github.com/Masterminds/squirrel"
+	"github.com/georgysavva/scany/pgxscan"
 	"github.com/jackc/pgx/v4"
 	"github.com/pghq/go-museum/museum/diagnostic/errors"
 
@@ -30,57 +32,71 @@ func (q *Query) Secondary() client.Query {
 }
 
 func (q *Query) From(collection string) client.Query {
-	q.opts = append(q.opts, func(builder squirrel.SelectBuilder) squirrel.SelectBuilder {
-		return builder.From(collection)
-	})
+	if collection != "" {
+		q.opts = append(q.opts, func(builder squirrel.SelectBuilder) squirrel.SelectBuilder {
+			return builder.From(collection)
+		})
+	}
 
 	return q
 }
 
 func (q *Query) And(collection string, args ...interface{}) client.Query {
-	q.opts = append(q.opts, func(builder squirrel.SelectBuilder) squirrel.SelectBuilder {
-		return builder.Join(collection, args...)
-	})
+	if collection != "" {
+		q.opts = append(q.opts, func(builder squirrel.SelectBuilder) squirrel.SelectBuilder {
+			return builder.Join(collection, args...)
+		})
+	}
 
 	return q
 }
 
 func (q *Query) Filter(filter client.Filter) client.Query {
-	q.opts = append(q.opts, func(builder squirrel.SelectBuilder) squirrel.SelectBuilder {
-		return builder.Where(filter)
-	})
+	if filter != nil {
+		q.opts = append(q.opts, func(builder squirrel.SelectBuilder) squirrel.SelectBuilder {
+			return builder.Where(filter)
+		})
+	}
 
 	return q
 }
 
 func (q *Query) Order(by string) client.Query {
-	q.opts = append(q.opts, func(builder squirrel.SelectBuilder) squirrel.SelectBuilder {
-		return builder.OrderBy(by)
-	})
+	if by != "" {
+		q.opts = append(q.opts, func(builder squirrel.SelectBuilder) squirrel.SelectBuilder {
+			return builder.OrderBy(by)
+		})
+	}
 
 	return q
 }
 
 func (q *Query) First(first int) client.Query {
-	q.opts = append(q.opts, func(builder squirrel.SelectBuilder) squirrel.SelectBuilder {
-		return builder.Limit(uint64(first))
-	})
+	if first > 0 {
+		q.opts = append(q.opts, func(builder squirrel.SelectBuilder) squirrel.SelectBuilder {
+			return builder.Limit(uint64(first))
+		})
+	}
 
 	return q
 }
 
-func (q *Query) After(key string, value interface{}) client.Query {
-	q.opts = append(q.opts, func(builder squirrel.SelectBuilder) squirrel.SelectBuilder {
-		return builder.Where(squirrel.GtOrEq{key: value})
-	})
+func (q *Query) After(key string, value time.Time) client.Query {
+	if key != "" && !value.IsZero() {
+		q.opts = append(q.opts, func(builder squirrel.SelectBuilder) squirrel.SelectBuilder {
+			return builder.Where(squirrel.GtOrEq{key: value})
+		})
+	}
 
 	return q
 }
 
 func (q *Query) Return(key string, args ...interface{}) client.Query {
-	q.opts = append(q.opts, func(builder squirrel.SelectBuilder) squirrel.SelectBuilder {
-		return builder.Column(key, args...)
-	})
+	if key != "" {
+		q.opts = append(q.opts, func(builder squirrel.SelectBuilder) squirrel.SelectBuilder {
+			return builder.Column(key, args...)
+		})
+	}
 
 	return q
 }
@@ -97,22 +113,21 @@ func (q *Query) Statement() (string, []interface{}, error) {
 	return builder.ToSql()
 }
 
-func (q *Query) Execute(ctx context.Context) (client.Cursor, error) {
+func (q *Query) Execute(ctx context.Context, dst interface{}) error {
 	sql, args, err := q.Statement()
 	if err != nil {
-		return nil, errors.BadRequest(err)
+		return errors.BadRequest(err)
 	}
 
-	rows, err := q.client.pool.Query(ctx, sql, args...)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, errors.NoContent(err)
+	if err := pgxscan.Select(ctx, q.client.pool, dst, sql, args...); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return errors.NoContent(err)
 		}
 
-		return nil, errors.Wrap(err)
+		return errors.Wrap(err)
 	}
 
-	return NewCursor(rows), nil
+	return nil
 }
 
 // NewQuery creates a new query for the Postgres database.
