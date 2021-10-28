@@ -302,7 +302,7 @@ func TestStore_Query(t *testing.T) {
 		rows.Expect("Err").Return(nil)
 		rows.Expect("Close")
 		defer rows.Assert(t)
-		primary.Expect("Query", context.TODO(), "SELECT runs FROM tests JOIN units ON runs.id = units.id WHERE coverage > $1 AND created_at >= $2 ORDER BY coverage DESC LIMIT 5", 50, now).
+		primary.Expect("Query", context.TODO(), "SELECT runs FROM tests JOIN units ON runs.id = units.id WHERE coverage > $1 AND created_at >= $2 ORDER BY coverage DESC LIMIT 5", 50, &now).
 			Return(rows, nil)
 		defer primary.Assert(t)
 
@@ -313,7 +313,7 @@ func TestStore_Query(t *testing.T) {
 			Order("coverage DESC").
 			Return("runs").
 			First(5).
-			After("created_at", now).
+			After("created_at", &now).
 			Execute(context.TODO(), &dst)
 		assert.Nil(t, err)
 	})
@@ -391,7 +391,7 @@ func TestStore_Remove(t *testing.T) {
 		remove := NewRemove(client)
 
 		now := time.Now()
-		primary.Expect("Exec", context.TODO(), "DELETE FROM tests WHERE coverage > $1 AND created_at >= $2 ORDER BY coverage DESC LIMIT 5", 50, now).
+		primary.Expect("Exec", context.TODO(), "DELETE FROM tests WHERE coverage > $1 AND created_at >= $2 ORDER BY coverage DESC LIMIT 5", 50, &now).
 			Return(pgconn.CommandTag{}, nil)
 		defer primary.Assert(t)
 
@@ -400,7 +400,7 @@ func TestStore_Remove(t *testing.T) {
 			Filter(client.Filter().Gt("coverage", 50)).
 			Order("coverage DESC").
 			First(5).
-			After("created_at", now).
+			After("created_at", &now).
 			Execute(context.TODO())
 		assert.Nil(t, err)
 	})

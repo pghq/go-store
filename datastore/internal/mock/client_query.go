@@ -175,7 +175,7 @@ func (q *Query) First(first int) client.Query {
 	return query
 }
 
-func (q *Query) After(key string, value time.Time) client.Query {
+func (q *Query) After(key string, value *time.Time) client.Query {
 	q.t.Helper()
 	res := q.Call(q.t, key, value)
 	if len(res) != 1 {
