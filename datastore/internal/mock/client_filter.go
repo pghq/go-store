@@ -3,8 +3,6 @@ package mock
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/pghq/go-datastore/datastore/client"
 )
 
@@ -217,15 +215,4 @@ func NewFilter(t *testing.T) *Filter {
 	}
 
 	return &f
-}
-
-// NewFilterWithFail creates a mock datastore.Filter with an expected failure
-func NewFilterWithFail(t *testing.T, expect ...interface{}) *Filter {
-	f := NewFilter(t)
-	f.fail = func(v ...interface{}) {
-		t.Helper()
-		assert.Equal(t, append([]interface{}{t}, expect...), v)
-	}
-
-	return f
 }

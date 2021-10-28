@@ -4,8 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/pghq/go-datastore/datastore/client"
 )
 
@@ -160,15 +158,4 @@ func NewUpdate(t *testing.T) *Update {
 	}
 
 	return &u
-}
-
-// NewUpdateWithFail creates a mock datastore.Update with an expected failure
-func NewUpdateWithFail(t *testing.T, expect ...interface{}) *Update {
-	u := NewUpdate(t)
-	u.fail = func(v ...interface{}) {
-		t.Helper()
-		assert.Equal(t, append([]interface{}{t}, expect...), v)
-	}
-
-	return u
 }

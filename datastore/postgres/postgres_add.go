@@ -28,10 +28,12 @@ func (a *Add) To(collection string) client.Add {
 	return a
 }
 
-func (a *Add) Item(snapshot map[string]interface{}) client.Add {
-	a.opts = append(a.opts, func(builder squirrel.InsertBuilder) squirrel.InsertBuilder {
-		return builder.SetMap(snapshot)
-	})
+func (a *Add) Item(value map[string]interface{}) client.Add {
+	if value != nil {
+		a.opts = append(a.opts, func(builder squirrel.InsertBuilder) squirrel.InsertBuilder {
+			return builder.SetMap(value)
+		})
+	}
 
 	return a
 }

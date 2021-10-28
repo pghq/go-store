@@ -22,6 +22,13 @@ import (
 // Repository is an instance of a postgres Database
 type Repository struct {
 	client client.Client
+	tag    string
+}
+
+// Tag sets the tag for adding to repository
+func (r *Repository) Tag(tag string) *Repository {
+	r.tag = tag
+	return r
 }
 
 // Filter gets a new filter for searching the repository.
@@ -39,9 +46,9 @@ func New(client client.Client) (*Repository, error) {
 		return nil, errors.Wrap(err)
 	}
 
-	r := Repository{
+	r := &Repository{
 		client: client,
 	}
 
-	return &r, nil
+	return r.Tag("db"), nil
 }

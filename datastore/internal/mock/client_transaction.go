@@ -4,8 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/pghq/go-datastore/datastore/client"
 )
 
@@ -123,15 +121,4 @@ func NewTransaction(t *testing.T) *Transaction {
 	}
 
 	return &tx
-}
-
-// NewTransactionWithFail creates a mock datastore.Transaction with an expected failure
-func NewTransactionWithFail(t *testing.T, expect ...interface{}) *Transaction {
-	tx := NewTransaction(t)
-	tx.fail = func(v ...interface{}) {
-		t.Helper()
-		assert.Equal(t, append([]interface{}{t}, expect...), v)
-	}
-
-	return tx
 }

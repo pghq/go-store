@@ -111,76 +111,6 @@ func TestStore(t *testing.T) {
 		assert.NotNil(t, err)
 	})
 
-	t.Run("can create a new cursor", func(t *testing.T) {
-		rows := NewPostgresRows(t)
-		defer rows.Assert(t)
-
-		c := NewCursor(rows)
-		assert.NotNil(t, c)
-	})
-
-	t.Run("cursor can be closed", func(t *testing.T) {
-		rows := NewPostgresRows(t)
-		defer rows.Assert(t)
-
-		rows.Expect("Close")
-
-		c := NewCursor(rows)
-		defer c.Close()
-	})
-
-	t.Run("cursor handles decode errors", func(t *testing.T) {
-		rows := NewPostgresRows(t)
-		defer rows.Assert(t)
-
-		rows.Expect("Scan").
-			Return(errors.New("an error has occurred"))
-
-		c := NewCursor(rows)
-		assert.NotNil(t, c)
-		err := c.Decode()
-		assert.NotNil(t, err)
-	})
-
-	t.Run("cursor can decode values", func(t *testing.T) {
-		rows := NewPostgresRows(t)
-		defer rows.Assert(t)
-
-		var one int
-		rows.Expect("Scan", &one).
-			Return(nil)
-		rows.Expect("Err").
-			Return(nil)
-
-		c := NewCursor(rows)
-		err := c.Decode(&one)
-		assert.Nil(t, err)
-		assert.Nil(t, c.Error())
-	})
-
-	t.Run("cursor keeps track of errors", func(t *testing.T) {
-		rows := NewPostgresRows(t)
-		defer rows.Assert(t)
-
-		rows.Expect("Err").
-			Return(errors.New("an error has occurred"))
-
-		c := NewCursor(rows)
-		err := c.Error()
-		assert.NotNil(t, err)
-	})
-
-	t.Run("cursor iterates through values", func(t *testing.T) {
-		rows := NewPostgresRows(t)
-		defer rows.Assert(t)
-
-		rows.Expect("Next").
-			Return(false)
-
-		c := NewCursor(rows)
-		c.Next()
-	})
-
 	t.Run("can recognize integrity violation errors", func(t *testing.T) {
 		err := &pgconn.PgError{Code: pgerrcode.IntegrityConstraintViolation}
 		assert.True(t, IsIntegrityConstraintViolation(err))
@@ -323,7 +253,7 @@ func TestStore_Query(t *testing.T) {
 		client, _, _ := setup(t)
 		query := NewQuery(client)
 
-		_, err := query.Execute(context.TODO())
+		err := query.Execute(context.TODO(), nil)
 		assert.NotNil(t, err)
 		assert.False(t, errors.IsFatal(err))
 	})
@@ -336,10 +266,11 @@ func TestStore_Query(t *testing.T) {
 			Return(nil, pgx.ErrNoRows)
 		defer primary.Assert(t)
 
-		_, err := query.
+		var dst []map[string]interface{}
+		err := query.
 			From("tests").
 			Return("coverage").
-			Execute(context.TODO())
+			Execute(context.TODO(), dst)
 		assert.NotNil(t, err)
 		assert.False(t, errors.IsFatal(err))
 	})
@@ -352,10 +283,10 @@ func TestStore_Query(t *testing.T) {
 			Return(nil, errors.New("an error has occurred"))
 		defer primary.Assert(t)
 
-		_, err := query.
+		err := query.
 			From("tests").
 			Return("coverage").
-			Execute(context.TODO())
+			Execute(context.TODO(), nil)
 		assert.NotNil(t, err)
 		assert.True(t, errors.IsFatal(err))
 	})
@@ -364,33 +295,48 @@ func TestStore_Query(t *testing.T) {
 		client, primary, _ := setup(t)
 		query := NewQuery(client)
 
-		primary.Expect("Query", context.TODO(), "SELECT runs FROM tests JOIN units ON runs.id = units.id WHERE coverage > $1 AND id >= $2 ORDER BY coverage DESC LIMIT 5", 50, 2).
-			Return(NewPostgresRows(t), nil)
+		now := time.Now()
+		rows := NewPostgresRows(t)
+		rows.Expect("Close")
+		rows.Expect("Next").Return(false)
+		rows.Expect("Err").Return(nil)
+		rows.Expect("Close")
+		defer rows.Assert(t)
+		primary.Expect("Query", context.TODO(), "SELECT runs FROM tests JOIN units ON runs.id = units.id WHERE coverage > $1 AND created_at >= $2 ORDER BY coverage DESC LIMIT 5", 50, now).
+			Return(rows, nil)
 		defer primary.Assert(t)
 
-		_, err := query.From("tests").
+		var dst []map[string]interface{}
+		err := query.From("tests").
 			And("units ON runs.id = units.id").
 			Filter(client.Filter().Gt("coverage", 50)).
 			Order("coverage DESC").
 			Return("runs").
 			First(5).
-			After("id", 2).
-			Execute(context.TODO())
+			After("created_at", now).
+			Execute(context.TODO(), &dst)
 		assert.Nil(t, err)
 	})
 
 	t.Run("can execute on secondary", func(t *testing.T) {
 		client, _, secondary := setup(t)
 		query := NewQuery(client)
+		rows := NewPostgresRows(t)
+		rows.Expect("Close")
+		rows.Expect("Next").Return(false)
+		rows.Expect("Err").Return(nil)
+		rows.Expect("Close")
+		defer rows.Assert(t)
 		secondary.Expect("Query", context.TODO(), "SELECT runs FROM tests").
-			Return(NewPostgresRows(t), nil)
+			Return(rows, nil)
 		defer secondary.Assert(t)
 
-		_, err := query.
+		var dst []map[string]interface{}
+		err := query.
 			Secondary().
 			From("tests").
 			Return("runs").
-			Execute(context.TODO())
+			Execute(context.TODO(), &dst)
 		assert.Nil(t, err)
 	})
 }
@@ -444,7 +390,8 @@ func TestStore_Remove(t *testing.T) {
 		client, primary, _ := setup(t)
 		remove := NewRemove(client)
 
-		primary.Expect("Exec", context.TODO(), "DELETE FROM tests WHERE coverage > $1 AND id >= $2 ORDER BY coverage DESC LIMIT 5", 50, 2).
+		now := time.Now()
+		primary.Expect("Exec", context.TODO(), "DELETE FROM tests WHERE coverage > $1 AND created_at >= $2 ORDER BY coverage DESC LIMIT 5", 50, now).
 			Return(pgconn.CommandTag{}, nil)
 		defer primary.Assert(t)
 
@@ -453,7 +400,7 @@ func TestStore_Remove(t *testing.T) {
 			Filter(client.Filter().Gt("coverage", 50)).
 			Order("coverage DESC").
 			First(5).
-			After("id", 2).
+			After("created_at", now).
 			Execute(context.TODO())
 		assert.Nil(t, err)
 	})

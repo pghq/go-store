@@ -53,8 +53,9 @@ func TestRepository_Add(t *testing.T) {
 
 		r, _ := New(client)
 
-		item := mock.NewSnapper(t)
-		defer item.Assert(t)
+		item := map[string]interface{}{
+			"key": "value",
+		}
 
 		err := r.Add(context.TODO(), "tests", item)
 		assert.NotNil(t, err)
@@ -74,11 +75,6 @@ func TestRepository_Add(t *testing.T) {
 			Return(nil)
 		defer transaction.Assert(t)
 
-		item := mock.NewSnapper(t)
-		item.Expect("Snapshot").
-			Return(map[string]interface{}{"key": 1337})
-		defer item.Assert(t)
-
 		add := mock.NewAdd(t)
 		add.Expect("To", "tests").
 			Return(add)
@@ -95,7 +91,7 @@ func TestRepository_Add(t *testing.T) {
 
 		r, _ := New(client)
 
-		err := r.Add(context.TODO(), "tests", item)
+		err := r.Add(context.TODO(), "tests", map[string]interface{}{"key": 1337})
 		assert.NotNil(t, err)
 	})
 
@@ -122,11 +118,6 @@ func TestRepository_Add(t *testing.T) {
 			Return(add)
 		defer add.Assert(t)
 
-		item := mock.NewSnapper(t)
-		item.Expect("Snapshot").
-			Return(map[string]interface{}{"key": 1337})
-		defer item.Assert(t)
-
 		client := mock.NewClient(t)
 		client.Expect("Transaction", context.TODO()).
 			Return(transaction, nil)
@@ -136,7 +127,24 @@ func TestRepository_Add(t *testing.T) {
 
 		r, _ := New(client)
 
-		err := r.Add(context.TODO(), "tests", item)
+		err := r.Add(context.TODO(), "tests", map[string]interface{}{"key": 1337})
+		assert.NotNil(t, err)
+	})
+
+	t.Run("raises bad item errors", func(t *testing.T) {
+		transaction := mock.NewTransaction(t)
+		transaction.Expect("Rollback").
+			Return(nil)
+		defer transaction.Assert(t)
+
+		client := mock.NewClient(t)
+		client.Expect("Transaction", context.TODO()).
+			Return(transaction, nil)
+		defer client.Assert(t)
+
+		r, _ := New(client)
+
+		err := r.Add(context.TODO(), "tests", nil)
 		assert.NotNil(t, err)
 	})
 
@@ -163,11 +171,6 @@ func TestRepository_Add(t *testing.T) {
 			Return(add)
 		defer add.Assert(t)
 
-		item := mock.NewSnapper(t)
-		item.Expect("Snapshot").
-			Return(map[string]interface{}{"key": 1337})
-		defer item.Assert(t)
-
 		client := mock.NewClient(t)
 		client.Expect("Transaction", context.TODO()).
 			Return(transaction, nil)
@@ -177,7 +180,12 @@ func TestRepository_Add(t *testing.T) {
 
 		r, _ := New(client)
 
-		err := r.Add(context.TODO(), "tests", item)
+		var item struct {
+			Key int `db:"key"`
+		}
+
+		item.Key = 1337
+		err := r.Add(context.TODO(), "tests", &item)
 		assert.Nil(t, err)
 	})
 }
@@ -194,17 +202,19 @@ func TestRepository_Search(t *testing.T) {
 	})
 
 	t.Run("can execute", func(t *testing.T) {
+		var dst []map[string]interface{}
 		query := mock.NewQuery(t)
-		query.Expect("Execute", context.TODO()).
-			Return(mock.NewCursor(t), nil)
+		query.Expect("Execute", context.TODO(), &dst).
+			Return(nil)
 		defer query.Assert(t)
 
 		client := mock.NewClient(t)
 		defer client.Assert(t)
 
 		r, _ := New(client)
-		c, _ := r.Search(context.TODO(), query)
-		assert.NotNil(t, c)
+
+		err := r.Search(context.TODO(), query, &dst)
+		assert.Nil(t, err)
 	})
 }
 
@@ -245,12 +255,14 @@ func TestRepository_Filter(t *testing.T) {
 }
 
 func TestRepository_Update(t *testing.T) {
-	t.Run("can execute", func(t *testing.T) {
-		item := mock.NewSnapper(t)
-		item.Expect("Snapshot").
-			Return(map[string]interface{}{"key": 1337})
-		defer item.Assert(t)
+	t.Run("raises bad item errors", func(t *testing.T) {
+		client := mock.NewClient(t)
+		r, _ := New(client)
+		_, err := r.Update(context.TODO(), "tests", nil, nil)
+		assert.NotNil(t, err)
+	})
 
+	t.Run("can execute", func(t *testing.T) {
 		update := mock.NewUpdate(t)
 		update.Expect("In", "tests").
 			Return(update)
@@ -268,7 +280,7 @@ func TestRepository_Update(t *testing.T) {
 		defer client.Assert(t)
 
 		r, _ := New(client)
-		_, err := r.Update(context.TODO(), "tests", nil, item)
+		_, err := r.Update(context.TODO(), "tests", nil, map[string]interface{}{"key": 1337})
 		assert.Nil(t, err)
 	})
 }
