@@ -81,8 +81,8 @@ func (q *Query) First(first int) client.Query {
 	return q
 }
 
-func (q *Query) After(key string, value time.Time) client.Query {
-	if key != "" && !value.IsZero() {
+func (q *Query) After(key string, value *time.Time) client.Query {
+	if key != "" && value != nil && !value.IsZero() {
 		q.opts = append(q.opts, func(builder squirrel.SelectBuilder) squirrel.SelectBuilder {
 			return builder.Where(squirrel.GtOrEq{key: value})
 		})

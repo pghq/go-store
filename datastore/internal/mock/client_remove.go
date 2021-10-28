@@ -122,7 +122,7 @@ func (r *Remove) First(first int) client.Remove {
 	return remove
 }
 
-func (r *Remove) After(key string, value time.Time) client.Remove {
+func (r *Remove) After(key string, value *time.Time) client.Remove {
 	r.t.Helper()
 	res := r.Call(r.t, key, value)
 	if len(res) != 1 {

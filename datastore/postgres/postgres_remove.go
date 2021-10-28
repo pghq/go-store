@@ -61,8 +61,8 @@ func (r *Remove) First(first int) client.Remove {
 	return r
 }
 
-func (r *Remove) After(key string, value time.Time) client.Remove {
-	if key != "" && !value.IsZero() {
+func (r *Remove) After(key string, value *time.Time) client.Remove {
+	if key != "" && value != nil && !value.IsZero() {
 		r.opts = append(r.opts, func(builder squirrel.DeleteBuilder) squirrel.DeleteBuilder {
 			return builder.Where(squirrel.GtOrEq{key: value})
 		})

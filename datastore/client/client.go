@@ -61,7 +61,7 @@ type Remove interface {
 	Filter(filter Filter) Remove
 	Order(by string) Remove
 	First(first int) Remove
-	After(key string, value time.Time) Remove
+	After(key string, value *time.Time) Remove
 	Execute(ctx context.Context) (int, error)
 }
 
@@ -79,7 +79,7 @@ type Query interface {
 	Filter(filter Filter) Query
 	Order(by string) Query
 	First(first int) Query
-	After(key string, value time.Time) Query
+	After(key string, value *time.Time) Query
 	Return(key string, args ...interface{}) Query
 	Execute(ctx context.Context, dst interface{}) error
 }
