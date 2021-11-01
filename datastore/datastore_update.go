@@ -7,13 +7,13 @@ import (
 )
 
 // Update updates items matching filters
-func (ctx *Context) Update(collection string, filter client.Filter, data interface{}, first int) (int, error) {
+func (ctx *Context) Update(collection string, filter client.Filter, data interface{}) (int, error) {
 	item, err := ctx.repo.item(data)
 	if err != nil {
 		return 0, errors.Wrap(err)
 	}
 
-	command := ctx.repo.client.Update().In(collection).Filter(filter).First(first).Item(item)
+	command := ctx.repo.client.Update().In(collection).Filter(filter).Item(item)
 	count, err := ctx.tx.Execute(command)
 	if err != nil {
 		return 0, errors.Wrap(err)
