@@ -1,17 +1,23 @@
 package datastore
 
 import (
-	"context"
+	"github.com/pghq/go-museum/museum/diagnostic/errors"
 
 	"github.com/pghq/go-datastore/datastore/client"
 )
 
 // Remove removes items from the repository matching criteria.
-func (r *Repository) Remove(ctx context.Context, collection string, filter client.Filter, first int) (int, error) {
-	command := r.client.Remove().From(collection).Filter(filter)
+func (ctx *Context) Remove(collection string, filter client.Filter, first int) (int, error) {
+	command := ctx.repo.client.Remove().From(collection).Filter(filter)
 	if first != 0 {
 		command = command.First(first)
 	}
 
-	return command.Execute(ctx)
+	count, err := ctx.tx.Execute(command)
+	if err != nil {
+		_ = ctx.tx.Rollback()
+		return 0, errors.Wrap(err)
+	}
+
+	return count, nil
 }
