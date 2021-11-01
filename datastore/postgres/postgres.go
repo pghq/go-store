@@ -157,14 +157,12 @@ type PGXLogger struct{}
 
 func (l *PGXLogger) Log(_ context.Context, level pgx.LogLevel, msg string, data map[string]interface{}) {
 	switch level {
-	case pgx.LogLevelDebug:
-		log.Debugf("%s\n%s", msg, l.pretty(data))
 	case pgx.LogLevelInfo:
 		log.Infof("%s\n%s", msg, l.pretty(data))
 	case pgx.LogLevelWarn:
 		log.Warnf("%s\n%s", msg, l.pretty(data))
 	default:
-		errors.Send(errors.Newf("%s\n%s", msg, l.pretty(data)))
+		log.Debugf("%s\n%s", msg, l.pretty(data))
 	}
 }
 

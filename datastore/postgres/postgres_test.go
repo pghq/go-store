@@ -145,9 +145,8 @@ func TestStore(t *testing.T) {
 		assert.True(t, strings.Contains(buf.String(), "test: value"))
 
 		buf.Reset()
-		log.Level("error")
+		log.Level("debug")
 		l.Log(context.TODO(), pgx.LogLevelError, "an error has occurred", map[string]interface{}{"test": "value"})
-		assert.True(t, strings.Contains(buf.String(), "error"))
 		assert.True(t, strings.Contains(buf.String(), "test: value"))
 	})
 
@@ -435,6 +434,23 @@ func TestStore_Transaction(t *testing.T) {
 		add := mock.NewAdd(t)
 		add.Expect("Statement").
 			Return("", nil, errors.New("an error has occurred"))
+		defer add.Assert(t)
+
+		tx := transaction{ctx: context.TODO(), tx: ptx}
+		_, err := tx.Execute(add)
+		assert.NotNil(t, err)
+		assert.False(t, errors.IsFatal(err))
+	})
+
+	t.Run("raises integrity errors on execute", func(t *testing.T) {
+		ptx := NewPostgresTx(t)
+		ptx.Expect("Exec", context.TODO(), "").
+			Return(0, &pgconn.PgError{Code: pgerrcode.IntegrityConstraintViolation})
+		defer ptx.Assert(t)
+
+		add := mock.NewAdd(t)
+		add.Expect("Statement").
+			Return("", nil, nil)
 		defer add.Assert(t)
 
 		tx := transaction{ctx: context.TODO(), tx: ptx}
