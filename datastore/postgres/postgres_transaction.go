@@ -33,6 +33,9 @@ func (t *transaction) Execute(statement client.Encoder) (int, error) {
 
 	tag, err := t.tx.Exec(t.ctx, sql, args...)
 	if err != nil {
+		if IsIntegrityConstraintViolation(err) {
+			return 0, errors.BadRequest(err)
+		}
 		return 0, errors.Wrap(err)
 	}
 
