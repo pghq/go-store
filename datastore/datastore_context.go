@@ -9,21 +9,21 @@ import (
 )
 
 // Context creates a new data store context
-func (r *Repository) Context(ctx context.Context) (*Context, func() error, error) {
-	if ctx, ok := ctx.(*Context); ok{
-		return ctx, func() error{ return nil }, nil
+func (r *Repository) Context(ctx context.Context) (*Context, error) {
+	if ctx != nil{
+		if ctx, ok := ctx.(*Context); ok{
+			ctx := *ctx
+			ctx.child = true
+			return &ctx, nil
+		}
 	}
 
-	tx, err := NewContext(ctx, r)
-	if err != nil{
-		return nil, nil, errors.Wrap(err)
-	}
-
-	return tx, tx.tx.Rollback, nil
+	return NewContext(ctx, r)
 }
 
 // Context is a data store transactions
 type Context struct {
+	child bool
 	context.Context
 	repo *Repository
 	tx   client.Transaction
@@ -31,7 +31,20 @@ type Context struct {
 
 // Commit a datastore transaction
 func (ctx *Context) Commit() error {
+	if ctx.child {
+		return nil
+	}
+
 	return ctx.tx.Commit()
+}
+
+// Rollback a datastore transaction
+func (ctx *Context) Rollback() error {
+	if ctx.child {
+		return nil
+	}
+
+	return ctx.tx.Rollback()
 }
 
 // NewContext creates a new instance of the data store context
