@@ -9,12 +9,17 @@ import (
 )
 
 // Context creates a new data store context
-func (r *Repository) Context(ctx context.Context) (*Context, error) {
+func (r *Repository) Context(ctx context.Context) (*Context, func() error, error) {
 	if ctx, ok := ctx.(*Context); ok{
-		return ctx, nil
+		return ctx, func() error{ return nil }, nil
 	}
 
-	return NewContext(ctx, r)
+	tx, err := NewContext(ctx, r)
+	if err != nil{
+		return nil, nil, errors.Wrap(err)
+	}
+
+	return tx, tx.tx.Rollback, nil
 }
 
 // Context is a data store transactions
