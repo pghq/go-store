@@ -15,7 +15,6 @@ func (ctx *Context) Remove(collection string, filter client.Filter, first int) (
 
 	count, err := ctx.tx.Execute(command)
 	if err != nil {
-		_ = ctx.tx.Rollback()
 		return 0, errors.Wrap(err)
 	}
 
