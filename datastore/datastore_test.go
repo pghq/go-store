@@ -44,7 +44,7 @@ func TestRepository_Add(t *testing.T) {
 		r, _ := New(client)
 		tx, cancel, _ := r.Context(context.TODO())
 		defer cancel()
-		_, err := tx.Add("tests", nil)
+		err := tx.Add("tests", nil)
 		assert.NotNil(t, err)
 	})
 
@@ -61,12 +61,6 @@ func TestRepository_Add(t *testing.T) {
 	})
 
 	t.Run("raises execution errors", func(t *testing.T) {
-		expect := mock.NewAdd(t)
-		expect.Expect("To", "tests").
-			Return(expect)
-		expect.Expect("Item", map[string]interface{}{"key": 1337}).
-			Return(expect)
-
 		add := mock.NewAdd(t)
 		add.Expect("To", "tests").
 			Return(add)
@@ -76,7 +70,7 @@ func TestRepository_Add(t *testing.T) {
 
 		client := mock.NewClient(t)
 		client.Expect("Transaction", context.TODO()).
-			Return(expectFailedTransactionExecute(t, expect), nil)
+			Return(expectFailedTransactionExecute(t, add), nil)
 		client.Expect("Add").
 			Return(add)
 		defer client.Assert(t)
@@ -85,17 +79,11 @@ func TestRepository_Add(t *testing.T) {
 
 		tx, cancel, _ := r.Context(context.TODO())
 		defer cancel()
-		_, err := tx.Add("tests", map[string]interface{}{"key": 1337})
+		err := tx.Add("tests", map[string]interface{}{"key": 1337})
 		assert.NotNil(t, err)
 	})
 
 	t.Run("raises commit errors", func(t *testing.T) {
-		expect := mock.NewAdd(t)
-		expect.Expect("To", "tests").
-			Return(expect)
-		expect.Expect("Item", map[string]interface{}{"key": 1337}).
-			Return(expect)
-
 		add := mock.NewAdd(t)
 		add.Expect("To", "tests").
 			Return(add)
@@ -105,7 +93,7 @@ func TestRepository_Add(t *testing.T) {
 
 		client := mock.NewClient(t)
 		client.Expect("Transaction", context.TODO()).
-			Return(expectFailedTransactionCommit(t, expect), nil)
+			Return(expectFailedTransactionCommit(t, add), nil)
 		client.Expect("Add").
 			Return(add)
 		defer client.Assert(t)
@@ -114,7 +102,7 @@ func TestRepository_Add(t *testing.T) {
 
 		tx, cancel, _ := r.Context(context.TODO())
 		defer cancel()
-		_, err := tx.Add("tests", map[string]interface{}{"key": 1337})
+		err := tx.Add("tests", map[string]interface{}{"key": 1337})
 		assert.Nil(t, err)
 
 		err = tx.Commit()
@@ -129,7 +117,7 @@ func TestRepository_Add(t *testing.T) {
 
 		tx, cancel, _ := r.Context(context.TODO())
 		defer cancel()
-		_, err := tx.Add("tests", "item")
+		err := tx.Add("tests", "item")
 		assert.NotNil(t, err)
 	})
 
@@ -140,7 +128,7 @@ func TestRepository_Add(t *testing.T) {
 		r, _ := New(client)
 		tx, cancel, _ := r.Context(context.TODO())
 		defer cancel()
-		_, err := tx.Add("tests", []string{"item"})
+		err := tx.Add("tests", []string{"item"})
 		assert.NotNil(t, err)
 	})
 
@@ -151,52 +139,36 @@ func TestRepository_Add(t *testing.T) {
 		r, _ := New(client)
 		tx, cancel, _ := r.Context(context.TODO())
 		defer cancel()
-		_, err := tx.Add("tests", []interface{}{})
+		err := tx.Add("tests", []interface{}{})
 		assert.NotNil(t, err)
 	})
 
 	t.Run("can add one", func(t *testing.T) {
-		items := []map[string]interface{}{
-			{"key": 1337},
-		}
-
-		execute := mock.NewAdd(t)
-		for _, item := range items {
-			execute.Expect("To", "tests").
-				Return(execute)
-			execute.Expect("Item", item).
-				Return(execute)
+		item := map[string]interface{}{
+			"key": 1337,
 		}
 
 		add := mock.NewAdd(t)
-		for _, item := range items {
-			add.Expect("To", "tests").
-				Return(add)
-			add.Expect("Item", item).
-				Return(add)
-		}
+		add.Expect("To", "tests").
+			Return(add)
+		add.Expect("Item", item).
+			Return(add)
 		defer add.Assert(t)
 
 		client := mock.NewClient(t)
 		client.Expect("Transaction", context.TODO()).
-			Return(expectTransaction(t, execute), nil)
-		for range items {
-			client.Expect("Add").
-				Return(add)
-		}
+			Return(expectTransaction(t, add), nil)
+		client.Expect("Add").
+			Return(add)
 		defer client.Assert(t)
 
 		r, _ := New(client)
 
-		var item struct {
-			Key int `db:"key"`
-		}
-
-		item.Key = 1337
-
+		var is struct {Key int `db:"key"`}
+		is.Key = 1337
 		tx, cancel, _ := r.Context(context.TODO())
 		defer cancel()
-		_, err := tx.Add("tests", &item)
+		err := tx.Add("tests", &is)
 		assert.Nil(t, err)
 
 		tx, cancel, _ = r.Context(tx)
@@ -205,19 +177,7 @@ func TestRepository_Add(t *testing.T) {
 	})
 
 	t.Run("can add many", func(t *testing.T) {
-		items := []map[string]interface{}{
-			{"key": 1337},
-			{"key": 1337},
-		}
-
-		execute := mock.NewAdd(t)
-		for _, item := range items {
-			execute.Expect("To", "tests").
-				Return(execute)
-			execute.Expect("Item", item).
-				Return(execute)
-		}
-
+		items := []map[string]interface{}{{"key": 1337}, {"key": 1337}}
 		add := mock.NewAdd(t)
 		for _, item := range items {
 			add.Expect("To", "tests").
@@ -229,7 +189,7 @@ func TestRepository_Add(t *testing.T) {
 
 		client := mock.NewClient(t)
 		client.Expect("Transaction", context.TODO()).
-			Return(expectTransaction(t, execute, execute), nil)
+			Return(expectTransaction(t, add, add), nil)
 		for range items {
 			client.Expect("Add").
 				Return(add)
@@ -238,22 +198,15 @@ func TestRepository_Add(t *testing.T) {
 
 		r, _ := New(client)
 
-		var item struct {
-			Key int `db:"key"`
-		}
-
-		item.Key = 1337
-
-		var item2 struct {
-			Key int `db:"key"`
-		}
-
-		item2.Key = 1337
+		var is struct {Key int `db:"key"`}
+		is.Key = 1337
+		is2 := is
+		is2.Key = 1337
 		tx, cancel, _ := r.Context(context.TODO())
 		defer cancel()
-		_, err := tx.Add("tests", &item)
+		err := tx.Add("tests", &is)
 		assert.Nil(t, err)
-		_, err = tx.Add("tests", &item2)
+		err = tx.Add("tests", &is2)
 		assert.Nil(t, err)
 	})
 }
@@ -288,14 +241,6 @@ func TestRepository_Search(t *testing.T) {
 
 func TestRepository_Remove(t *testing.T) {
 	t.Run("raises execution errors", func(t *testing.T) {
-		expect := mock.NewRemove(t)
-		expect.Expect("From", "tests").
-			Return(expect)
-		expect.Expect("Filter", nil).
-			Return(expect)
-		expect.Expect("First", 1).
-			Return(expect)
-
 		remove := mock.NewRemove(t)
 		remove.Expect("From", "tests").
 			Return(remove)
@@ -307,7 +252,7 @@ func TestRepository_Remove(t *testing.T) {
 
 		client := mock.NewClient(t)
 		client.Expect("Transaction", context.TODO()).
-			Return(expectFailedTransactionExecute(t, expect), nil)
+			Return(expectFailedTransactionExecute(t, remove), nil)
 		client.Expect("Remove").
 			Return(remove)
 		defer client.Assert(t)
@@ -366,23 +311,17 @@ func TestRepository_Update(t *testing.T) {
 
 		tx, cancel, _ := r.Context(context.TODO())
 		defer cancel()
-		_, err := tx.Update("tests", nil, nil)
+		_, err := tx.Update("tests", nil, nil, 1)
 		assert.NotNil(t, err)
 	})
 
 	t.Run("raises execution errors", func(t *testing.T) {
-		expect := mock.NewUpdate(t)
-		expect.Expect("In", "tests").
-			Return(expect)
-		expect.Expect("Filter", nil).
-			Return(expect)
-		expect.Expect("Item", map[string]interface{}{"key": 1337}).
-			Return(expect)
-
 		update := mock.NewUpdate(t)
 		update.Expect("In", "tests").
 			Return(update)
 		update.Expect("Filter", nil).
+			Return(update)
+		update.Expect("First", 1).
 			Return(update)
 		update.Expect("Item", map[string]interface{}{"key": 1337}).
 			Return(update)
@@ -390,7 +329,7 @@ func TestRepository_Update(t *testing.T) {
 
 		client := mock.NewClient(t)
 		client.Expect("Transaction", context.TODO()).
-			Return(expectFailedTransactionExecute(t, expect), nil)
+			Return(expectFailedTransactionExecute(t, update), nil)
 		client.Expect("Update").
 			Return(update)
 		defer client.Assert(t)
@@ -399,7 +338,7 @@ func TestRepository_Update(t *testing.T) {
 
 		tx, cancel, _ := r.Context(context.TODO())
 		defer cancel()
-		_, err := tx.Update("tests", nil, map[string]interface{}{"key": 1337})
+		_, err := tx.Update("tests", nil, map[string]interface{}{"key": 1337}, 1)
 		assert.NotNil(t, err)
 	})
 
@@ -408,6 +347,8 @@ func TestRepository_Update(t *testing.T) {
 		update.Expect("In", "tests").
 			Return(update)
 		update.Expect("Filter", nil).
+			Return(update)
+		update.Expect("First", 1).
 			Return(update)
 		update.Expect("Item", map[string]interface{}{"key": 1337}).
 			Return(update)
@@ -424,7 +365,7 @@ func TestRepository_Update(t *testing.T) {
 
 		tx, cancel, _ := r.Context(context.TODO())
 		defer cancel()
-		_, err := tx.Update("tests", nil, map[string]interface{}{"key": 1337})
+		_, err := tx.Update("tests", nil, map[string]interface{}{"key": 1337}, 1)
 		assert.Nil(t, err)
 	})
 }

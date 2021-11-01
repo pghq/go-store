@@ -121,6 +121,23 @@ func (u *Update) Filter(filter client.Filter) client.Update {
 	return update
 }
 
+func (u *Update) First(first int) client.Update {
+	u.t.Helper()
+	res := u.Call(u.t, first)
+	if len(res) != 1 {
+		u.fail(u.t, "unexpected length of return values")
+		return nil
+	}
+
+	update, ok := res[0].(client.Update)
+	if !ok {
+		u.fail(u.t, "unexpected type of return value")
+		return nil
+	}
+
+	return update
+}
+
 func (u *Update) Execute(ctx context.Context) (int, error) {
 	u.t.Helper()
 	res := u.Call(u.t, ctx)

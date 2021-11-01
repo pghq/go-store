@@ -6,20 +6,19 @@ import (
 	"github.com/pghq/go-museum/museum/diagnostic/errors"
 )
 
-// Add adds items(s) to the repository
-func (ctx *Context) Add(collection string, data interface{}) (int, error) {
+// Add adds item to the repository
+func (ctx *Context) Add(collection string, data interface{}) error {
 	item, err := ctx.repo.item(data)
 	if err != nil {
-		return 0, errors.Wrap(err)
+		return errors.Wrap(err)
 	}
 
 	command := ctx.repo.client.Add().To(collection).Item(item)
-	count, err := ctx.tx.Execute(command)
-	if err != nil {
-		return 0, errors.Wrap(err)
+	if _, err := ctx.tx.Execute(command); err != nil {
+		return errors.Wrap(err)
 	}
 
-	return count, nil
+	return nil
 }
 
 // item converts a struct to a map using reflection
