@@ -20,43 +20,53 @@ type Update struct {
 	opts   []func(builder squirrel.UpdateBuilder) squirrel.UpdateBuilder
 }
 
-func (a *Update) In(collection string) client.Update {
+func (u *Update) In(collection string) client.Update {
 	if collection != "" {
-		a.opts = append(a.opts, func(builder squirrel.UpdateBuilder) squirrel.UpdateBuilder {
+		u.opts = append(u.opts, func(builder squirrel.UpdateBuilder) squirrel.UpdateBuilder {
 			return builder.Table(collection)
 		})
 	}
 
-	return a
+	return u
 }
 
-func (a *Update) Item(value map[string]interface{}) client.Update {
+func (u *Update) Item(value map[string]interface{}) client.Update {
 	if value != nil {
-		a.opts = append(a.opts, func(builder squirrel.UpdateBuilder) squirrel.UpdateBuilder {
+		u.opts = append(u.opts, func(builder squirrel.UpdateBuilder) squirrel.UpdateBuilder {
 			return builder.SetMap(value)
 		})
 	}
 
-	return a
+	return u
 }
 
-func (a *Update) Filter(filter client.Filter) client.Update {
+func (u *Update) Filter(filter client.Filter) client.Update {
 	if filter != nil {
-		a.opts = append(a.opts, func(builder squirrel.UpdateBuilder) squirrel.UpdateBuilder {
+		u.opts = append(u.opts, func(builder squirrel.UpdateBuilder) squirrel.UpdateBuilder {
 			return builder.Where(filter)
 		})
 	}
 
-	return a
+	return u
 }
 
-func (a *Update) Execute(ctx context.Context) (int, error) {
-	sql, args, err := a.Statement()
+func (u *Update) First(first int) client.Update {
+	if first > 0 {
+		u.opts = append(u.opts, func(builder squirrel.UpdateBuilder) squirrel.UpdateBuilder {
+			return builder.Limit(uint64(first))
+		})
+	}
+
+	return u
+}
+
+func (u *Update) Execute(ctx context.Context) (int, error) {
+	sql, args, err := u.Statement()
 	if err != nil {
 		return 0, errors.BadRequest(err)
 	}
 
-	tag, err := a.client.pool.Exec(ctx, sql, args...)
+	tag, err := u.client.pool.Exec(ctx, sql, args...)
 	if err != nil {
 		if IsIntegrityConstraintViolation(err) {
 			return 0, errors.BadRequest(err)
@@ -67,12 +77,12 @@ func (a *Update) Execute(ctx context.Context) (int, error) {
 	return int(tag.RowsAffected()), nil
 }
 
-func (a *Update) Statement() (string, []interface{}, error) {
+func (u *Update) Statement() (string, []interface{}, error) {
 	builder := squirrel.StatementBuilder.
 		PlaceholderFormat(squirrel.Dollar).
 		Update("")
 
-	for _, opt := range a.opts {
+	for _, opt := range u.opts {
 		builder = opt(builder)
 	}
 

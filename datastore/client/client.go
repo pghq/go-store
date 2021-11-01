@@ -52,6 +52,7 @@ type Update interface {
 	Item(value map[string]interface{}) Update
 	Filter(filter Filter) Update
 	Execute(ctx context.Context) (int, error)
+	First(first int) Update
 }
 
 // Remove represents a command to remove items from the collection
