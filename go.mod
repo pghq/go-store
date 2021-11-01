@@ -11,7 +11,7 @@ require (
 	github.com/jackc/pgx/v4 v4.13.0
 	github.com/lib/pq v1.10.3
 	github.com/ory/dockertest/v3 v3.8.0
-	github.com/pghq/go-museum v0.0.19
+	github.com/pghq/go-museum v0.0.26
 	github.com/pressly/goose/v3 v3.2.0
 	github.com/stretchr/testify v1.7.0
 )
