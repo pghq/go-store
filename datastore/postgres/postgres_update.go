@@ -50,16 +50,6 @@ func (u *Update) Filter(filter client.Filter) client.Update {
 	return u
 }
 
-func (u *Update) First(first int) client.Update {
-	if first > 0 {
-		u.opts = append(u.opts, func(builder squirrel.UpdateBuilder) squirrel.UpdateBuilder {
-			return builder.Limit(uint64(first))
-		})
-	}
-
-	return u
-}
-
 func (u *Update) Execute(ctx context.Context) (int, error) {
 	sql, args, err := u.Statement()
 	if err != nil {

@@ -574,7 +574,7 @@ func TestStore_Update(t *testing.T) {
 		client, primary, _ := setup(t)
 		update := NewUpdate(client)
 
-		primary.Expect("Exec", context.TODO(), "UPDATE tests SET coverage = $1 WHERE coverage > $2 LIMIT 1", 0, 50).
+		primary.Expect("Exec", context.TODO(), "UPDATE tests SET coverage = $1 WHERE coverage > $2", 0, 50).
 			Return(pgconn.CommandTag{}, nil)
 		defer primary.Assert(t)
 
@@ -582,7 +582,6 @@ func TestStore_Update(t *testing.T) {
 			In("tests").
 			Filter(client.Filter().Gt("coverage", 50)).
 			Item(map[string]interface{}{"coverage": 0}).
-			First(1).
 			Execute(context.TODO())
 		assert.Nil(t, err)
 	})

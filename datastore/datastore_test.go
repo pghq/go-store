@@ -300,7 +300,7 @@ func TestRepository_Update(t *testing.T) {
 
 		tx, _ := r.Context(context.TODO())
 		defer tx.Rollback()
-		_, err := tx.Update("tests", nil, nil, 1)
+		_, err := tx.Update("tests", nil, nil)
 		assert.NotNil(t, err)
 	})
 
@@ -319,7 +319,7 @@ func TestRepository_Update(t *testing.T) {
 
 		tx, _ := r.Context(context.TODO())
 		defer tx.Rollback()
-		_, err := tx.Update("tests", nil, map[string]interface{}{"key": 1337}, 1)
+		_, err := tx.Update("tests", nil, map[string]interface{}{"key": 1337})
 		assert.NotNil(t, err)
 	})
 
@@ -338,7 +338,7 @@ func TestRepository_Update(t *testing.T) {
 
 		tx, _ := r.Context(context.TODO())
 		defer tx.Rollback()
-		_, err := tx.Update("tests", nil, map[string]interface{}{"key": 1337}, 1)
+		_, err := tx.Update("tests", nil, map[string]interface{}{"key": 1337})
 		assert.Nil(t, err)
 	})
 }
@@ -412,8 +412,6 @@ func expectUpdate(t *testing.T, item map[string]interface{}) *mock.Update{
 	update.Expect("In", "tests").
 		Return(update)
 	update.Expect("Filter", nil).
-		Return(update)
-	update.Expect("First", 1).
 		Return(update)
 	update.Expect("Item", item).
 		Return(update)
