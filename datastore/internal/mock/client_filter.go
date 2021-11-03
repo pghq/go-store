@@ -170,6 +170,10 @@ func (f *Filter) NotEq(key string, value interface{}) client.Filter {
 	return filter
 }
 
+func (f *Filter) IsNil() bool {
+	return f == nil
+}
+
 func (f *Filter) Or(another client.Filter) client.Filter {
 	f.t.Helper()
 	res := f.Call(f.t, another)

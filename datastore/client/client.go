@@ -86,6 +86,7 @@ type Query interface {
 
 // Filter represents criteria for querying the collection
 type Filter interface {
+	IsNil() bool
 	Eq(key string, value interface{}) Filter
 	Lt(key string, value interface{}) Filter
 	Gt(key string, value interface{}) Filter
