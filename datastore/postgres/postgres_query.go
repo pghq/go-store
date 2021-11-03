@@ -52,7 +52,7 @@ func (q *Query) And(collection string, args ...interface{}) client.Query {
 }
 
 func (q *Query) Filter(filter client.Filter) client.Query {
-	if filter != nil {
+	if !filter.IsNil(){
 		q.opts = append(q.opts, func(builder squirrel.SelectBuilder) squirrel.SelectBuilder {
 			return builder.Where(filter)
 		})

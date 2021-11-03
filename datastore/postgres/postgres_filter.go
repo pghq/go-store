@@ -46,6 +46,10 @@ func (f filter) Gt(key string, value interface{}) client.Filter {
 	return filter{opts: append(f.opts, squirrel.Gt{key: value}), err: f.err}
 }
 
+func (f filter) IsNil() bool{
+	return len(f.opts) == 0
+}
+
 func (f filter) NotEq(key string, value interface{}) client.Filter {
 	if _, ok := value.([]interface{}); ok {
 		f.err = errors.NewBadRequest("can not NotEq slice")
