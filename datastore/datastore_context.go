@@ -47,6 +47,18 @@ func (ctx *Context) Rollback() error {
 	return ctx.tx.Rollback()
 }
 
+// Procedure executes a series of functions and bails fast if any errors occur
+func (ctx *Context) Procedure(funcs ...func() error) error{
+	for _, f := range funcs{
+		if err := f(); err != nil{
+			_ = ctx.Rollback()
+			return errors.Wrap(err)
+		}
+	}
+
+	return nil
+}
+
 // NewContext creates a new instance of the data store context
 func NewContext(ctx context.Context, repo *Repository) (*Context, error) {
 	tx, err := repo.client.Transaction(ctx)
