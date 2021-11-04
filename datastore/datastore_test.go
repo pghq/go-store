@@ -343,6 +343,42 @@ func TestRepository_Update(t *testing.T) {
 	})
 }
 
+func TestRepository_Context(t *testing.T) {
+	t.Run("should notify on procedure errors", func(t *testing.T) {
+		client := mock.NewClient(t)
+		client.Expect("Transaction", context.TODO()).
+			Return(expectTransaction(t), nil)
+
+		r, _ := New(client)
+		tx, _ := r.Context(context.TODO())
+		err := tx.Procedure(func() error{
+			return errors.New("an error")
+		}, func() error {
+			return errors.New("another error")
+		})
+
+		assert.NotNil(t, err)
+		assert.Contains(t, err.Error(), "an error")
+	})
+
+
+	t.Run("should notify on success", func(t *testing.T) {
+		client := mock.NewClient(t)
+		client.Expect("Transaction", context.TODO()).
+			Return(expectTransaction(t), nil)
+
+		r, _ := New(client)
+		tx, _ := r.Context(context.TODO())
+		err := tx.Procedure(func() error{
+			return nil
+		}, func() error {
+			return nil
+		})
+
+		assert.Nil(t, err)
+	})
+}
+
 func expectTransaction(t *testing.T, commands ...interface{}) *mock.Transaction{
 	transaction := mock.NewTransaction(t)
 
