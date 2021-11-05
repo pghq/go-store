@@ -345,20 +345,31 @@ func TestRepository_Update(t *testing.T) {
 
 func TestRepository_Context(t *testing.T) {
 	t.Run("should notify on procedure errors", func(t *testing.T) {
-		client := mock.NewClient(t)
-		client.Expect("Transaction", context.TODO()).
-			Return(expectTransaction(t), nil)
+		t.Run("new transaction failed", func(t *testing.T) {
+			client := mock.NewClient(t)
+			client.Expect("Transaction", context.TODO()).
+				Return(nil, errors.New("an error has occurred"))
 
-		r, _ := New(client)
-		tx, _ := r.Context(context.TODO())
-		err := tx.Procedure(func() error{
-			return errors.New("an error")
-		}, func() error {
-			return errors.New("another error")
+			r, _ := New(client)
+			err := r.Procedure(context.TODO())
+			assert.NotNil(t, err)
 		})
+		
+		t.Run("subroutine failed", func(t *testing.T) {
+			client := mock.NewClient(t)
+			client.Expect("Transaction", context.TODO()).
+				Return(expectTransaction(t), nil)
 
-		assert.NotNil(t, err)
-		assert.Contains(t, err.Error(), "an error")
+			r, _ := New(client)
+			err := r.Procedure(context.TODO(), func(tx *Context) error{
+				return errors.New("an error")
+			}, func(tx *Context) error {
+				return errors.New("another error")
+			})
+
+			assert.NotNil(t, err)
+			assert.Contains(t, err.Error(), "an error")
+		})
 	})
 
 
@@ -368,10 +379,9 @@ func TestRepository_Context(t *testing.T) {
 			Return(expectTransaction(t), nil)
 
 		r, _ := New(client)
-		tx, _ := r.Context(context.TODO())
-		err := tx.Procedure(func() error{
+		err := r.Procedure(context.TODO(), func(tx *Context) error{
 			return nil
-		}, func() error {
+		}, func(tx *Context) error {
 			return nil
 		})
 
