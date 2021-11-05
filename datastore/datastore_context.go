@@ -21,6 +21,23 @@ func (r *Repository) Context(ctx context.Context) (*Context, error) {
 	return NewContext(ctx, r)
 }
 
+// Procedure executes a series of functions and bails fast if any errors occur
+func (r *Repository) Procedure(ctx context.Context, funcs ...func(tx *Context) error) error{
+	tx, err := r.Context(ctx)
+	if err != nil{
+		return errors.Wrap(err)
+	}
+
+	for _, f := range funcs{
+		if err := f(tx); err != nil{
+			_ = tx.Rollback()
+			return errors.Wrap(err)
+		}
+	}
+
+	return tx.Commit()
+}
+
 // Context is a data store transactions
 type Context struct {
 	child bool
@@ -45,18 +62,6 @@ func (ctx *Context) Rollback() error {
 	}
 
 	return ctx.tx.Rollback()
-}
-
-// Procedure executes a series of functions and bails fast if any errors occur
-func (ctx *Context) Procedure(funcs ...func() error) error{
-	for _, f := range funcs{
-		if err := f(); err != nil{
-			_ = ctx.Rollback()
-			return errors.Wrap(err)
-		}
-	}
-
-	return nil
 }
 
 // NewContext creates a new instance of the data store context
