@@ -105,23 +105,6 @@ func (r *Remove) Order(by string) client.Remove {
 	return remove
 }
 
-func (r *Remove) First(first int) client.Remove {
-	r.t.Helper()
-	res := r.Call(r.t, first)
-	if len(res) != 1 {
-		r.fail(r.t, "unexpected length of return values")
-		return nil
-	}
-
-	remove, ok := res[0].(client.Remove)
-	if !ok {
-		r.fail(r.t, "unexpected type of return value")
-		return nil
-	}
-
-	return remove
-}
-
 func (r *Remove) After(key string, value *time.Time) client.Remove {
 	r.t.Helper()
 	res := r.Call(r.t, key, value)

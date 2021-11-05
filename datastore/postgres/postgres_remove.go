@@ -51,16 +51,6 @@ func (r *Remove) Order(by string) client.Remove {
 	return r
 }
 
-func (r *Remove) First(first int) client.Remove {
-	if first > 0 {
-		r.opts = append(r.opts, func(builder squirrel.DeleteBuilder) squirrel.DeleteBuilder {
-			return builder.Limit(uint64(first))
-		})
-	}
-
-	return r
-}
-
 func (r *Remove) After(key string, value *time.Time) client.Remove {
 	if key != "" && value != nil && !value.IsZero() {
 		r.opts = append(r.opts, func(builder squirrel.DeleteBuilder) squirrel.DeleteBuilder {

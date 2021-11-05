@@ -256,7 +256,7 @@ func TestRepository_Remove(t *testing.T) {
 
 		tx, _ := r.Context(context.TODO())
 		defer tx.Rollback()
-		_, err := tx.Remove("tests", nil, 1)
+		_, err := tx.Remove("tests", nil)
 		assert.NotNil(t, err)
 	})
 
@@ -275,7 +275,7 @@ func TestRepository_Remove(t *testing.T) {
 
 		tx, _ := r.Context(context.TODO())
 		defer tx.Rollback()
-		_, err := tx.Remove("tests", nil, 1)
+		_, err := tx.Remove("tests", nil)
 		assert.Nil(t, err)
 	})
 }
@@ -437,8 +437,6 @@ func expectRemove(t *testing.T) *mock.Remove{
 	remove.Expect("From", "tests").
 		Return(remove)
 	remove.Expect("Filter", nil).
-		Return(remove)
-	remove.Expect("First", 1).
 		Return(remove)
 	return remove
 }
