@@ -60,7 +60,6 @@ type Remove interface {
 	From(collection string) Remove
 	Filter(filter Filter) Remove
 	Order(by string) Remove
-	First(first int) Remove
 	After(key string, value *time.Time) Remove
 	Execute(ctx context.Context) (int, error)
 }

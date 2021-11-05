@@ -390,7 +390,7 @@ func TestStore_Remove(t *testing.T) {
 		remove := NewRemove(client)
 
 		now := time.Now()
-		primary.Expect("Exec", context.TODO(), "DELETE FROM tests WHERE coverage > $1 AND created_at >= $2 ORDER BY coverage DESC LIMIT 5", 50, &now).
+		primary.Expect("Exec", context.TODO(), "DELETE FROM tests WHERE coverage > $1 AND created_at >= $2 ORDER BY coverage DESC", 50, &now).
 			Return(pgconn.CommandTag{}, nil)
 		defer primary.Assert(t)
 
@@ -398,7 +398,6 @@ func TestStore_Remove(t *testing.T) {
 			From("tests").
 			Filter(client.Filter().Gt("coverage", 50)).
 			Order("coverage DESC").
-			First(5).
 			After("created_at", &now).
 			Execute(context.TODO())
 		assert.Nil(t, err)
