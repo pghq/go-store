@@ -192,9 +192,43 @@ func (q *Query) After(key string, value *time.Time) client.Query {
 	return query
 }
 
-func (q *Query) Return(key string, args ...interface{}) client.Query {
+func (q *Query) Fields(fields ...interface{}) client.Query {
+	q.t.Helper()
+	res := q.Call(q.t, fields...)
+	if len(res) != 1 {
+		q.fail(q.t, "unexpected length of return values")
+		return nil
+	}
+
+	query, ok := res[0].(client.Query)
+	if !ok {
+		q.fail(q.t, "unexpected type of return value")
+		return nil
+	}
+
+	return query
+}
+
+func (q *Query) Field(key string, args ...interface{}) client.Query {
 	q.t.Helper()
 	res := q.Call(q.t, append([]interface{}{key}, args...)...)
+	if len(res) != 1 {
+		q.fail(q.t, "unexpected length of return values")
+		return nil
+	}
+
+	query, ok := res[0].(client.Query)
+	if !ok {
+		q.fail(q.t, "unexpected type of return value")
+		return nil
+	}
+
+	return query
+}
+
+func (q *Query) Transform(transform func(string) string) client.Query {
+	q.t.Helper()
+	res := q.Call(q.t, transform)
 	if len(res) != 1 {
 		q.fail(q.t, "unexpected length of return values")
 		return nil

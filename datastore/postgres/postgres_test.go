@@ -229,13 +229,13 @@ func TestStore_Add(t *testing.T) {
 		client, primary, _ := setup(t)
 		add := NewAdd(client)
 
-		primary.Expect("Exec", context.TODO(), "INSERT INTO tests (coverage) SELECT coverage FROM units LIMIT 1").
+		primary.Expect("Exec", context.TODO(), "INSERT INTO tests (test_coverage) SELECT test_coverage FROM units LIMIT 1").
 			Return(pgconn.CommandTag{}, nil)
 		defer primary.Assert(t)
 
 		_, err := add.
-			Item(map[string]interface{}{"coverage": 0}).
-			Query(client.Query().From("units").Return("coverage").First(1)).
+			Item(map[string]interface{}{"test_coverage": 0}).
+			Query(client.Query().From("units").Field("testCoverage").First(1)).
 			To("tests").
 			Execute(context.TODO())
 		assert.Nil(t, err)
@@ -268,7 +268,7 @@ func TestStore_Query(t *testing.T) {
 		var dst []map[string]interface{}
 		err := query.
 			From("tests").
-			Return("coverage").
+			Field("coverage").
 			Execute(context.TODO(), dst)
 		assert.NotNil(t, err)
 		assert.False(t, errors.IsFatal(err))
@@ -284,7 +284,7 @@ func TestStore_Query(t *testing.T) {
 
 		err := query.
 			From("tests").
-			Return("coverage").
+			Field("coverage").
 			Execute(context.TODO(), nil)
 		assert.NotNil(t, err)
 		assert.True(t, errors.IsFatal(err))
@@ -301,7 +301,7 @@ func TestStore_Query(t *testing.T) {
 		rows.Expect("Err").Return(nil)
 		rows.Expect("Close")
 		defer rows.Assert(t)
-		primary.Expect("Query", context.TODO(), "SELECT runs FROM tests JOIN units ON runs.id = units.id WHERE coverage > $1 AND created_at >= $2 ORDER BY coverage DESC LIMIT 5", 50, &now).
+		primary.Expect("Query", context.TODO(), "SELECT runs, foo FROM tests JOIN units ON runs.id = units.id WHERE coverage > $1 AND created_at >= $2 ORDER BY coverage DESC LIMIT 5", 50, &now).
 			Return(rows, nil)
 		defer primary.Assert(t)
 
@@ -310,7 +310,9 @@ func TestStore_Query(t *testing.T) {
 			And("units ON runs.id = units.id").
 			Filter(client.Filter().Gt("coverage", 50)).
 			Order("coverage DESC").
-			Return("runs").
+			Fields("FOO").
+			Transform(strings.ToLower).
+			Field("runs").
 			First(5).
 			After("created_at", &now).
 			Execute(context.TODO(), &dst)
@@ -334,7 +336,7 @@ func TestStore_Query(t *testing.T) {
 		err := query.
 			Secondary().
 			From("tests").
-			Return("runs").
+			Field("runs").
 			Execute(context.TODO(), &dst)
 		assert.Nil(t, err)
 	})

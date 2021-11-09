@@ -8,7 +8,7 @@ import (
 
 // Update updates items matching filters
 func (ctx *Context) Update(collection string, filter client.Filter, data interface{}) (int, error) {
-	item, err := ctx.repo.item(data)
+	item, err := Item(data)
 	if err != nil {
 		return 0, errors.Wrap(err)
 	}

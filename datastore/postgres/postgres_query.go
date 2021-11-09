@@ -9,7 +9,9 @@ import (
 	"github.com/jackc/pgx/v4"
 	"github.com/pghq/go-museum/museum/diagnostic/errors"
 
+	"github.com/pghq/go-datastore/datastore"
 	"github.com/pghq/go-datastore/datastore/client"
+	"github.com/pghq/go-datastore/datastore/internal"
 )
 
 // Query creates a query for the database.
@@ -19,8 +21,10 @@ func (c *Client) Query() client.Query {
 
 // Query is an instance of the repository query for Postgres.
 type Query struct {
-	client *Client
-	opts   []func(builder squirrel.SelectBuilder) squirrel.SelectBuilder
+	client    *Client
+	opts      []func(builder squirrel.SelectBuilder) squirrel.SelectBuilder
+	fields    []string
+	transform func(string) string
 }
 
 func (q *Query) Secondary() client.Query {
@@ -91,12 +95,24 @@ func (q *Query) After(key string, value *time.Time) client.Query {
 	return q
 }
 
-func (q *Query) Return(key string, args ...interface{}) client.Query {
+func (q *Query) Fields(fields ...interface{}) client.Query {
+	q.fields = datastore.Fields(fields...)
+
+	return q
+}
+
+func (q *Query) Field(key string, args ...interface{}) client.Query {
 	if key != "" {
 		q.opts = append(q.opts, func(builder squirrel.SelectBuilder) squirrel.SelectBuilder {
-			return builder.Column(key, args...)
+			return builder.Column(internal.ToSnakeCase(key), args...)
 		})
 	}
+
+	return q
+}
+
+func (q *Query) Transform(transform func(string) string) client.Query {
+	q.transform = transform
 
 	return q
 }
@@ -108,6 +124,15 @@ func (q *Query) Statement() (string, []interface{}, error) {
 
 	for _, opt := range q.opts {
 		builder = opt(builder)
+	}
+
+	for _, field := range q.fields {
+		field = internal.ToSnakeCase(field)
+		if q.transform != nil {
+			field = q.transform(field)
+		}
+
+		builder = builder.Column(field)
 	}
 
 	return builder.ToSql()
