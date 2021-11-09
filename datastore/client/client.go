@@ -79,7 +79,9 @@ type Query interface {
 	Order(by string) Query
 	First(first int) Query
 	After(key string, value *time.Time) Query
-	Return(key string, args ...interface{}) Query
+	Fields(fields ...interface{}) Query
+	Transform(transform func(string) string) Query
+	Field(key string, args ...interface{}) Query
 	Execute(ctx context.Context, dst interface{}) error
 }
 

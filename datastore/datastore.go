@@ -14,6 +14,9 @@
 package datastore
 
 import (
+	"reflect"
+	"strings"
+
 	"github.com/pghq/go-museum/museum/diagnostic/errors"
 
 	"github.com/pghq/go-datastore/datastore/client"
@@ -22,13 +25,6 @@ import (
 // Repository is an instance of a postgres Database
 type Repository struct {
 	client client.Client
-	tag    string
-}
-
-// Tag sets the tag for adding to repository
-func (r *Repository) Tag(tag string) *Repository {
-	r.tag = tag
-	return r
 }
 
 // Filter gets a new filter for searching the repository.
@@ -50,5 +46,58 @@ func New(client client.Client) (*Repository, error) {
 		client: client,
 	}
 
-	return r.Tag("db"), nil
+	return r, nil
+}
+
+// Fields gets all fields for datastore item(s)
+func Fields(args ...interface{}) []string {
+	var fields []string
+	for _, arg := range args {
+		switch v := arg.(type) {
+		case []string:
+			return v
+		case string:
+			fields = append(fields, v)
+		default:
+			if i, err := Item(v, true); err == nil {
+				for field, _ := range i {
+					fields = append(fields, field)
+				}
+			}
+		}
+	}
+
+	return fields
+}
+
+// Item converts a struct to a map using reflection
+// variation of: https://play.golang.org/p/2Qi3thFf--
+func Item(in interface{}, transient ...interface{}) (map[string]interface{}, error) {
+	if v, ok := in.(map[string]interface{}); ok {
+		return v, nil
+	}
+
+	v := reflect.ValueOf(in)
+	if v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
+
+	if v.Kind() != reflect.Struct {
+		return nil, errors.Newf("item of type %T is not a struct", v)
+	}
+
+	item := make(map[string]interface{})
+	t := v.Type()
+	for i := 0; i < v.NumField(); i++ {
+		field := t.Field(i)
+		if key := field.Tag.Get("db"); key != "" && key != "-" {
+			if len(transient) == 0 && strings.HasSuffix(key, ",transient") {
+				continue
+			}
+
+			item[strings.Split(key, ",")[0]] = v.Field(i).Interface()
+		}
+	}
+
+	return item, nil
 }

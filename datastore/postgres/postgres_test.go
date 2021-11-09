@@ -235,7 +235,7 @@ func TestStore_Add(t *testing.T) {
 
 		_, err := add.
 			Item(map[string]interface{}{"test_coverage": 0}).
-			Query(client.Query().From("units").Return("testCoverage").First(1)).
+			Query(client.Query().From("units").Field("testCoverage").First(1)).
 			To("tests").
 			Execute(context.TODO())
 		assert.Nil(t, err)
@@ -268,7 +268,7 @@ func TestStore_Query(t *testing.T) {
 		var dst []map[string]interface{}
 		err := query.
 			From("tests").
-			Return("coverage").
+			Field("coverage").
 			Execute(context.TODO(), dst)
 		assert.NotNil(t, err)
 		assert.False(t, errors.IsFatal(err))
@@ -284,7 +284,7 @@ func TestStore_Query(t *testing.T) {
 
 		err := query.
 			From("tests").
-			Return("coverage").
+			Field("coverage").
 			Execute(context.TODO(), nil)
 		assert.NotNil(t, err)
 		assert.True(t, errors.IsFatal(err))
@@ -310,7 +310,8 @@ func TestStore_Query(t *testing.T) {
 			And("units ON runs.id = units.id").
 			Filter(client.Filter().Gt("coverage", 50)).
 			Order("coverage DESC").
-			Return("runs").
+			Fields().
+			Field("runs").
 			First(5).
 			After("created_at", &now).
 			Execute(context.TODO(), &dst)
@@ -334,7 +335,7 @@ func TestStore_Query(t *testing.T) {
 		err := query.
 			Secondary().
 			From("tests").
-			Return("runs").
+			Field("runs").
 			Execute(context.TODO(), &dst)
 		assert.Nil(t, err)
 	})

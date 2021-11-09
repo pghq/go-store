@@ -33,6 +33,14 @@ func TestRepository(t *testing.T) {
 		assert.Nil(t, err)
 		assert.NotNil(t, r)
 	})
+
+	t.Run("can get fields", func(t *testing.T) {
+		fields := Fields(map[string]interface{}{"key": ""}, "collection")
+		assert.Equal(t, []string{"key", "collection"}, fields)
+
+		fields = Fields(map[string]interface{}{"key": ""}, "collection", []string{"field"})
+		assert.Equal(t, []string{"field"}, fields)
+	})
 }
 
 func TestRepository_Add(t *testing.T) {
