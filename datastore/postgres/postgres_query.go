@@ -10,6 +10,7 @@ import (
 	"github.com/pghq/go-museum/museum/diagnostic/errors"
 
 	"github.com/pghq/go-datastore/datastore/client"
+	"github.com/pghq/go-datastore/datastore/internal"
 )
 
 // Query creates a query for the database.
@@ -94,7 +95,7 @@ func (q *Query) After(key string, value *time.Time) client.Query {
 func (q *Query) Return(key string, args ...interface{}) client.Query {
 	if key != "" {
 		q.opts = append(q.opts, func(builder squirrel.SelectBuilder) squirrel.SelectBuilder {
-			return builder.Column(key, args...)
+			return builder.Column(internal.ToSnakeCase(key), args...)
 		})
 	}
 

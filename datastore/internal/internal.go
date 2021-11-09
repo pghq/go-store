@@ -16,11 +16,28 @@
 // depend on any external packages within the application.
 package internal
 
-import "time"
+import (
+	"regexp"
+	"strings"
+	"time"
+)
+
+var (
+	matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
+	matchAllCap   = regexp.MustCompile("([a-z0-9])([A-Z])")
+)
 
 // Clock is an interface representing the internal clock time
 type Clock interface {
 	Now() time.Time
 	Start() time.Time
 	From(now func() time.Time) Clock
+}
+
+// ToSnakeCase converts a string to snake_case
+// https://gist.github.com/stoewer/fbe273b711e6a06315d19552dd4d33e6
+func ToSnakeCase(str string) string {
+	snake := matchFirstCap.ReplaceAllString(str, "${1}_${2}")
+	snake = matchAllCap.ReplaceAllString(snake, "${1}_${2}")
+	return strings.ToLower(snake)
 }

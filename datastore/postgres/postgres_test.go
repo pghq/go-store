@@ -229,13 +229,13 @@ func TestStore_Add(t *testing.T) {
 		client, primary, _ := setup(t)
 		add := NewAdd(client)
 
-		primary.Expect("Exec", context.TODO(), "INSERT INTO tests (coverage) SELECT coverage FROM units LIMIT 1").
+		primary.Expect("Exec", context.TODO(), "INSERT INTO tests (test_coverage) SELECT test_coverage FROM units LIMIT 1").
 			Return(pgconn.CommandTag{}, nil)
 		defer primary.Assert(t)
 
 		_, err := add.
-			Item(map[string]interface{}{"coverage": 0}).
-			Query(client.Query().From("units").Return("coverage").First(1)).
+			Item(map[string]interface{}{"test_coverage": 0}).
+			Query(client.Query().From("units").Return("testCoverage").First(1)).
 			To("tests").
 			Execute(context.TODO())
 		assert.Nil(t, err)
