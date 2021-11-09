@@ -35,7 +35,7 @@ func TestRepository(t *testing.T) {
 	})
 
 	t.Run("can get fields", func(t *testing.T) {
-		fields := Fields(map[string]interface{}{"key": ""}, "collection")
+		fields := Fields(map[string]interface{}{"key": ""}, "collection", []string{})
 		assert.Equal(t, []string{"key", "collection"}, fields)
 
 		fields = Fields(map[string]interface{}{"key": ""}, "collection", []string{"field"})

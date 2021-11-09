@@ -55,7 +55,9 @@ func Fields(args ...interface{}) []string {
 	for _, arg := range args {
 		switch v := arg.(type) {
 		case []string:
-			return v
+			if len(v) > 0 {
+				return v
+			}
 		case string:
 			fields = append(fields, v)
 		default:
