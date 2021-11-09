@@ -10,8 +10,8 @@ import (
 
 // Context creates a new data store context
 func (r *Repository) Context(ctx context.Context) (*Context, error) {
-	if ctx != nil{
-		if ctx, ok := ctx.(*Context); ok{
+	if ctx != nil {
+		if ctx, ok := ctx.(*Context); ok {
 			ctx := *ctx
 			ctx.child = true
 			return &ctx, nil
@@ -21,15 +21,15 @@ func (r *Repository) Context(ctx context.Context) (*Context, error) {
 	return NewContext(ctx, r)
 }
 
-// Procedure executes a series of functions and bails fast if any errors occur
-func (r *Repository) Procedure(ctx context.Context, funcs ...func(tx *Context) error) error{
+// Procedure executes a series of subroutines and bails fast if any errors occur
+func (r *Repository) Procedure(ctx context.Context, subroutines ...func(tx *Context) error) error {
 	tx, err := r.Context(ctx)
-	if err != nil{
+	if err != nil {
 		return errors.Wrap(err)
 	}
 
-	for _, f := range funcs{
-		if err := f(tx); err != nil{
+	for _, f := range subroutines {
+		if err := f(tx); err != nil {
 			_ = tx.Rollback()
 			return errors.Wrap(err)
 		}
@@ -73,8 +73,8 @@ func NewContext(ctx context.Context, repo *Repository) (*Context, error) {
 
 	c := Context{
 		Context: ctx,
-		repo: repo,
-		tx:   tx,
+		repo:    repo,
+		tx:      tx,
 	}
 
 	return &c, nil

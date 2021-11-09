@@ -164,8 +164,14 @@ func TestRepository_Add(t *testing.T) {
 
 		r, _ := New(client)
 
-		var is struct {Key int `db:"key"`}
+		var is struct {
+			Key       int    `db:"key"`
+			Transient string `db:"value,transient"`
+			Ignore    string `db:"-"`
+		}
 		is.Key = 1337
+		is.Transient = "transient"
+		is.Ignore = "ignore"
 		tx, _ := r.Context(context.TODO())
 		defer tx.Rollback()
 		err := tx.Add("tests", &is)
@@ -199,7 +205,9 @@ func TestRepository_Add(t *testing.T) {
 
 		r, _ := New(client)
 
-		var is struct {Key int `db:"key"`}
+		var is struct {
+			Key int `db:"key"`
+		}
 		is.Key = 1337
 		is2 := is
 		is2.Key = 1337
@@ -354,14 +362,14 @@ func TestRepository_Context(t *testing.T) {
 			err := r.Procedure(context.TODO())
 			assert.NotNil(t, err)
 		})
-		
+
 		t.Run("subroutine failed", func(t *testing.T) {
 			client := mock.NewClient(t)
 			client.Expect("Transaction", context.TODO()).
 				Return(expectTransaction(t), nil)
 
 			r, _ := New(client)
-			err := r.Procedure(context.TODO(), func(tx *Context) error{
+			err := r.Procedure(context.TODO(), func(tx *Context) error {
 				return errors.New("an error")
 			}, func(tx *Context) error {
 				return errors.New("another error")
@@ -372,14 +380,13 @@ func TestRepository_Context(t *testing.T) {
 		})
 	})
 
-
 	t.Run("should notify on success", func(t *testing.T) {
 		client := mock.NewClient(t)
 		client.Expect("Transaction", context.TODO()).
 			Return(expectTransaction(t), nil)
 
 		r, _ := New(client)
-		err := r.Procedure(context.TODO(), func(tx *Context) error{
+		err := r.Procedure(context.TODO(), func(tx *Context) error {
 			return nil
 		}, func(tx *Context) error {
 			return nil
@@ -389,10 +396,10 @@ func TestRepository_Context(t *testing.T) {
 	})
 }
 
-func expectTransaction(t *testing.T, commands ...interface{}) *mock.Transaction{
+func expectTransaction(t *testing.T, commands ...interface{}) *mock.Transaction {
 	transaction := mock.NewTransaction(t)
 
-	for _, command := range commands{
+	for _, command := range commands {
 		transaction.Expect("Execute", command).
 			Return(0, nil)
 	}
@@ -405,7 +412,7 @@ func expectTransaction(t *testing.T, commands ...interface{}) *mock.Transaction{
 	return transaction
 }
 
-func expectFailedTransaction(t *testing.T) *mock.Transaction{
+func expectFailedTransaction(t *testing.T) *mock.Transaction {
 	transaction := mock.NewTransaction(t)
 
 	transaction.Expect("Rollback").
@@ -414,10 +421,10 @@ func expectFailedTransaction(t *testing.T) *mock.Transaction{
 	return transaction
 }
 
-func expectFailedTransactionCommit(t *testing.T, commands ...interface{}) *mock.Transaction{
+func expectFailedTransactionCommit(t *testing.T, commands ...interface{}) *mock.Transaction {
 	transaction := mock.NewTransaction(t)
 
-	for _, command := range commands{
+	for _, command := range commands {
 		transaction.Expect("Execute", command).
 			Return(0, nil)
 	}
@@ -430,7 +437,7 @@ func expectFailedTransactionCommit(t *testing.T, commands ...interface{}) *mock.
 	return transaction
 }
 
-func expectFailedTransactionExecute(t *testing.T, command interface{}) *mock.Transaction{
+func expectFailedTransactionExecute(t *testing.T, command interface{}) *mock.Transaction {
 	transaction := mock.NewTransaction(t)
 
 	transaction.Expect("Execute", command).
@@ -442,7 +449,7 @@ func expectFailedTransactionExecute(t *testing.T, command interface{}) *mock.Tra
 	return transaction
 }
 
-func expectRemove(t *testing.T) *mock.Remove{
+func expectRemove(t *testing.T) *mock.Remove {
 	remove := mock.NewRemove(t)
 	remove.Expect("From", "tests").
 		Return(remove)
@@ -451,7 +458,7 @@ func expectRemove(t *testing.T) *mock.Remove{
 	return remove
 }
 
-func expectUpdate(t *testing.T, item map[string]interface{}) *mock.Update{
+func expectUpdate(t *testing.T, item map[string]interface{}) *mock.Update {
 	update := mock.NewUpdate(t)
 	update.Expect("In", "tests").
 		Return(update)

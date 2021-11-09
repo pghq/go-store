@@ -2,6 +2,7 @@ package datastore
 
 import (
 	"reflect"
+	"strings"
 
 	"github.com/pghq/go-museum/museum/diagnostic/errors"
 )
@@ -41,7 +42,7 @@ func (r *Repository) item(in interface{}) (map[string]interface{}, error) {
 	t := v.Type()
 	for i := 0; i < v.NumField(); i++ {
 		field := t.Field(i)
-		if key := field.Tag.Get(r.tag); key != "" {
+		if key := field.Tag.Get(r.tag); key != "" && key != "-" && !strings.HasSuffix(key, ",transient") {
 			item[key] = v.Field(i).Interface()
 		}
 	}
