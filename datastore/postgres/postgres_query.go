@@ -127,11 +127,12 @@ func (q *Query) Statement() (string, []interface{}, error) {
 	}
 
 	for _, field := range q.fields {
+		field = internal.ToSnakeCase(field)
 		if q.transform != nil {
 			field = q.transform(field)
 		}
 
-		builder = builder.Column(internal.ToSnakeCase(field))
+		builder = builder.Column(field)
 	}
 
 	return builder.ToSql()

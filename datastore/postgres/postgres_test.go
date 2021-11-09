@@ -301,7 +301,7 @@ func TestStore_Query(t *testing.T) {
 		rows.Expect("Err").Return(nil)
 		rows.Expect("Close")
 		defer rows.Assert(t)
-		primary.Expect("Query", context.TODO(), "SELECT runs FROM tests JOIN units ON runs.id = units.id WHERE coverage > $1 AND created_at >= $2 ORDER BY coverage DESC LIMIT 5", 50, &now).
+		primary.Expect("Query", context.TODO(), "SELECT runs, foo FROM tests JOIN units ON runs.id = units.id WHERE coverage > $1 AND created_at >= $2 ORDER BY coverage DESC LIMIT 5", 50, &now).
 			Return(rows, nil)
 		defer primary.Assert(t)
 
@@ -310,7 +310,8 @@ func TestStore_Query(t *testing.T) {
 			And("units ON runs.id = units.id").
 			Filter(client.Filter().Gt("coverage", 50)).
 			Order("coverage DESC").
-			Fields().
+			Fields("FOO").
+			Transform(strings.ToLower).
 			Field("runs").
 			First(5).
 			After("created_at", &now).
