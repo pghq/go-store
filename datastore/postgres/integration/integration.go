@@ -39,7 +39,7 @@ const (
 	DefaultMaxConnectTime = 60 * time.Second
 
 	// DefaultTag is the default tag for the postgres docker image
-	DefaultTag = "11"
+	DefaultTag = "13"
 
 	// DefaultDockerEndpoint is the default docker endpoint for connections
 	DefaultDockerEndpoint = ""
