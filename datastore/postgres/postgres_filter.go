@@ -46,7 +46,7 @@ func (f filter) Gt(key string, value interface{}) client.Filter {
 	return filter{opts: append(f.opts, squirrel.Gt{key: value}), err: f.err}
 }
 
-func (f filter) IsNil() bool{
+func (f filter) IsNil() bool {
 	return len(f.opts) == 0
 }
 
