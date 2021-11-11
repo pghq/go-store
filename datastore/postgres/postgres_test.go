@@ -658,7 +658,7 @@ func TestStore_Filter(t *testing.T) {
 		sql, args, err := squirrel.Select("column").From("tests").Where(f).ToSql()
 		assert.Nil(t, err)
 		assert.Equal(t, "SELECT column FROM tests WHERE eq = ? AND (eq = ? OR lt < ?) AND (eq = ? AND (eq = ? OR lt < ?) AND gt > ? AND ne <> ? AND prefix LIKE ? AND suffix LIKE ? AND containsString LIKE ? AND containsSlice IN (?,?,?) AND containsNumber IN (?) AND notContainsString NOT LIKE ? AND notContainsSlice NOT IN (?,?,?) AND notContainsNumber NOT IN (?))", sql)
-		assert.Equal(t, []interface{}{1, 1, 2, 1, 1, 2, 3, 4, "%5", "6%", "%7%", 8, 9, 10, 11, "%7%", 8, 9, 10, 11}, args)
+		assert.Equal(t, []interface{}{1, 1, 2, 1, 1, 2, 3, 4, "5%", "%6", "%7%", 8, 9, 10, 11, "%7%", 8, 9, 10, 11}, args)
 	})
 }
 

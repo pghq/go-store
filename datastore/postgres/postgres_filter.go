@@ -60,11 +60,11 @@ func (f filter) NotEq(key string, value interface{}) client.Filter {
 }
 
 func (f filter) BeginsWith(key string, value string) client.Filter {
-	return filter{opts: append(f.opts, squirrel.Like{key: fmt.Sprintf("%%%s", value)}), err: f.err}
+	return filter{opts: append(f.opts, squirrel.Like{key: fmt.Sprintf("%s%%", value)}), err: f.err}
 }
 
 func (f filter) EndsWith(key string, value string) client.Filter {
-	return filter{opts: append(f.opts, squirrel.Like{key: fmt.Sprintf("%s%%", value)}), err: f.err}
+	return filter{opts: append(f.opts, squirrel.Like{key: fmt.Sprintf("%%%s", value)}), err: f.err}
 }
 
 func (f filter) Contains(key string, value interface{}) client.Filter {
