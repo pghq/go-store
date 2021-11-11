@@ -107,7 +107,7 @@ func (q *Query) From(collection string) client.Query {
 	return query
 }
 
-func (q *Query) And(collection string, args ...interface{}) client.Query {
+func (q *Query) Complement(collection string, args ...interface{}) client.Query {
 	q.t.Helper()
 	res := q.Call(q.t, append([]interface{}{collection}, args...)...)
 	if len(res) != 1 {

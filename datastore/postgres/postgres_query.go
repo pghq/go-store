@@ -45,10 +45,10 @@ func (q *Query) From(collection string) client.Query {
 	return q
 }
 
-func (q *Query) And(collection string, args ...interface{}) client.Query {
+func (q *Query) Complement(collection string, args ...interface{}) client.Query {
 	if collection != "" {
 		q.opts = append(q.opts, func(builder squirrel.SelectBuilder) squirrel.SelectBuilder {
-			return builder.Join(collection, args...)
+			return builder.LeftJoin(collection, args...)
 		})
 	}
 
