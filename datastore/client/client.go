@@ -74,13 +74,13 @@ type Query interface {
 	Encoder
 	Secondary() Query
 	From(collection string) Query
-	And(collection string, args ...interface{}) Query
+	Complement(collection string, args ...interface{}) Query
 	Filter(filter Filter) Query
 	Order(by string) Query
 	First(first int) Query
 	After(key string, value *time.Time) Query
-	Fields(fields ...interface{}) Query
 	Transform(transform func(string) string) Query
+	Fields(fields ...interface{}) Query
 	Field(key string, args ...interface{}) Query
 	Execute(ctx context.Context, dst interface{}) error
 }
