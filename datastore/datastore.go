@@ -27,11 +27,6 @@ type Repository struct {
 	client client.Client
 }
 
-// Filter gets a new filter for searching the repository.
-func (r *Repository) Filter() client.Filter {
-	return r.client.Filter()
-}
-
 // New creates a new postgres database
 func New(client client.Client) (*Repository, error) {
 	if client == nil {

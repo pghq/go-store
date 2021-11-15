@@ -296,18 +296,6 @@ func TestRepository_Remove(t *testing.T) {
 	})
 }
 
-func TestRepository_Filter(t *testing.T) {
-	t.Run("can create instance", func(t *testing.T) {
-		client := mock.NewClient(t)
-		client.Expect("Filter").
-			Return(mock.NewFilter(t))
-		defer client.Assert(t)
-
-		r, _ := New(client)
-		assert.NotNil(t, r.Filter())
-	})
-}
-
 func TestRepository_Update(t *testing.T) {
 	t.Run("raises bad item errors", func(t *testing.T) {
 		client := mock.NewClient(t)

@@ -55,8 +55,8 @@ func (q *Query) Complement(collection string, args ...interface{}) client.Query 
 	return q
 }
 
-func (q *Query) Filter(filter client.Filter) client.Query {
-	if !filter.IsNil() {
+func (q *Query) Filter(filter interface{}) client.Query {
+	if f, ok := filter.(Cond); ok && len(f.opts) > 0 {
 		q.opts = append(q.opts, func(builder squirrel.SelectBuilder) squirrel.SelectBuilder {
 			return builder.Where(filter)
 		})

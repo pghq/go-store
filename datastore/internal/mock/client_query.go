@@ -124,7 +124,7 @@ func (q *Query) Complement(collection string, args ...interface{}) client.Query 
 	return query
 }
 
-func (q *Query) Filter(filter client.Filter) client.Query {
+func (q *Query) Filter(filter interface{}) client.Query {
 	q.t.Helper()
 	res := q.Call(q.t, filter)
 	if len(res) != 1 {

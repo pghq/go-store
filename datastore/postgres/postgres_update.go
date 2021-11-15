@@ -40,8 +40,8 @@ func (u *Update) Item(value map[string]interface{}) client.Update {
 	return u
 }
 
-func (u *Update) Filter(filter client.Filter) client.Update {
-	if filter != nil {
+func (u *Update) Filter(filter interface{}) client.Update {
+	if f, ok := filter.(Cond); ok && len(f.opts) > 0 {
 		u.opts = append(u.opts, func(builder squirrel.UpdateBuilder) squirrel.UpdateBuilder {
 			return builder.Where(filter)
 		})

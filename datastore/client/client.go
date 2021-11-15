@@ -21,7 +21,6 @@ import (
 // Client represents a client for operating on a database.
 type Client interface {
 	Connect() error
-	Filter() Filter
 	Query() Query
 	Add() Add
 	Update() Update
@@ -50,7 +49,7 @@ type Update interface {
 	Encoder
 	In(collection string) Update
 	Item(value map[string]interface{}) Update
-	Filter(filter Filter) Update
+	Filter(filter interface{}) Update
 	Execute(ctx context.Context) (int, error)
 }
 
@@ -58,7 +57,7 @@ type Update interface {
 type Remove interface {
 	Encoder
 	From(collection string) Remove
-	Filter(filter Filter) Remove
+	Filter(filter interface{}) Remove
 	Order(by string) Remove
 	After(key string, value *time.Time) Remove
 	Execute(ctx context.Context) (int, error)
@@ -75,7 +74,7 @@ type Query interface {
 	Secondary() Query
 	From(collection string) Query
 	Complement(collection string, args ...interface{}) Query
-	Filter(filter Filter) Query
+	Filter(filter interface{}) Query
 	Order(by string) Query
 	First(first int) Query
 	After(key string, value *time.Time) Query
@@ -83,19 +82,4 @@ type Query interface {
 	Fields(fields ...interface{}) Query
 	Field(key string, args ...interface{}) Query
 	Execute(ctx context.Context, dst interface{}) error
-}
-
-// Filter represents criteria for querying the collection
-type Filter interface {
-	IsNil() bool
-	Eq(key string, value interface{}) Filter
-	Lt(key string, value interface{}) Filter
-	Gt(key string, value interface{}) Filter
-	NotEq(key string, value interface{}) Filter
-	BeginsWith(key string, prefix string) Filter
-	EndsWith(key string, suffix string) Filter
-	Contains(key string, value interface{}) Filter
-	NotContains(key string, value interface{}) Filter
-	Or(another Filter) Filter
-	And(another Filter) Filter
 }

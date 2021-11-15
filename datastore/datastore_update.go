@@ -2,12 +2,10 @@ package datastore
 
 import (
 	"github.com/pghq/go-museum/museum/diagnostic/errors"
-
-	"github.com/pghq/go-datastore/datastore/client"
 )
 
 // Update updates items matching filters
-func (ctx *Context) Update(collection string, filter client.Filter, data interface{}) (int, error) {
+func (ctx *Context) Update(collection string, filter, data interface{}) (int, error) {
 	item, err := Item(data)
 	if err != nil {
 		return 0, errors.Wrap(err)

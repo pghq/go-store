@@ -6,111 +6,106 @@ import (
 
 	"github.com/Masterminds/squirrel"
 	"github.com/pghq/go-museum/museum/diagnostic/errors"
-
-	"github.com/pghq/go-datastore/datastore/client"
 )
 
-func (c *Client) Filter() client.Filter {
-	return Filter()
-}
-
-type filter struct {
+// Cond is an instance of filter conditions for pg queries
+type Cond struct {
 	err  error
 	opts []squirrel.Sqlizer
 }
 
-func (f filter) Eq(key string, value interface{}) client.Filter {
+// Eq is the = operator
+func (f Cond) Eq(key string, value interface{}) Cond {
 	if _, ok := value.([]interface{}); ok {
 		f.err = errors.NewBadRequest("can not Eq slice")
 		return f
 	}
 
-	return filter{opts: append(f.opts, squirrel.Eq{key: value}), err: f.err}
+	return Cond{opts: append(f.opts, squirrel.Eq{key: value}), err: f.err}
 }
 
-func (f filter) Lt(key string, value interface{}) client.Filter {
+// Lt is the < operator
+func (f Cond) Lt(key string, value interface{}) Cond {
 	if _, ok := value.([]interface{}); ok {
 		f.err = errors.NewBadRequest("can not Lt slice")
 		return f
 	}
 
-	return filter{opts: append(f.opts, squirrel.Lt{key: value}), err: f.err}
+	return Cond{opts: append(f.opts, squirrel.Lt{key: value}), err: f.err}
 }
 
-func (f filter) Gt(key string, value interface{}) client.Filter {
+// Gt is the > operator
+func (f Cond) Gt(key string, value interface{}) Cond {
 	if _, ok := value.([]interface{}); ok {
 		f.err = errors.NewBadRequest("can not Gt slice")
 		return f
 	}
 
-	return filter{opts: append(f.opts, squirrel.Gt{key: value}), err: f.err}
+	return Cond{opts: append(f.opts, squirrel.Gt{key: value}), err: f.err}
 }
 
-func (f filter) IsNil() bool {
-	return len(f.opts) == 0
-}
-
-func (f filter) NotEq(key string, value interface{}) client.Filter {
+// NotEq is the <> operator
+func (f Cond) NotEq(key string, value interface{}) Cond {
 	if _, ok := value.([]interface{}); ok {
 		f.err = errors.NewBadRequest("can not NotEq slice")
 		return f
 	}
 
-	return filter{opts: append(f.opts, squirrel.NotEq{key: value}), err: f.err}
+	return Cond{opts: append(f.opts, squirrel.NotEq{key: value}), err: f.err}
 }
 
-func (f filter) BeginsWith(key string, value string) client.Filter {
-	return filter{opts: append(f.opts, squirrel.Like{key: fmt.Sprintf("%s%%", value)}), err: f.err}
+// BeginsWith is the LIKE 'foo%' operation
+func (f Cond) BeginsWith(key string, value string) Cond {
+	return Cond{opts: append(f.opts, squirrel.Like{key: fmt.Sprintf("%s%%", value)}), err: f.err}
 }
 
-func (f filter) EndsWith(key string, value string) client.Filter {
-	return filter{opts: append(f.opts, squirrel.Like{key: fmt.Sprintf("%%%s", value)}), err: f.err}
+// EndsWith is the LIKE '%foo' operation
+func (f Cond) EndsWith(key string, value string) Cond {
+	return Cond{opts: append(f.opts, squirrel.Like{key: fmt.Sprintf("%%%s", value)}), err: f.err}
 }
 
-func (f filter) Contains(key string, value interface{}) client.Filter {
+// Contains is the LIKE '%foo%' operation for strings or IN operator for arrays
+func (f Cond) Contains(key string, value interface{}) Cond {
 	if _, ok := value.(string); ok {
-		return filter{opts: append(f.opts, squirrel.Like{key: fmt.Sprintf("%%%s%%", value)}), err: f.err}
+		return Cond{opts: append(f.opts, squirrel.Like{key: fmt.Sprintf("%%%s%%", value)}), err: f.err}
 	}
 
 	if _, ok := value.([]interface{}); ok {
-		return filter{opts: append(f.opts, squirrel.Eq{key: value}), err: f.err}
+		return Cond{opts: append(f.opts, squirrel.Eq{key: value}), err: f.err}
 	}
 
-	return filter{opts: append(f.opts, squirrel.Eq{key: []interface{}{value}}), err: f.err}
+	return Cond{opts: append(f.opts, squirrel.Eq{key: []interface{}{value}}), err: f.err}
 }
 
-func (f filter) NotContains(key string, value interface{}) client.Filter {
+// NotContains is the NOT LIKE '%foo%' operation for strings or NOT IN operator for arrays
+func (f Cond) NotContains(key string, value interface{}) Cond {
 	if _, ok := value.(string); ok {
-		return filter{opts: append(f.opts, squirrel.NotLike{key: fmt.Sprintf("%%%s%%", value)}), err: f.err}
+		return Cond{opts: append(f.opts, squirrel.NotLike{key: fmt.Sprintf("%%%s%%", value)}), err: f.err}
 	}
 
 	if _, ok := value.([]interface{}); ok {
-		return filter{opts: append(f.opts, squirrel.NotEq{key: value}), err: f.err}
+		return Cond{opts: append(f.opts, squirrel.NotEq{key: value}), err: f.err}
 	}
 
-	return filter{opts: append(f.opts, squirrel.NotEq{key: []interface{}{value}}), err: f.err}
+	return Cond{opts: append(f.opts, squirrel.NotEq{key: []interface{}{value}}), err: f.err}
 }
 
-func (f filter) Or(another client.Filter) client.Filter {
-	if or, ok := another.(filter); ok {
-		return filter{opts: append(f.opts, squirrel.Or{f, or}), err: f.err}
-	}
-
-	f.err = errors.NewBadRequest("can not Or value of unknown type")
-	return f
+// Or conjunction
+func (f Cond) Or(another Cond) Cond {
+	return Cond{opts: append(f.opts, squirrel.Or{f, another}), err: f.err}
 }
 
-func (f filter) And(another client.Filter) client.Filter {
-	if and, ok := another.(filter); ok {
-		return filter{opts: append(f.opts, squirrel.And{f, and}), err: f.err}
-	}
-
-	f.err = errors.NewBadRequest("can not And value of unknown type")
-
-	return f
+// And conjunction
+func (f Cond) And(another Cond) Cond {
+	return Cond{opts: append(f.opts, squirrel.And{f, another}), err: f.err}
 }
 
-func (f filter) ToSql() (string, []interface{}, error) {
+// Raw constructs a raw pg Cond
+func (f Cond) Raw(sql string, args ...interface{}) Cond {
+	return Cond{opts: append(f.opts, squirrel.Expr(sql, args...)), err: f.err}
+}
+
+func (f Cond) ToSql() (string, []interface{}, error) {
 	if f.err != nil {
 		return "", nil, f.err
 	}
@@ -128,8 +123,4 @@ func (f filter) ToSql() (string, []interface{}, error) {
 	}
 
 	return strings.Join(statements, " AND "), arguments, nil
-}
-
-func Filter() client.Filter {
-	return filter{}
 }
