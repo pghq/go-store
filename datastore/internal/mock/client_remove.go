@@ -71,7 +71,7 @@ func (r *Remove) Statement() (string, []interface{}, error) {
 	return statement, nil, nil
 }
 
-func (r *Remove) Filter(filter client.Filter) client.Remove {
+func (r *Remove) Filter(filter interface{}) client.Remove {
 	r.t.Helper()
 	res := r.Call(r.t, filter)
 	if len(res) != 1 {

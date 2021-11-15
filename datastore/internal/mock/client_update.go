@@ -104,7 +104,7 @@ func (u *Update) Item(snapshot map[string]interface{}) client.Update {
 	return update
 }
 
-func (u *Update) Filter(filter client.Filter) client.Update {
+func (u *Update) Filter(filter interface{}) client.Update {
 	u.t.Helper()
 	res := u.Call(u.t, filter)
 	if len(res) != 1 {

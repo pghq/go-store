@@ -14,7 +14,6 @@ import (
 	"github.com/Masterminds/squirrel"
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgerrcode"
-	"github.com/jackc/pgproto3/v2"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/pghq/go-museum/museum/diagnostic/errors"
@@ -308,7 +307,7 @@ func TestStore_Query(t *testing.T) {
 		var dst []map[string]interface{}
 		err := query.From("tests").
 			Complement("units ON runs.id = units.id").
-			Filter(client.Filter().Gt("coverage", 50)).
+			Filter(Cond{}.Gt("coverage", 50)).
 			Order("coverage DESC").
 			Fields("FOO").
 			Transform(strings.ToLower).
@@ -392,13 +391,13 @@ func TestStore_Remove(t *testing.T) {
 		remove := NewRemove(client)
 
 		now := time.Now()
-		primary.Expect("Exec", context.TODO(), "DELETE FROM tests WHERE coverage > $1 AND id = $2 AND created_at > $3 ORDER BY coverage DESC", 50, squirrel.Expr("tests.id"), &now).
+		primary.Expect("Exec", context.TODO(), "DELETE FROM tests WHERE coverage > $1 AND id = tests.id AND created_at > $2 ORDER BY coverage DESC", 50, &now).
 			Return(pgconn.CommandTag{}, nil)
 		defer primary.Assert(t)
 
 		_, err := remove.
 			From("tests").
-			Filter(client.Filter().Gt("coverage", 50).Eq("id", Raw("tests.id"))).
+			Filter(Cond{}.Gt("coverage", 50).Raw("id = tests.id")).
 			Order("coverage DESC").
 			After("created_at", &now).
 			Execute(context.TODO())
@@ -597,7 +596,7 @@ func TestStore_Update(t *testing.T) {
 
 		_, err := update.
 			In("tests").
-			Filter(client.Filter().Gt("coverage", 50)).
+			Filter(Cond{}.Gt("coverage", 50)).
 			Item(map[string]interface{}{"coverage": 0}).
 			Execute(context.TODO())
 		assert.Nil(t, err)
@@ -606,7 +605,7 @@ func TestStore_Update(t *testing.T) {
 
 func TestStore_Filter(t *testing.T) {
 	t.Run("raises invalid slice type errors", func(t *testing.T) {
-		f := Filter().
+		f := Cond{}.
 			Eq("key", []interface{}{}).
 			Lt("key", []interface{}{}).
 			Gt("key", []interface{}{}).
@@ -617,19 +616,8 @@ func TestStore_Filter(t *testing.T) {
 		assert.False(t, errors.IsFatal(err))
 	})
 
-	t.Run("raises invalid conjunction errors", func(t *testing.T) {
-		f := Filter().
-			Eq("eq", 1).
-			Or(nil).
-			And(nil)
-
-		_, _, err := squirrel.Select("column").From("tests").Where(f).ToSql()
-		assert.NotNil(t, err)
-		assert.False(t, errors.IsFatal(err))
-	})
-
 	t.Run("raises bad op errors", func(t *testing.T) {
-		f := Filter().
+		f := Cond{}.
 			Lt("key", nil)
 
 		_, _, err := squirrel.Select("column").From("tests").Where(f).ToSql()
@@ -638,8 +626,8 @@ func TestStore_Filter(t *testing.T) {
 	})
 
 	t.Run("can sql-ize", func(t *testing.T) {
-		or := Filter().Lt("lt", 2)
-		and := Filter().Gt("gt", 3).
+		or := Cond{}.Lt("lt", 2)
+		and := Cond{}.Gt("gt", 3).
 			NotEq("ne", 4).
 			BeginsWith("prefix", "5").
 			EndsWith("suffix", "6").
@@ -650,14 +638,14 @@ func TestStore_Filter(t *testing.T) {
 			NotContains("notContainsSlice", []interface{}{8, 9, 10}).
 			NotContains("notContainsNumber", 11)
 
-		f := Filter().
+		f := Cond{}.
 			Eq("eq", 1).
 			Or(or).
 			And(and)
 
-		sql, args, err := squirrel.Select("column").From("tests").Where(f).ToSql()
+		stmt, args, err := squirrel.Select("column").From("tests").Where(f).ToSql()
 		assert.Nil(t, err)
-		assert.Equal(t, "SELECT column FROM tests WHERE eq = ? AND (eq = ? OR lt < ?) AND (eq = ? AND (eq = ? OR lt < ?) AND gt > ? AND ne <> ? AND prefix LIKE ? AND suffix LIKE ? AND containsString LIKE ? AND containsSlice IN (?,?,?) AND containsNumber IN (?) AND notContainsString NOT LIKE ? AND notContainsSlice NOT IN (?,?,?) AND notContainsNumber NOT IN (?))", sql)
+		assert.Equal(t, "SELECT column FROM tests WHERE eq = ? AND (eq = ? OR lt < ?) AND (eq = ? AND (eq = ? OR lt < ?) AND gt > ? AND ne <> ? AND prefix LIKE ? AND suffix LIKE ? AND containsString LIKE ? AND containsSlice IN (?,?,?) AND containsNumber IN (?) AND notContainsString NOT LIKE ? AND notContainsSlice NOT IN (?,?,?) AND notContainsNumber NOT IN (?))", stmt)
 		assert.Equal(t, []interface{}{1, 1, 2, 1, 1, 2, 3, 4, "5%", "%6", "%7%", 8, 9, 10, 11, "%7%", 8, 9, 10, 11}, args)
 	})
 }
@@ -746,6 +734,7 @@ func (p *PostgresPool) Begin(ctx context.Context) (pgx.Tx, error) {
 type PostgresTx struct {
 	mock.Mock
 	t *testing.T
+	pgx.Tx
 }
 
 func (tx *PostgresTx) Commit(ctx context.Context) error {
@@ -807,46 +796,6 @@ func (tx *PostgresTx) Exec(ctx context.Context, sql string, args ...interface{})
 	return tag, nil
 }
 
-func (tx *PostgresTx) Begin(ctx context.Context) (pgx.Tx, error) {
-	panic("not implemented")
-}
-
-func (tx *PostgresTx) BeginFunc(ctx context.Context, f func(pgx.Tx) error) (err error) {
-	panic("implement me")
-}
-
-func (tx *PostgresTx) CopyFrom(ctx context.Context, tableName pgx.Identifier, columnNames []string, rowSrc pgx.CopyFromSource) (int64, error) {
-	panic("implement me")
-}
-
-func (tx *PostgresTx) SendBatch(ctx context.Context, b *pgx.Batch) pgx.BatchResults {
-	panic("implement me")
-}
-
-func (tx *PostgresTx) LargeObjects() pgx.LargeObjects {
-	panic("implement me")
-}
-
-func (tx *PostgresTx) Prepare(ctx context.Context, name, sql string) (*pgconn.StatementDescription, error) {
-	panic("implement me")
-}
-
-func (tx *PostgresTx) Query(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error) {
-	panic("implement me")
-}
-
-func (tx *PostgresTx) QueryRow(ctx context.Context, sql string, args ...interface{}) pgx.Row {
-	panic("implement me")
-}
-
-func (tx *PostgresTx) QueryFunc(ctx context.Context, sql string, args []interface{}, scans []interface{}, f func(pgx.QueryFuncRow) error) (pgconn.CommandTag, error) {
-	panic("implement me")
-}
-
-func (tx *PostgresTx) Conn() *pgx.Conn {
-	panic("implement me")
-}
-
 func NewPostgresTx(t *testing.T) *PostgresTx {
 	tx := PostgresTx{t: t}
 
@@ -879,6 +828,7 @@ func (p *PostgresPool) Query(ctx context.Context, sql string, args ...interface{
 type PostgresRows struct {
 	mock.Mock
 	t *testing.T
+	pgx.Rows
 }
 
 func (r *PostgresRows) Close() {
@@ -940,22 +890,6 @@ func (r *PostgresRows) Scan(dest ...interface{}) error {
 	return nil
 }
 
-func (r *PostgresRows) CommandTag() pgconn.CommandTag {
-	panic("implement me")
-}
-
-func (r *PostgresRows) FieldDescriptions() []pgproto3.FieldDescription {
-	panic("implement me")
-}
-
-func (r *PostgresRows) Values() ([]interface{}, error) {
-	panic("implement me")
-}
-
-func (r *PostgresRows) RawValues() [][]byte {
-	panic("implement me")
-}
-
 func NewPostgresRows(t *testing.T) *PostgresRows {
 	rows := PostgresRows{t: t}
 
@@ -964,10 +898,10 @@ func NewPostgresRows(t *testing.T) *PostgresRows {
 
 type ErrConnector struct{}
 
-func (e ErrConnector) Connect(ctx context.Context) (driver.Conn, error) {
+func (e ErrConnector) Connect(_ context.Context) (driver.Conn, error) {
 	return nil, errors.New("an error has occurred")
 }
 
 func (e ErrConnector) Driver() driver.Driver {
-	panic("not imlemented")
+	panic("not implemented")
 }
