@@ -21,6 +21,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Masterminds/squirrel"
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v4"
@@ -223,4 +224,9 @@ func IsIntegrityConstraintViolation(err error) bool {
 	}
 
 	return false
+}
+
+// Raw constructs a raw pg query
+func Raw(sql string, args ...interface{}) interface{}{
+	return squirrel.Expr(sql, args...)
 }
