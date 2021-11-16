@@ -56,18 +56,18 @@ func (f Cond) NotEq(key string, value interface{}) Cond {
 
 // BeginsWith is the LIKE 'foo%' operation
 func (f Cond) BeginsWith(key string, value string) Cond {
-	return Cond{opts: append(f.opts, squirrel.Like{key: fmt.Sprintf("%s%%", value)}), err: f.err}
+	return Cond{opts: append(f.opts, squirrel.ILike{key: fmt.Sprintf("%s%%", value)}), err: f.err}
 }
 
 // EndsWith is the LIKE '%foo' operation
 func (f Cond) EndsWith(key string, value string) Cond {
-	return Cond{opts: append(f.opts, squirrel.Like{key: fmt.Sprintf("%%%s", value)}), err: f.err}
+	return Cond{opts: append(f.opts, squirrel.ILike{key: fmt.Sprintf("%%%s", value)}), err: f.err}
 }
 
 // Contains is the LIKE '%foo%' operation for strings or IN operator for arrays
 func (f Cond) Contains(key string, value interface{}) Cond {
 	if _, ok := value.(string); ok {
-		return Cond{opts: append(f.opts, squirrel.Like{key: fmt.Sprintf("%%%s%%", value)}), err: f.err}
+		return Cond{opts: append(f.opts, squirrel.ILike{key: fmt.Sprintf("%%%s%%", value)}), err: f.err}
 	}
 
 	if _, ok := value.([]interface{}); ok {
@@ -80,7 +80,7 @@ func (f Cond) Contains(key string, value interface{}) Cond {
 // NotContains is the NOT LIKE '%foo%' operation for strings or NOT IN operator for arrays
 func (f Cond) NotContains(key string, value interface{}) Cond {
 	if _, ok := value.(string); ok {
-		return Cond{opts: append(f.opts, squirrel.NotLike{key: fmt.Sprintf("%%%s%%", value)}), err: f.err}
+		return Cond{opts: append(f.opts, squirrel.NotILike{key: fmt.Sprintf("%%%s%%", value)}), err: f.err}
 	}
 
 	if _, ok := value.([]interface{}); ok {

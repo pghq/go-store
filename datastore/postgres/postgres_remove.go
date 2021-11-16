@@ -32,7 +32,7 @@ func (r *Remove) From(collection string) client.Remove {
 }
 
 func (r *Remove) Filter(filter interface{}) client.Remove {
-	if f, ok := filter.(Cond); ok && len(f.opts) > 0{
+	if f, ok := filter.(Cond); ok && len(f.opts) > 0 {
 		r.opts = append(r.opts, func(builder squirrel.DeleteBuilder) squirrel.DeleteBuilder {
 			return builder.Where(filter)
 		})
