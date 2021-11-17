@@ -147,7 +147,6 @@ func New(primary string) *Client {
 
 // Pool for executing db commands against.
 type Pool interface {
-	Query(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error)
 	Exec(ctx context.Context, sql string, args ...interface{}) (pgconn.CommandTag, error)
 	Begin(ctx context.Context) (pgx.Tx, error)
 }

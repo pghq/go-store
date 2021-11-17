@@ -1,7 +1,6 @@
 package mock
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -120,32 +119,6 @@ func (r *Remove) After(key string, value *time.Time) client.Remove {
 	}
 
 	return remove
-}
-
-func (r *Remove) Execute(ctx context.Context) (int, error) {
-	r.t.Helper()
-	res := r.Call(r.t, ctx)
-	if len(res) != 2 {
-		r.fail(r.t, "unexpected length of return values")
-		return 0, nil
-	}
-
-	if res[1] != nil {
-		err, ok := res[1].(error)
-		if !ok {
-			r.fail(r.t, "unexpected type of return value")
-			return 0, nil
-		}
-		return 0, err
-	}
-
-	count, ok := res[0].(int)
-	if !ok {
-		r.fail(r.t, "unexpected type of return value")
-		return 0, nil
-	}
-
-	return count, nil
 }
 
 func (r *Remove) From(collection string) client.Remove {

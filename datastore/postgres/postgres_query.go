@@ -1,13 +1,9 @@
 package postgres
 
 import (
-	"context"
 	"time"
 
 	"github.com/Masterminds/squirrel"
-	"github.com/georgysavva/scany/pgxscan"
-	"github.com/jackc/pgx/v4"
-	"github.com/pghq/go-museum/museum/diagnostic/errors"
 
 	"github.com/pghq/go-datastore/datastore"
 	"github.com/pghq/go-datastore/datastore/client"
@@ -136,23 +132,6 @@ func (q *Query) Statement() (string, []interface{}, error) {
 	}
 
 	return builder.ToSql()
-}
-
-func (q *Query) Execute(ctx context.Context, dst interface{}) error {
-	sql, args, err := q.Statement()
-	if err != nil {
-		return errors.BadRequest(err)
-	}
-
-	if err := pgxscan.Select(ctx, q.client.pool, dst, sql, args...); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return errors.NoContent(err)
-		}
-
-		return errors.Wrap(err)
-	}
-
-	return nil
 }
 
 // NewQuery creates a new query for the Postgres database.

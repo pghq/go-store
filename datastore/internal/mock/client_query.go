@@ -1,11 +1,8 @@
 package mock
 
 import (
-	"context"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/assert"
 
 	"github.com/pghq/go-datastore/datastore/client"
 )
@@ -243,26 +240,6 @@ func (q *Query) Transform(transform func(string) string) client.Query {
 	return query
 }
 
-func (q *Query) Execute(ctx context.Context, dst interface{}) error {
-	q.t.Helper()
-	res := q.Call(q.t, ctx, dst)
-	if len(res) != 1 {
-		q.fail(q.t, "unexpected length of return values")
-		return nil
-	}
-
-	if res[0] != nil {
-		err, ok := res[0].(error)
-		if !ok {
-			q.fail(q.t, "unexpected type of return value")
-			return nil
-		}
-		return err
-	}
-
-	return nil
-}
-
 // NewQuery creates a mock datastore.Query
 func NewQuery(t *testing.T) *Query {
 	q := Query{
@@ -274,15 +251,4 @@ func NewQuery(t *testing.T) *Query {
 	}
 
 	return &q
-}
-
-// NewQueryWithFail creates a mock datastore.Query with an expected failure
-func NewQueryWithFail(t *testing.T, expect ...interface{}) *Query {
-	q := NewQuery(t)
-	q.fail = func(v ...interface{}) {
-		t.Helper()
-		assert.Equal(t, append([]interface{}{t}, expect...), v)
-	}
-
-	return q
 }

@@ -1,7 +1,6 @@
 package mock
 
 import (
-	"context"
 	"testing"
 
 	"github.com/pghq/go-datastore/datastore/client"
@@ -50,32 +49,6 @@ func (a *Add) Query(query client.Query) client.Add {
 	}
 
 	return add
-}
-
-func (a *Add) Execute(ctx context.Context) (int, error) {
-	a.t.Helper()
-	res := a.Call(a.t, ctx)
-	if len(res) != 2 {
-		a.fail(a.t, "unexpected length of return values")
-		return 0, nil
-	}
-
-	if res[1] != nil {
-		err, ok := res[1].(error)
-		if !ok {
-			a.fail(a.t, "unexpected type of return value")
-			return 0, nil
-		}
-		return 0, err
-	}
-
-	count, ok := res[0].(int)
-	if !ok {
-		a.fail(a.t, "unexpected type of return value")
-		return 0, nil
-	}
-
-	return count, nil
 }
 
 func (a *Add) Statement() (string, []interface{}, error) {

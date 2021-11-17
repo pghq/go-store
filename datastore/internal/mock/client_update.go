@@ -1,7 +1,6 @@
 package mock
 
 import (
-	"context"
 	"testing"
 
 	"github.com/pghq/go-datastore/datastore/client"
@@ -119,32 +118,6 @@ func (u *Update) Filter(filter interface{}) client.Update {
 	}
 
 	return update
-}
-
-func (u *Update) Execute(ctx context.Context) (int, error) {
-	u.t.Helper()
-	res := u.Call(u.t, ctx)
-	if len(res) != 2 {
-		u.fail(u.t, "unexpected length of return values")
-		return 0, nil
-	}
-
-	if res[1] != nil {
-		err, ok := res[1].(error)
-		if !ok {
-			u.fail(u.t, "unexpected type of return value")
-			return 0, nil
-		}
-		return 0, err
-	}
-
-	count, ok := res[0].(int)
-	if !ok {
-		u.fail(u.t, "unexpected type of return value")
-		return 0, nil
-	}
-
-	return count, nil
 }
 
 // NewUpdate creates a mock datastore.Update
