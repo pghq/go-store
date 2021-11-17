@@ -84,9 +84,9 @@ func (tx *Transaction) Rollback() error {
 	return nil
 }
 
-func (tx *Transaction) Execute(statement client.Encoder) (int, error) {
+func (tx *Transaction) Execute(statement client.Encoder, dst ...interface{}) (int, error) {
 	tx.t.Helper()
-	res := tx.Call(tx.t, statement)
+	res := tx.Call(tx.t, append([]interface{}{statement}, dst...)...)
 	if len(res) != 2 {
 		tx.fail(tx.t, "unexpected length of return values")
 		return 0, nil

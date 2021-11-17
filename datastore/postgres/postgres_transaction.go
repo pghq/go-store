@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 
+	"github.com/georgysavva/scany/pgxscan"
 	"github.com/jackc/pgx/v4"
 	"github.com/pghq/go-museum/museum/diagnostic/errors"
 
@@ -20,15 +21,27 @@ func (c *Client) Transaction(ctx context.Context) (client.Transaction, error) {
 	return &t, err
 }
 
+// transaction is an instance of client.Transaction for pg
 type transaction struct {
 	ctx context.Context
 	tx  pgx.Tx
 }
 
-func (t *transaction) Execute(statement client.Encoder) (int, error) {
+func (t *transaction) Execute(statement client.Encoder, dst ...interface{}) (int, error) {
 	sql, args, err := statement.Statement()
 	if err != nil {
 		return 0, errors.BadRequest(err)
+	}
+
+	if len(dst) > 0 {
+		if err := pgxscan.Select(t.ctx, t.tx, dst[0], sql, args...); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return 0, errors.NoContent(err)
+			}
+			return 0, errors.Wrap(err)
+		}
+
+		return 0, nil
 	}
 
 	tag, err := t.tx.Exec(t.ctx, sql, args...)

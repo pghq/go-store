@@ -24,9 +24,9 @@ import (
 )
 
 var (
-	_ Pool     = NewPostgresPool(nil)
-	_ pgx.Tx   = NewPostgresTx(nil)
-	_ pgx.Rows = NewPostgresRows(nil)
+	_ Pool     = &PostgresPool{}
+	_ pgx.Tx   = &PostgresTx{}
+	_ pgx.Rows = &PostgresRows{}
 )
 
 func TestStore(t *testing.T) {
@@ -183,61 +183,16 @@ func TestStore_Add(t *testing.T) {
 		assert.NotNil(t, client.Add())
 	})
 
-	t.Run("raises bad request errors on execute", func(t *testing.T) {
+	t.Run("can execute", func(t *testing.T) {
 		client, _, _ := setup(t)
 		add := NewAdd(client)
-
-		_, err := add.Execute(context.TODO())
-		assert.NotNil(t, err)
-		assert.False(t, errors.IsFatal(err))
-	})
-
-	t.Run("raises fatal errors on execute", func(t *testing.T) {
-		client, primary, _ := setup(t)
-		add := NewAdd(client)
-
-		primary.Expect("Exec", context.TODO(), "INSERT INTO tests (coverage) VALUES ($1)", 50).
-			Return(nil, errors.New("an error has occurred"))
-		defer primary.Assert(t)
-
-		_, err := add.
-			To("tests").
-			Item(map[string]interface{}{"coverage": 50}).
-			Execute(context.TODO())
-		assert.NotNil(t, err)
-		assert.True(t, errors.IsFatal(err))
-	})
-
-	t.Run("raises integrity errors on execute", func(t *testing.T) {
-		client, primary, _ := setup(t)
-		add := NewAdd(client)
-
-		primary.Expect("Exec", context.TODO(), "INSERT INTO tests (coverage) VALUES ($1)", 50).
-			Return(nil, &pgconn.PgError{Code: pgerrcode.IntegrityConstraintViolation})
-		defer primary.Assert(t)
-
-		_, err := add.
-			To("tests").
-			Item(map[string]interface{}{"coverage": 50}).
-			Execute(context.TODO())
-		assert.NotNil(t, err)
-		assert.False(t, errors.IsFatal(err))
-	})
-
-	t.Run("can execute", func(t *testing.T) {
-		client, primary, _ := setup(t)
-		add := NewAdd(client)
-
-		primary.Expect("Exec", context.TODO(), "INSERT INTO tests (test_coverage) SELECT test_coverage FROM units LIMIT 1").
-			Return(pgconn.CommandTag{}, nil)
-		defer primary.Assert(t)
-
-		_, err := add.
+		stmt, _, err := add.
 			Item(map[string]interface{}{"test_coverage": 0}).
 			Query(client.Query().From("units").Field("testCoverage").First(1)).
 			To("tests").
-			Execute(context.TODO())
+			Statement()
 		assert.Nil(t, err)
+		assert.Equal(t, "INSERT INTO tests (test_coverage) SELECT test_coverage FROM units LIMIT 1", stmt)
 	})
 }
 
@@ -247,65 +202,11 @@ func TestStore_Query(t *testing.T) {
 		assert.NotNil(t, client.Query())
 	})
 
-	t.Run("raises bad request errors", func(t *testing.T) {
+	t.Run("can execute on primary", func(t *testing.T) {
 		client, _, _ := setup(t)
 		query := NewQuery(client)
-
-		err := query.Execute(context.TODO(), nil)
-		assert.NotNil(t, err)
-		assert.False(t, errors.IsFatal(err))
-	})
-
-	t.Run("raises no content errors", func(t *testing.T) {
-		client, primary, _ := setup(t)
-		query := NewQuery(client)
-
-		primary.Expect("Query", context.TODO(), "SELECT coverage FROM tests").
-			Return(nil, pgx.ErrNoRows)
-		defer primary.Assert(t)
-
-		var dst []map[string]interface{}
-		err := query.
-			From("tests").
-			Field("coverage").
-			Execute(context.TODO(), dst)
-		assert.NotNil(t, err)
-		assert.False(t, errors.IsFatal(err))
-	})
-
-	t.Run("raises fatal errors", func(t *testing.T) {
-		client, primary, _ := setup(t)
-		query := NewQuery(client)
-
-		primary.Expect("Query", context.TODO(), "SELECT coverage FROM tests").
-			Return(nil, errors.New("an error has occurred"))
-		defer primary.Assert(t)
-
-		err := query.
-			From("tests").
-			Field("coverage").
-			Execute(context.TODO(), nil)
-		assert.NotNil(t, err)
-		assert.True(t, errors.IsFatal(err))
-	})
-
-	t.Run("can execute on primary", func(t *testing.T) {
-		client, primary, _ := setup(t)
-		query := NewQuery(client)
-
 		now := time.Now()
-		rows := NewPostgresRows(t)
-		rows.Expect("Close")
-		rows.Expect("Next").Return(false)
-		rows.Expect("Err").Return(nil)
-		rows.Expect("Close")
-		defer rows.Assert(t)
-		primary.Expect("Query", context.TODO(), "SELECT runs, foo FROM tests LEFT JOIN units ON runs.id = units.id WHERE coverage > $1 AND created_at > $2 ORDER BY coverage DESC LIMIT 5", 50, &now).
-			Return(rows, nil)
-		defer primary.Assert(t)
-
-		var dst []map[string]interface{}
-		err := query.From("tests").
+		stmt, args, err := query.Secondary().From("tests").
 			Complement("units ON runs.id = units.id").
 			Filter(Cond{}.Gt("coverage", 50)).
 			Order("coverage DESC").
@@ -314,30 +215,10 @@ func TestStore_Query(t *testing.T) {
 			Field("runs").
 			First(5).
 			After("created_at", &now).
-			Execute(context.TODO(), &dst)
+			Statement()
 		assert.Nil(t, err)
-	})
-
-	t.Run("can execute on secondary", func(t *testing.T) {
-		client, _, secondary := setup(t)
-		query := NewQuery(client)
-		rows := NewPostgresRows(t)
-		rows.Expect("Close")
-		rows.Expect("Next").Return(false)
-		rows.Expect("Err").Return(nil)
-		rows.Expect("Close")
-		defer rows.Assert(t)
-		secondary.Expect("Query", context.TODO(), "SELECT runs FROM tests").
-			Return(rows, nil)
-		defer secondary.Assert(t)
-
-		var dst []map[string]interface{}
-		err := query.
-			Secondary().
-			From("tests").
-			Field("runs").
-			Execute(context.TODO(), &dst)
-		assert.Nil(t, err)
+		assert.Equal(t, "SELECT runs, foo FROM tests LEFT JOIN units ON runs.id = units.id WHERE coverage > $1 AND created_at > $2 ORDER BY coverage DESC LIMIT 5", stmt)
+		assert.Equal(t, []interface{}{50, &now}, args)
 	})
 }
 
@@ -347,61 +228,20 @@ func TestStore_Remove(t *testing.T) {
 		assert.NotNil(t, client.Remove())
 	})
 
-	t.Run("raises bad request errors", func(t *testing.T) {
+	t.Run("can execute", func(t *testing.T) {
 		client, _, _ := setup(t)
 		remove := NewRemove(client)
 
-		_, err := remove.Execute(context.TODO())
-		assert.NotNil(t, err)
-		assert.False(t, errors.IsFatal(err))
-	})
-
-	t.Run("raises integrity errors", func(t *testing.T) {
-		client, primary, _ := setup(t)
-		remove := NewRemove(client)
-
-		primary.Expect("Exec", context.TODO(), "DELETE FROM tests").
-			Return(nil, &pgconn.PgError{Code: pgerrcode.IntegrityConstraintViolation})
-		defer primary.Assert(t)
-
-		_, err := remove.
-			From("tests").
-			Execute(context.TODO())
-		assert.NotNil(t, err)
-		assert.False(t, errors.IsFatal(err))
-	})
-
-	t.Run("raises fatal errors", func(t *testing.T) {
-		client, primary, _ := setup(t)
-		remove := NewRemove(client)
-
-		primary.Expect("Exec", context.TODO(), "DELETE FROM tests").
-			Return(nil, errors.New("an error has occurred"))
-		defer primary.Assert(t)
-
-		_, err := remove.
-			From("tests").
-			Execute(context.TODO())
-		assert.NotNil(t, err)
-		assert.True(t, errors.IsFatal(err))
-	})
-
-	t.Run("can execute", func(t *testing.T) {
-		client, primary, _ := setup(t)
-		remove := NewRemove(client)
-
 		now := time.Now()
-		primary.Expect("Exec", context.TODO(), "DELETE FROM tests WHERE coverage > $1 AND id = tests.id AND created_at > $2 ORDER BY coverage DESC", 50, &now).
-			Return(pgconn.CommandTag{}, nil)
-		defer primary.Assert(t)
-
-		_, err := remove.
+		stmt, args, err := remove.
 			From("tests").
 			Filter(Cond{}.Gt("coverage", 50).Raw("id = tests.id")).
 			Order("coverage DESC").
 			After("created_at", &now).
-			Execute(context.TODO())
+			Statement()
 		assert.Nil(t, err)
+		assert.Equal(t, "DELETE FROM tests WHERE coverage > $1 AND id = tests.id AND created_at > $2 ORDER BY coverage DESC", stmt)
+		assert.Equal(t, []interface{}{50, &now}, args)
 	})
 }
 
@@ -442,7 +282,7 @@ func TestStore_Transaction(t *testing.T) {
 		assert.False(t, errors.IsFatal(err))
 	})
 
-	t.Run("raises integrity errors on execute", func(t *testing.T) {
+	t.Run("raises non fatal errors on execute", func(t *testing.T) {
 		ptx := NewPostgresTx(t)
 		ptx.Expect("Exec", context.TODO(), "").
 			Return(0, &pgconn.PgError{Code: pgerrcode.IntegrityConstraintViolation})
@@ -457,6 +297,18 @@ func TestStore_Transaction(t *testing.T) {
 		_, err := tx.Execute(add)
 		assert.NotNil(t, err)
 		assert.False(t, errors.IsFatal(err))
+
+		ptx.Expect("Query", context.TODO(), "").
+			Return(nil, pgx.ErrNoRows)
+		defer ptx.Assert(t)
+
+		query := mock.NewQuery(t)
+		query.Expect("Statement").
+			Return("", nil, nil)
+		defer query.Assert(t)
+
+		_, err = tx.Execute(query, nil)
+		assert.NotNil(t, err)
 	})
 
 	t.Run("raises fatal errors", func(t *testing.T) {
@@ -474,6 +326,18 @@ func TestStore_Transaction(t *testing.T) {
 		_, err := tx.Execute(add)
 		assert.NotNil(t, err)
 		assert.True(t, errors.IsFatal(err))
+
+		ptx.Expect("Query", context.TODO(), "").
+			Return(nil, errors.New("an error has occurred"))
+		defer ptx.Assert(t)
+
+		query := mock.NewQuery(t)
+		query.Expect("Statement").
+			Return("", nil, nil)
+		defer query.Assert(t)
+
+		_, err = tx.Execute(query, nil)
+		assert.NotNil(t, err)
 	})
 
 	t.Run("can execute", func(t *testing.T) {
@@ -489,6 +353,24 @@ func TestStore_Transaction(t *testing.T) {
 
 		tx := transaction{ctx: context.TODO(), tx: ptx}
 		_, err := tx.Execute(add)
+		assert.Nil(t, err)
+
+		rows := NewPostgresRows(t)
+		rows.Expect("Close")
+		rows.Expect("Next").Return(false)
+		rows.Expect("Err").Return(nil)
+		rows.Expect("Close")
+		ptx.Expect("Query", context.TODO(), "").
+			Return(rows, nil)
+		defer ptx.Assert(t)
+
+		query := mock.NewQuery(t)
+		query.Expect("Statement").
+			Return("", nil, nil)
+		defer query.Assert(t)
+
+		var dst []map[string]interface{}
+		_, err = tx.Execute(query, &dst)
 		assert.Nil(t, err)
 	})
 
@@ -545,61 +427,18 @@ func TestStore_Update(t *testing.T) {
 		assert.NotNil(t, client.Update())
 	})
 
-	t.Run("raises bad request errors", func(t *testing.T) {
+	t.Run("can execute", func(t *testing.T) {
 		client, _, _ := setup(t)
 		update := NewUpdate(client)
 
-		_, err := update.Execute(context.TODO())
-		assert.NotNil(t, err)
-		assert.False(t, errors.IsFatal(err))
-	})
-
-	t.Run("raises integrity errors", func(t *testing.T) {
-		client, primary, _ := setup(t)
-		update := NewUpdate(client)
-
-		primary.Expect("Exec", context.TODO(), "UPDATE tests SET coverage = $1", 0).
-			Return(nil, &pgconn.PgError{Code: pgerrcode.IntegrityConstraintViolation})
-		defer primary.Assert(t)
-
-		_, err := update.
-			In("tests").
-			Item(map[string]interface{}{"coverage": 0}).
-			Execute(context.TODO())
-		assert.NotNil(t, err)
-		assert.False(t, errors.IsFatal(err))
-	})
-
-	t.Run("raises fatal errors", func(t *testing.T) {
-		client, primary, _ := setup(t)
-		update := NewUpdate(client)
-
-		primary.Expect("Exec", context.TODO(), "UPDATE tests SET coverage = $1", 0).
-			Return(nil, errors.New("an error has occurred"))
-		defer primary.Assert(t)
-
-		_, err := update.
-			In("tests").
-			Item(map[string]interface{}{"coverage": 0}).
-			Execute(context.TODO())
-		assert.NotNil(t, err)
-		assert.True(t, errors.IsFatal(err))
-	})
-
-	t.Run("can execute", func(t *testing.T) {
-		client, primary, _ := setup(t)
-		update := NewUpdate(client)
-
-		primary.Expect("Exec", context.TODO(), "UPDATE tests SET coverage = $1 WHERE coverage > $2", 0, 50).
-			Return(pgconn.CommandTag{}, nil)
-		defer primary.Assert(t)
-
-		_, err := update.
+		stmt, args, err := update.
 			In("tests").
 			Filter(Cond{}.Gt("coverage", 50)).
 			Item(map[string]interface{}{"coverage": 0}).
-			Execute(context.TODO())
+			Statement()
 		assert.Nil(t, err)
+		assert.Equal(t, "UPDATE tests SET coverage = $1 WHERE coverage > $2", stmt)
+		assert.Equal(t, []interface{}{0, 50}, args)
 	})
 }
 
@@ -653,6 +492,7 @@ func TestStore_Filter(t *testing.T) {
 type PostgresPool struct {
 	mock.Mock
 	t *testing.T
+	Pool
 }
 
 func (p *PostgresPool) Exec(ctx context.Context, sql string, args ...interface{}) (pgconn.CommandTag, error) {
@@ -676,6 +516,29 @@ func (p *PostgresPool) Exec(ctx context.Context, sql string, args ...interface{}
 	}
 
 	return tag, nil
+}
+
+func (p *PostgresPool) Begin(ctx context.Context) (pgx.Tx, error) {
+	p.t.Helper()
+	res := p.Call(p.t, ctx)
+	if len(res) != 2 {
+		p.Fatalf(p.t, "length of return values for Begin is not equal to 1")
+	}
+
+	if res[1] != nil {
+		err, ok := res[1].(error)
+		if !ok {
+			p.Fatalf(p.t, "return value #2 of Begin is not an error")
+		}
+		return nil, err
+	}
+
+	tx, ok := res[0].(pgx.Tx)
+	if !ok {
+		p.Fatalf(p.t, "return value #1 of Begin is not a pgx.Tx")
+	}
+
+	return tx, nil
 }
 
 func NewPostgresPool(t *testing.T) *PostgresPool {
@@ -708,29 +571,6 @@ func setup(t *testing.T) (*Client, *PostgresPool, *PostgresPool) {
 	return c, primary, secondary
 }
 
-func (p *PostgresPool) Begin(ctx context.Context) (pgx.Tx, error) {
-	p.t.Helper()
-	res := p.Call(p.t, ctx)
-	if len(res) != 2 {
-		p.Fatalf(p.t, "length of return values for Begin is not equal to 1")
-	}
-
-	if res[1] != nil {
-		err, ok := res[1].(error)
-		if !ok {
-			p.Fatalf(p.t, "return value #2 of Begin is not an error")
-		}
-		return nil, err
-	}
-
-	tx, ok := res[0].(pgx.Tx)
-	if !ok {
-		p.Fatalf(p.t, "return value #1 of Begin is not a pgx.Tx")
-	}
-
-	return tx, nil
-}
-
 type PostgresTx struct {
 	mock.Mock
 	t *testing.T
@@ -753,6 +593,29 @@ func (tx *PostgresTx) Commit(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (tx *PostgresTx) Query(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error) {
+	tx.t.Helper()
+	res := tx.Call(tx.t, append([]interface{}{ctx, sql}, args...)...)
+	if len(res) != 2 {
+		tx.Fatalf(tx.t, "length of return values for Query is not equal to 2")
+	}
+
+	if res[1] != nil {
+		err, ok := res[1].(error)
+		if !ok {
+			tx.Fatalf(tx.t, "return value #2 of Query is not an error")
+		}
+		return nil, err
+	}
+
+	rows, ok := res[0].(pgx.Rows)
+	if !ok {
+		tx.Fatalf(tx.t, "return value #1 of Query is not a pgx.Rows")
+	}
+
+	return rows, nil
 }
 
 func (tx *PostgresTx) Rollback(ctx context.Context) error {
@@ -800,29 +663,6 @@ func NewPostgresTx(t *testing.T) *PostgresTx {
 	tx := PostgresTx{t: t}
 
 	return &tx
-}
-
-func (p *PostgresPool) Query(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error) {
-	p.t.Helper()
-	res := p.Call(p.t, append([]interface{}{ctx, sql}, args...)...)
-	if len(res) != 2 {
-		p.Fatalf(p.t, "length of return values for Query is not equal to 2")
-	}
-
-	if res[1] != nil {
-		err, ok := res[1].(error)
-		if !ok {
-			p.Fatalf(p.t, "return value #2 of Err is not an error")
-		}
-		return nil, err
-	}
-
-	rows, ok := res[0].(pgx.Rows)
-	if !ok {
-		p.Fatalf(p.t, "return value #1 of Query is not a pgx.Rows")
-	}
-
-	return rows, nil
 }
 
 type PostgresRows struct {

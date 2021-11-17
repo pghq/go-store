@@ -11,11 +11,5 @@ func (ctx *Context) Update(collection string, filter, data interface{}) (int, er
 		return 0, errors.Wrap(err)
 	}
 
-	command := ctx.repo.client.Update().In(collection).Filter(filter).Item(item)
-	count, err := ctx.tx.Execute(command)
-	if err != nil {
-		return 0, errors.Wrap(err)
-	}
-
-	return count, nil
+	return ctx.tx.Execute(ctx.repo.client.Update().In(collection).Filter(filter).Item(item))
 }

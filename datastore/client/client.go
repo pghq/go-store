@@ -30,7 +30,7 @@ type Client interface {
 
 // Transaction represents a database transaction.
 type Transaction interface {
-	Execute(statement Encoder) (int, error)
+	Execute(statement Encoder, dst ...interface{}) (int, error)
 	Commit() error
 	Rollback() error
 }
@@ -41,7 +41,6 @@ type Add interface {
 	To(collection string) Add
 	Item(value map[string]interface{}) Add
 	Query(query Query) Add
-	Execute(ctx context.Context) (int, error)
 }
 
 // Update represents a command to update items in the collection
@@ -50,7 +49,6 @@ type Update interface {
 	In(collection string) Update
 	Item(value map[string]interface{}) Update
 	Filter(filter interface{}) Update
-	Execute(ctx context.Context) (int, error)
 }
 
 // Remove represents a command to remove items from the collection
@@ -60,7 +58,6 @@ type Remove interface {
 	Filter(filter interface{}) Remove
 	Order(by string) Remove
 	After(key string, value *time.Time) Remove
-	Execute(ctx context.Context) (int, error)
 }
 
 // Encoder represents a statement encoder
@@ -81,5 +78,4 @@ type Query interface {
 	Transform(transform func(string) string) Query
 	Fields(fields ...interface{}) Query
 	Field(key string, args ...interface{}) Query
-	Execute(ctx context.Context, dst interface{}) error
 }

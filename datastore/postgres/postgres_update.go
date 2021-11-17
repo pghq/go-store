@@ -1,10 +1,7 @@
 package postgres
 
 import (
-	"context"
-
 	"github.com/Masterminds/squirrel"
-	"github.com/pghq/go-museum/museum/diagnostic/errors"
 
 	"github.com/pghq/go-datastore/datastore/client"
 )
@@ -48,23 +45,6 @@ func (u *Update) Filter(filter interface{}) client.Update {
 	}
 
 	return u
-}
-
-func (u *Update) Execute(ctx context.Context) (int, error) {
-	sql, args, err := u.Statement()
-	if err != nil {
-		return 0, errors.BadRequest(err)
-	}
-
-	tag, err := u.client.pool.Exec(ctx, sql, args...)
-	if err != nil {
-		if IsIntegrityConstraintViolation(err) {
-			return 0, errors.BadRequest(err)
-		}
-		return 0, errors.Wrap(err)
-	}
-
-	return int(tag.RowsAffected()), nil
 }
 
 func (u *Update) Statement() (string, []interface{}, error) {

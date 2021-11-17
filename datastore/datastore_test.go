@@ -204,7 +204,7 @@ func TestRepository_Add(t *testing.T) {
 
 		client := mock.NewClient(t)
 		client.Expect("Transaction", context.TODO()).
-			Return(expectTransaction(t, add, add), nil)
+			Return(expectTransactions(t, add, add), nil)
 		for range items {
 			client.Expect("Add").
 				Return(add)
@@ -239,19 +239,39 @@ func TestRepository_Search(t *testing.T) {
 		assert.NotNil(t, r.Query())
 	})
 
-	t.Run("can execute", func(t *testing.T) {
+	t.Run("raises execution errors", func(t *testing.T) {
 		var dst []map[string]interface{}
 		query := mock.NewQuery(t)
-		query.Expect("Execute", context.TODO(), &dst).
-			Return(nil)
 		defer query.Assert(t)
 
 		client := mock.NewClient(t)
+		client.Expect("Transaction", context.TODO()).
+			Return(expectFailedTransactionExecute(t, query, &dst), nil)
 		defer client.Assert(t)
 
 		r, _ := New(client)
 
-		err := r.Search(context.TODO(), query, &dst)
+		tx, _ := r.Context(context.TODO())
+		defer tx.Rollback()
+		err := tx.Search(query, &dst)
+		assert.NotNil(t, err)
+	})
+
+	t.Run("can execute", func(t *testing.T) {
+		var dst []map[string]interface{}
+		query := mock.NewQuery(t)
+		defer query.Assert(t)
+
+		client := mock.NewClient(t)
+		client.Expect("Transaction", context.TODO()).
+			Return(expectTransaction(t, query, &dst), nil)
+		defer client.Assert(t)
+
+		r, _ := New(client)
+
+		tx, _ := r.Context(context.TODO())
+		defer tx.Rollback()
+		err := tx.Search(query, &dst)
 		assert.Nil(t, err)
 	})
 }
@@ -362,7 +382,7 @@ func TestRepository_Context(t *testing.T) {
 		t.Run("subroutine failed", func(t *testing.T) {
 			client := mock.NewClient(t)
 			client.Expect("Transaction", context.TODO()).
-				Return(expectTransaction(t), nil)
+				Return(expectTransactions(t), nil)
 
 			r, _ := New(client)
 			err := r.Procedure(context.TODO(), func(tx *Context) error {
@@ -379,7 +399,7 @@ func TestRepository_Context(t *testing.T) {
 	t.Run("should notify on success", func(t *testing.T) {
 		client := mock.NewClient(t)
 		client.Expect("Transaction", context.TODO()).
-			Return(expectTransaction(t), nil)
+			Return(expectTransactions(t), nil)
 
 		r, _ := New(client)
 		err := r.Procedure(context.TODO(), func(tx *Context) error {
@@ -392,7 +412,21 @@ func TestRepository_Context(t *testing.T) {
 	})
 }
 
-func expectTransaction(t *testing.T, commands ...interface{}) *mock.Transaction {
+func expectTransaction(t *testing.T, command interface{}, dst ...interface{}) *mock.Transaction {
+	transaction := mock.NewTransaction(t)
+
+	transaction.Expect("Execute", append([]interface{}{command}, dst...)...).
+		Return(0, nil)
+
+	transaction.Expect("Commit").
+		Return(nil)
+	transaction.Expect("Rollback").
+		Return(nil)
+
+	return transaction
+}
+
+func expectTransactions(t *testing.T, commands ...interface{}) *mock.Transaction {
 	transaction := mock.NewTransaction(t)
 
 	for _, command := range commands {
@@ -433,10 +467,10 @@ func expectFailedTransactionCommit(t *testing.T, commands ...interface{}) *mock.
 	return transaction
 }
 
-func expectFailedTransactionExecute(t *testing.T, command interface{}) *mock.Transaction {
+func expectFailedTransactionExecute(t *testing.T, command interface{}, dst ...interface{}) *mock.Transaction {
 	transaction := mock.NewTransaction(t)
 
-	transaction.Expect("Execute", command).
+	transaction.Expect("Execute", append([]interface{}{command}, dst...)...).
 		Return(0, errors.New("an error has occurred"))
 
 	transaction.Expect("Rollback").
