@@ -1,29 +1,22 @@
-# go-datastore
+# go-ark
 Data storage for apps within the organization.
 
 ## Installation
 
-go-datastore may be installed using the go get command:
+go-ark may be installed using the go get command:
 
 ```
-go get github.com/pghq/go-datastore
+go get github.com/pghq/go-ark
 ```
 ## Usage
 
-```
-import (
-    "github.com/pghq/go-datastore/datastore/postgres"
-    "github.com/pghq/go-datastore/datastore"
-)
-```
-
-To create a new repo:
+To create a new store:
 
 ```
-repo, err := datastore.New(postgres.New("postgres://postgres:postgres@db:5432"))
+import "github.com/pghq/go-ark"
+
+store, err := ark.NewStore("postgres://postgres:postgres@db:5432")
 if err != nil{
     panic(err)
 }
-
-// TODO: See tests for specific use cases...
 ```

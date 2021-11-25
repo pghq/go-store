@@ -1,37 +1,35 @@
-package postgres
+package ark
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/Masterminds/squirrel"
 
-	"github.com/pghq/go-datastore/datastore"
-	"github.com/pghq/go-datastore/datastore/client"
-	"github.com/pghq/go-datastore/datastore/internal"
+	"github.com/pghq/go-ark/client"
+	"github.com/pghq/go-ark/internal"
 )
 
 // Query creates a query for the database.
-func (c *Client) Query() client.Query {
-	return NewQuery(c)
+func (c *pgClient) Query() client.Query {
+	return &pgQuery{client: c, selected: c.pools.primary}
 }
 
-// Query is an instance of the repository query for Postgres.
-type Query struct {
-	client    *Client
+// pgQuery is an instance of the repository query for Postgres.
+type pgQuery struct {
+	client    *pgClient
+	selected  pgPool
 	opts      []func(builder squirrel.SelectBuilder) squirrel.SelectBuilder
 	fields    []string
 	transform func(string) string
 }
 
-func (q *Query) Secondary() client.Query {
-	if q.client != nil {
-		q.client.pool = q.client.secondary
-	}
-
-	return q
+func (q *pgQuery) String() string {
+	s, args, _ := q.Statement()
+	return fmt.Sprint(s, args)
 }
 
-func (q *Query) From(collection string) client.Query {
+func (q *pgQuery) From(collection string) client.Query {
 	if collection != "" {
 		q.opts = append(q.opts, func(builder squirrel.SelectBuilder) squirrel.SelectBuilder {
 			return builder.From(collection)
@@ -41,7 +39,7 @@ func (q *Query) From(collection string) client.Query {
 	return q
 }
 
-func (q *Query) Complement(collection string, args ...interface{}) client.Query {
+func (q *pgQuery) Complement(collection string, args ...interface{}) client.Query {
 	if collection != "" {
 		q.opts = append(q.opts, func(builder squirrel.SelectBuilder) squirrel.SelectBuilder {
 			return builder.LeftJoin(collection, args...)
@@ -51,8 +49,8 @@ func (q *Query) Complement(collection string, args ...interface{}) client.Query 
 	return q
 }
 
-func (q *Query) Filter(filter interface{}) client.Query {
-	if f, ok := filter.(Cond); ok && len(f.opts) > 0 {
+func (q *pgQuery) Filter(filter interface{}) client.Query {
+	if f, ok := filter.(PgCond); ok && len(f.opts) > 0 {
 		q.opts = append(q.opts, func(builder squirrel.SelectBuilder) squirrel.SelectBuilder {
 			return builder.Where(filter)
 		})
@@ -61,7 +59,7 @@ func (q *Query) Filter(filter interface{}) client.Query {
 	return q
 }
 
-func (q *Query) Order(by string) client.Query {
+func (q *pgQuery) Order(by string) client.Query {
 	if by != "" {
 		q.opts = append(q.opts, func(builder squirrel.SelectBuilder) squirrel.SelectBuilder {
 			return builder.OrderBy(by)
@@ -71,7 +69,7 @@ func (q *Query) Order(by string) client.Query {
 	return q
 }
 
-func (q *Query) First(first int) client.Query {
+func (q *pgQuery) First(first int) client.Query {
 	if first > 0 {
 		q.opts = append(q.opts, func(builder squirrel.SelectBuilder) squirrel.SelectBuilder {
 			return builder.Limit(uint64(first))
@@ -81,7 +79,7 @@ func (q *Query) First(first int) client.Query {
 	return q
 }
 
-func (q *Query) After(key string, value *time.Time) client.Query {
+func (q *pgQuery) After(key string, value *time.Time) client.Query {
 	if key != "" && value != nil && !value.IsZero() {
 		q.opts = append(q.opts, func(builder squirrel.SelectBuilder) squirrel.SelectBuilder {
 			return builder.Where(squirrel.Gt{key: value})
@@ -91,13 +89,13 @@ func (q *Query) After(key string, value *time.Time) client.Query {
 	return q
 }
 
-func (q *Query) Fields(fields ...interface{}) client.Query {
-	q.fields = datastore.Fields(fields...)
+func (q *pgQuery) Fields(fields ...interface{}) client.Query {
+	q.fields = Fields(fields...)
 
 	return q
 }
 
-func (q *Query) Field(key string, args ...interface{}) client.Query {
+func (q *pgQuery) Field(key string, args ...interface{}) client.Query {
 	if key != "" {
 		q.opts = append(q.opts, func(builder squirrel.SelectBuilder) squirrel.SelectBuilder {
 			return builder.Column(internal.ToSnakeCase(key), args...)
@@ -107,13 +105,13 @@ func (q *Query) Field(key string, args ...interface{}) client.Query {
 	return q
 }
 
-func (q *Query) Transform(transform func(string) string) client.Query {
+func (q *pgQuery) Transform(transform func(string) string) client.Query {
 	q.transform = transform
 
 	return q
 }
 
-func (q *Query) Statement() (string, []interface{}, error) {
+func (q *pgQuery) Statement() (string, []interface{}, error) {
 	builder := squirrel.StatementBuilder.
 		PlaceholderFormat(squirrel.Dollar).
 		Select()
@@ -132,13 +130,4 @@ func (q *Query) Statement() (string, []interface{}, error) {
 	}
 
 	return builder.ToSql()
-}
-
-// NewQuery creates a new query for the Postgres database.
-func NewQuery(client *Client) *Query {
-	q := Query{
-		client: client,
-	}
-
-	return &q
 }

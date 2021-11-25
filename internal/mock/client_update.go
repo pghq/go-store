@@ -3,7 +3,7 @@ package mock
 import (
 	"testing"
 
-	"github.com/pghq/go-datastore/datastore/client"
+	"github.com/pghq/go-ark/client"
 )
 
 var (

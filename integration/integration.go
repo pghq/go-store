@@ -23,12 +23,10 @@ import (
 
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
-	"github.com/pghq/go-museum/museum/diagnostic/errors"
-	"github.com/pghq/go-museum/museum/diagnostic/log"
+	"github.com/pghq/go-tea"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/pghq/go-datastore/datastore"
-	"github.com/pghq/go-datastore/datastore/postgres"
+	"github.com/pghq/go-ark"
 )
 
 const (
@@ -47,8 +45,8 @@ const (
 
 // Postgres is an integration for running postgres tests using docker
 type Postgres struct {
-	Repository *datastore.Repository
-	Migration  struct {
+	Store     *ark.Store
+	Migration struct {
 		FS        fs.FS
 		Directory string
 	}
@@ -68,7 +66,7 @@ func NewPostgres(m *testing.M) *Postgres {
 	p := Postgres{
 		run:  m.Run,
 		exit: os.Exit,
-		emit: errors.Send,
+		emit: tea.SendError,
 	}
 
 	return &p
@@ -78,7 +76,7 @@ func NewPostgres(m *testing.M) *Postgres {
 func NewPostgresWithExit(t *testing.T, code int) *Postgres {
 	p := Postgres{
 		run:  func() int { return 0 },
-		emit: errors.Send,
+		emit: tea.SendError,
 		exit: ExpectExit(t, code),
 	}
 
@@ -138,13 +136,11 @@ func RunPostgres(integration *Postgres) {
 	// Unfortunately, this method does not do any error handling :(
 	_ = resource.Expire(uint(integration.ContainerTTL.Seconds()))
 	connect := func() error {
-		log.Writer(io.Discard)
-		defer log.Reset()
+		tea.SetGlobalLogWriter(io.Discard)
+		defer tea.ResetGlobalLogger()
 
 		primary := fmt.Sprintf("postgres://test:test@localhost:%s/test?sslmode=disable", resource.GetPort("5432/tcp"))
-		store := postgres.New(primary).Migrations(integration.Migration.FS, integration.Migration.Directory)
-
-		integration.Repository, err = datastore.New(store)
+		integration.Store, err = ark.NewStore(primary, ark.MigrationFS(integration.Migration.FS), ark.MigrationDirectory(integration.Migration.Directory))
 		return err
 	}
 

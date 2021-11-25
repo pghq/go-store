@@ -1,23 +1,23 @@
-package postgres
+package ark
 
 import (
 	"github.com/Masterminds/squirrel"
 
-	"github.com/pghq/go-datastore/datastore/client"
+	"github.com/pghq/go-ark/client"
 )
 
 // Add creates an add command for the database.
-func (c *Client) Add() client.Add {
-	return NewAdd(c)
+func (c *pgClient) Add() client.Add {
+	return &pgAdd{client: c}
 }
 
-// Add is an instance of the add repository command using Postgres.
-type Add struct {
-	client *Client
+// pgAdd is an instance of the add repository command using Postgres.
+type pgAdd struct {
+	client *pgClient
 	opts   []func(builder squirrel.InsertBuilder) squirrel.InsertBuilder
 }
 
-func (a *Add) To(collection string) client.Add {
+func (a *pgAdd) To(collection string) client.Add {
 	a.opts = append(a.opts, func(builder squirrel.InsertBuilder) squirrel.InsertBuilder {
 		return builder.Into(collection)
 	})
@@ -25,7 +25,7 @@ func (a *Add) To(collection string) client.Add {
 	return a
 }
 
-func (a *Add) Item(value map[string]interface{}) client.Add {
+func (a *pgAdd) Item(value map[string]interface{}) client.Add {
 	if value != nil {
 		a.opts = append(a.opts, func(builder squirrel.InsertBuilder) squirrel.InsertBuilder {
 			return builder.SetMap(value)
@@ -35,8 +35,8 @@ func (a *Add) Item(value map[string]interface{}) client.Add {
 	return a
 }
 
-func (a *Add) Query(q client.Query) client.Add {
-	if q, ok := q.(*Query); ok {
+func (a *pgAdd) Query(q client.Query) client.Add {
+	if q, ok := q.(*pgQuery); ok {
 		s := squirrel.StatementBuilder.
 			PlaceholderFormat(squirrel.Dollar).
 			Select()
@@ -52,7 +52,7 @@ func (a *Add) Query(q client.Query) client.Add {
 	return a
 }
 
-func (a *Add) Statement() (string, []interface{}, error) {
+func (a *pgAdd) Statement() (string, []interface{}, error) {
 	builder := squirrel.StatementBuilder.
 		PlaceholderFormat(squirrel.Dollar).
 		Insert("")
@@ -62,10 +62,4 @@ func (a *Add) Statement() (string, []interface{}, error) {
 	}
 
 	return builder.ToSql()
-}
-
-// NewAdd creates a new add command for the Postgres database.
-func NewAdd(client *Client) *Add {
-	a := Add{client: client}
-	return &a
 }

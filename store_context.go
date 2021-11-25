@@ -1,15 +1,20 @@
-package datastore
+package ark
 
 import (
 	"context"
 
-	"github.com/pghq/go-museum/museum/diagnostic/errors"
+	"github.com/pghq/go-tea"
 
-	"github.com/pghq/go-datastore/datastore/client"
+	"github.com/pghq/go-ark/client"
 )
 
 // Context creates a new data store context
-func (r *Repository) Context(ctx context.Context) (*Context, error) {
+func (s *Store) Context(ctx context.Context, opts ...Option) (*Context, error) {
+	conf := Config{}
+	for _, opt := range opts {
+		opt.Apply(&conf)
+	}
+
 	if ctx != nil {
 		if ctx, ok := ctx.(*Context); ok {
 			ctx := *ctx
@@ -18,20 +23,20 @@ func (r *Repository) Context(ctx context.Context) (*Context, error) {
 		}
 	}
 
-	return NewContext(ctx, r)
+	return NewContext(ctx, s, conf.ro)
 }
 
-// Procedure executes a series of subroutines and bails fast if any errors occur
-func (r *Repository) Procedure(ctx context.Context, subroutines ...func(tx *Context) error) error {
-	tx, err := r.Context(ctx)
+// Do a series of subroutines
+func (s *Store) Do(ctx context.Context, subroutines ...func(tx *Context) error) error {
+	tx, err := s.Context(ctx)
 	if err != nil {
-		return errors.Wrap(err)
+		return tea.Error(err)
 	}
 
 	for _, f := range subroutines {
 		if err := f(tx); err != nil {
 			_ = tx.Rollback()
-			return errors.Wrap(err)
+			return tea.Error(err)
 		}
 	}
 
@@ -42,8 +47,8 @@ func (r *Repository) Procedure(ctx context.Context, subroutines ...func(tx *Cont
 type Context struct {
 	child bool
 	context.Context
-	repo *Repository
-	tx   client.Transaction
+	store *Store
+	tx    client.Transaction
 }
 
 // Commit a datastore transaction
@@ -65,15 +70,15 @@ func (ctx *Context) Rollback() error {
 }
 
 // NewContext creates a new instance of the data store context
-func NewContext(ctx context.Context, repo *Repository) (*Context, error) {
-	tx, err := repo.client.Transaction(ctx)
+func NewContext(ctx context.Context, store *Store, ro bool) (*Context, error) {
+	tx, err := store.client.Transaction(ctx, ro)
 	if err != nil {
-		return nil, errors.Wrap(err)
+		return nil, tea.Error(err)
 	}
 
 	c := Context{
 		Context: ctx,
-		repo:    repo,
+		store:   store,
 		tx:      tx,
 	}
 
