@@ -10,11 +10,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package client provides resources for data persistence and retrieval.
+// Package client provides a shared interface for database impls.
 package client
 
 import (
 	"context"
+	"fmt"
 	"time"
 )
 
@@ -25,7 +26,7 @@ type Client interface {
 	Add() Add
 	Update() Update
 	Remove() Remove
-	Transaction(ctx context.Context) (Transaction, error)
+	Transaction(ctx context.Context, ro bool) (Transaction, error)
 }
 
 // Transaction represents a database transaction.
@@ -68,7 +69,7 @@ type Encoder interface {
 // Query represents a query builder
 type Query interface {
 	Encoder
-	Secondary() Query
+	fmt.Stringer
 	From(collection string) Query
 	Complement(collection string, args ...interface{}) Query
 	Filter(filter interface{}) Query

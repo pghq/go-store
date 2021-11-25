@@ -1,4 +1,4 @@
-package postgres
+package ark
 
 import (
 	"bytes"
@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"embed"
+	"fmt"
 	"io"
 	"strings"
 	"testing"
@@ -16,145 +17,175 @@ import (
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
-	"github.com/pghq/go-museum/museum/diagnostic/errors"
-	"github.com/pghq/go-museum/museum/diagnostic/log"
+	"github.com/pghq/go-tea"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/pghq/go-datastore/datastore/internal/mock"
+	"github.com/pghq/go-ark/internal/mock"
 )
 
 var (
-	_ Pool     = &PostgresPool{}
+	_ pgPool   = &PostgresPool{}
 	_ pgx.Tx   = &PostgresTx{}
 	_ pgx.Rows = &PostgresRows{}
 )
 
-func TestStore(t *testing.T) {
-	t.Run("can create new database", func(t *testing.T) {
+func TestPostgres(t *testing.T) {
+	t.Run("can detect postgres", func(t *testing.T) {
+		tea.SetGlobalLogWriter(io.Discard)
+		defer tea.ResetGlobalLogger()
 		dsn := "postgres://postgres:postgres@db:5432"
-		client := New(dsn)
-		assert.Equal(t, dsn, client.primaryDSN)
-		assert.NotNil(t, dsn, client.secondaryDSN)
-		assert.Equal(t, DefaultSQLMaxOpenConns, client.maxConns)
-		assert.Equal(t, time.Duration(0), client.maxConnLifetime)
+		_, err := NewStore(dsn)
+		assert.NotNil(t, err)
 	})
 
-	client := New("postgres://postgres:postgres@db:5432")
-	t.Run("can set max connection lifetime", func(t *testing.T) {
-		lifetime := time.Second
-		client = client.MaxConnLifetime(lifetime)
-		assert.NotNil(t, client)
-		assert.Equal(t, lifetime, client.maxConnLifetime)
-	})
+	t.Run("can set store options", func(t *testing.T) {
+		client := pgClient{
+			conf: Config{
+				primary:   "postgres://postgres:postgres@db:5432",
+				secondary: "postgres://postgres:postgres@db:5432",
+			},
+			connect: func(ctx context.Context, config *pgxpool.Config) (*pgxpool.Pool, error) {
+				return &pgxpool.Pool{}, nil
+			},
+		}
+		opts := []Option{
+			RawClient(&client),
+			MaxConnLifetime(time.Second),
+			MaxConns(5),
+			Secondary("postgres://postgres:postgres@db:5432"),
+			MigrationFS(embed.FS{}),
+			MigrationDirectory("migrations"),
+		}
 
-	t.Run("can set max connections", func(t *testing.T) {
-		conns := 5
-		client = client.MaxConns(conns)
-		assert.NotNil(t, client)
-		assert.Equal(t, conns, client.maxConns)
+		store, err := NewStore("postgres://postgres:postgres@db:5432", opts...)
+		assert.Nil(t, err)
+		assert.NotNil(t, store)
 	})
 
 	t.Run("raises connect errors", func(t *testing.T) {
-		log.Writer(io.Discard)
-		defer log.Reset()
-		client := New("")
-		err := client.Connect()
+		tea.SetGlobalLogWriter(io.Discard)
+		defer tea.ResetGlobalLogger()
+		_, err := NewStore("")
+		assert.NotNil(t, err)
+	})
+
+	t.Run("bad primary", func(t *testing.T) {
+		client := pgClient{
+			conf: Config{
+				primary:   "postgres://postgres:postgres@db:5432",
+				secondary: "postgres://postgres:postgres@db:5432",
+			},
+			connect: func(ctx context.Context, config *pgxpool.Config) (*pgxpool.Pool, error) {
+				return nil, tea.NewError("bad primary")
+			},
+		}
+
+		_, err := NewStore("", RawClient(&client))
 		assert.NotNil(t, err)
 	})
 
 	t.Run("can not set a bad secondary", func(t *testing.T) {
-		client := New("postgres://postgres:postgres@db:5432")
-		client.connect = func(ctx context.Context, config *pgxpool.Config) (*pgxpool.Pool, error) {
-			if config.ConnString() == "secondary" {
-				return nil, errors.New("bad secondary")
-			}
-			return &pgxpool.Pool{}, nil
+		client := pgClient{
+			conf: Config{
+				primary:   "postgres://postgres:postgres@db:5432",
+				secondary: "secondary",
+			},
+			connect: func(ctx context.Context, config *pgxpool.Config) (*pgxpool.Pool, error) {
+				if config.ConnString() == "secondary" {
+					return nil, tea.NewError("bad secondary")
+				}
+				return &pgxpool.Pool{}, nil
+			},
 		}
-		err := client.Secondary("secondary").Connect()
+		_, err := NewStore("", RawClient(&client))
 		assert.NotNil(t, err)
 	})
 
-	t.Run("can set secondary database client", func(t *testing.T) {
-		client, _, _ := setup(t)
-		assert.NotNil(t, client.pool)
-		assert.NotNil(t, client.secondary)
-	})
-
 	t.Run("raises sql open errors on migration", func(t *testing.T) {
-		client := New("postgres://postgres:postgres@db:5432").
-			Migrations(embed.FS{}, "migrations")
-		client.connect = func(ctx context.Context, config *pgxpool.Config) (*pgxpool.Pool, error) {
-			return &pgxpool.Pool{}, nil
+		client := pgClient{
+			conf: Config{
+				primary:            "postgres://postgres:postgres@db:5432",
+				secondary:          "postgres://postgres:postgres@db:5432",
+				migrationFS:        embed.FS{},
+				migrationDirectory: "migrations",
+			},
+			connect: func(ctx context.Context, config *pgxpool.Config) (*pgxpool.Pool, error) {
+				return &pgxpool.Pool{}, nil
+			},
+			open: func(driverName, dataSourceName string) (*sql.DB, error) {
+				return &sql.DB{}, tea.NewError("an error has occurred")
+			},
 		}
-		client.migrations.open = func(driverName, dataSourceName string) (*sql.DB, error) {
-			return &sql.DB{}, errors.New("an error has occurred")
-		}
-		assert.NotNil(t, client)
 
-		err := client.Connect()
+		_, err := NewStore("", RawClient(&client))
 		assert.NotNil(t, err)
 	})
 
 	t.Run("raises migration errors", func(t *testing.T) {
-		client := New("postgres://postgres:postgres@db:5432").
-			Migrations(embed.FS{}, "migrations")
-		client.connect = func(ctx context.Context, config *pgxpool.Config) (*pgxpool.Pool, error) {
-			return &pgxpool.Pool{}, nil
+		client := pgClient{
+			conf: Config{
+				primary:            "postgres://postgres:postgres@db:5432",
+				secondary:          "postgres://postgres:postgres@db:5432",
+				migrationFS:        embed.FS{},
+				migrationDirectory: "migrations",
+			},
+			connect: func(ctx context.Context, config *pgxpool.Config) (*pgxpool.Pool, error) {
+				return &pgxpool.Pool{}, nil
+			},
+			open: func(driverName, dataSourceName string) (*sql.DB, error) {
+				return sql.OpenDB(ErrConnector{}), nil
+			},
 		}
-		client.migrations.open = func(driverName, dataSourceName string) (*sql.DB, error) {
-			return sql.OpenDB(ErrConnector{}), nil
-		}
-		assert.NotNil(t, client)
 
-		err := client.Connect()
+		_, err := NewStore("", RawClient(&client))
 		assert.NotNil(t, err)
 	})
 
 	t.Run("can recognize integrity violation errors", func(t *testing.T) {
 		err := &pgconn.PgError{Code: pgerrcode.IntegrityConstraintViolation}
-		assert.True(t, IsIntegrityConstraintViolation(err))
+		assert.True(t, IsPgIntegrityConstraintViolation(err))
 	})
 
 	t.Run("can distinguish non integrity violation errors", func(t *testing.T) {
-		err := errors.New("an error has occurred")
-		assert.False(t, IsIntegrityConstraintViolation(err))
+		err := tea.NewError("an error has occurred")
+		assert.False(t, IsPgIntegrityConstraintViolation(err))
 	})
 
 	t.Run("can send pgx logs", func(t *testing.T) {
-		l := NewPGXLogger()
+		l := pgxLogger{}
 		var buf bytes.Buffer
-		log.Writer(&buf)
-		defer log.Reset()
+		tea.SetGlobalLogWriter(&buf)
+		defer tea.ResetGlobalLogger()
 
-		log.Level("debug")
+		tea.SetGlobalLogLevel("debug")
 		l.Log(context.TODO(), pgx.LogLevelDebug, "an error has occurred", map[string]interface{}{"test": "value"})
 		assert.True(t, strings.Contains(buf.String(), "debug"))
 		assert.True(t, strings.Contains(buf.String(), "test: value"))
 
 		buf.Reset()
-		log.Level("info")
+		tea.SetGlobalLogLevel("info")
 		l.Log(context.TODO(), pgx.LogLevelInfo, "an error has occurred", map[string]interface{}{"test": "value"})
 		assert.True(t, strings.Contains(buf.String(), "info"))
 		assert.True(t, strings.Contains(buf.String(), "test: value"))
 
 		buf.Reset()
-		log.Level("warn")
+		tea.SetGlobalLogLevel("warn")
 		l.Log(context.TODO(), pgx.LogLevelWarn, "an error has occurred", map[string]interface{}{"test": "value"})
 		assert.True(t, strings.Contains(buf.String(), "warn"))
 		assert.True(t, strings.Contains(buf.String(), "test: value"))
 
 		buf.Reset()
-		log.Level("debug")
+		tea.SetGlobalLogLevel("debug")
 		l.Log(context.TODO(), pgx.LogLevelError, "an error has occurred", map[string]interface{}{"test": "value"})
 		assert.True(t, strings.Contains(buf.String(), "test: value"))
 	})
 
 	t.Run("can send goose logs", func(t *testing.T) {
-		l := NewGooseLogger()
+		l := gooseLogger{}
 		var buf bytes.Buffer
-		log.Writer(&buf)
-		defer log.Reset()
-		log.Level("info")
+		tea.SetGlobalLogWriter(&buf)
+		defer tea.ResetGlobalLogger()
+		tea.SetGlobalLogLevel("info")
 
 		l.Print("an error has occurred")
 		assert.True(t, strings.Contains(buf.String(), "an error has occurred"))
@@ -177,7 +208,7 @@ func TestStore(t *testing.T) {
 	})
 }
 
-func TestStore_Add(t *testing.T) {
+func TestPostgres_Add(t *testing.T) {
 	t.Run("can create new instance", func(t *testing.T) {
 		client, _, _ := setup(t)
 		assert.NotNil(t, client.Add())
@@ -185,7 +216,7 @@ func TestStore_Add(t *testing.T) {
 
 	t.Run("can execute", func(t *testing.T) {
 		client, _, _ := setup(t)
-		add := NewAdd(client)
+		add := pgAdd{client: client}
 		stmt, _, err := add.
 			Item(map[string]interface{}{"test_coverage": 0}).
 			Query(client.Query().From("units").Field("testCoverage").First(1)).
@@ -196,7 +227,7 @@ func TestStore_Add(t *testing.T) {
 	})
 }
 
-func TestStore_Query(t *testing.T) {
+func TestPostgres_Query(t *testing.T) {
 	t.Run("can create new instance", func(t *testing.T) {
 		client, _, _ := setup(t)
 		assert.NotNil(t, client.Query())
@@ -204,25 +235,27 @@ func TestStore_Query(t *testing.T) {
 
 	t.Run("can execute on primary", func(t *testing.T) {
 		client, _, _ := setup(t)
-		query := NewQuery(client)
+		query := pgQuery{client: client}
 		now := time.Now()
-		stmt, args, err := query.Secondary().From("tests").
+		q := query.From("tests").
 			Complement("units ON runs.id = units.id").
-			Filter(Cond{}.Gt("coverage", 50)).
+			Filter(PgCond{}.Gt("coverage", 50)).
 			Order("coverage DESC").
 			Fields("FOO").
 			Transform(strings.ToLower).
 			Field("runs").
 			First(5).
-			After("created_at", &now).
-			Statement()
+			After("created_at", &now)
+
+		stmt, args, err := q.Statement()
 		assert.Nil(t, err)
 		assert.Equal(t, "SELECT runs, foo FROM tests LEFT JOIN units ON runs.id = units.id WHERE coverage > $1 AND created_at > $2 ORDER BY coverage DESC LIMIT 5", stmt)
 		assert.Equal(t, []interface{}{50, &now}, args)
+		assert.Equal(t, fmt.Sprint(stmt, args), q.String())
 	})
 }
 
-func TestStore_Remove(t *testing.T) {
+func TestPostgres_Remove(t *testing.T) {
 	t.Run("can create new instance", func(t *testing.T) {
 		client, _, _ := setup(t)
 		assert.NotNil(t, client.Remove())
@@ -230,12 +263,12 @@ func TestStore_Remove(t *testing.T) {
 
 	t.Run("can execute", func(t *testing.T) {
 		client, _, _ := setup(t)
-		remove := NewRemove(client)
+		remove := pgRemove{client: client}
 
 		now := time.Now()
 		stmt, args, err := remove.
 			From("tests").
-			Filter(Cond{}.Gt("coverage", 50).Raw("id = tests.id")).
+			Filter(PgCond{}.Gt("coverage", 50).Raw("id = tests.id")).
 			Order("coverage DESC").
 			After("created_at", &now).
 			Statement()
@@ -245,14 +278,14 @@ func TestStore_Remove(t *testing.T) {
 	})
 }
 
-func TestStore_Transaction(t *testing.T) {
+func TestPostgres_Transaction(t *testing.T) {
 	t.Run("handles new transaction errors", func(t *testing.T) {
-		client, primary, _ := setup(t)
-		primary.Expect("Begin", context.TODO()).
-			Return(nil, errors.New("an error occurred"))
-		defer primary.Assert(t)
+		client, _, secondary := setup(t)
+		secondary.Expect("Begin", context.TODO()).
+			Return(nil, tea.NewError("an error occurred"))
+		defer secondary.Assert(t)
 
-		_, err := client.Transaction(context.TODO())
+		_, err := client.Transaction(context.TODO(), true)
 		assert.NotNil(t, err)
 	})
 
@@ -262,7 +295,7 @@ func TestStore_Transaction(t *testing.T) {
 			Return(NewPostgresTx(t), nil)
 		defer primary.Assert(t)
 
-		tx, err := client.Transaction(context.TODO())
+		tx, err := client.Transaction(context.TODO(), false)
 		assert.Nil(t, err)
 		assert.NotNil(t, tx)
 	})
@@ -273,13 +306,13 @@ func TestStore_Transaction(t *testing.T) {
 
 		add := mock.NewAdd(t)
 		add.Expect("Statement").
-			Return("", nil, errors.New("an error has occurred"))
+			Return("", nil, tea.NewError("an error has occurred"))
 		defer add.Assert(t)
 
-		tx := transaction{ctx: context.TODO(), tx: ptx}
+		tx := pgTransaction{ctx: context.TODO(), tx: ptx}
 		_, err := tx.Execute(add)
 		assert.NotNil(t, err)
-		assert.False(t, errors.IsFatal(err))
+		assert.False(t, tea.IsFatal(err))
 	})
 
 	t.Run("raises non fatal errors on execute", func(t *testing.T) {
@@ -293,10 +326,10 @@ func TestStore_Transaction(t *testing.T) {
 			Return("", nil, nil)
 		defer add.Assert(t)
 
-		tx := transaction{ctx: context.TODO(), tx: ptx}
+		tx := pgTransaction{ctx: context.TODO(), tx: ptx}
 		_, err := tx.Execute(add)
 		assert.NotNil(t, err)
-		assert.False(t, errors.IsFatal(err))
+		assert.False(t, tea.IsFatal(err))
 
 		ptx.Expect("Query", context.TODO(), "").
 			Return(nil, pgx.ErrNoRows)
@@ -314,7 +347,7 @@ func TestStore_Transaction(t *testing.T) {
 	t.Run("raises fatal errors", func(t *testing.T) {
 		ptx := NewPostgresTx(t)
 		ptx.Expect("Exec", context.TODO(), "").
-			Return(0, errors.New("an error has occurred"))
+			Return(0, tea.NewError("an error has occurred"))
 		defer ptx.Assert(t)
 
 		add := mock.NewAdd(t)
@@ -322,13 +355,13 @@ func TestStore_Transaction(t *testing.T) {
 			Return("", nil, nil)
 		defer add.Assert(t)
 
-		tx := transaction{ctx: context.TODO(), tx: ptx}
+		tx := pgTransaction{ctx: context.TODO(), tx: ptx}
 		_, err := tx.Execute(add)
 		assert.NotNil(t, err)
-		assert.True(t, errors.IsFatal(err))
+		assert.True(t, tea.IsFatal(err))
 
 		ptx.Expect("Query", context.TODO(), "").
-			Return(nil, errors.New("an error has occurred"))
+			Return(nil, tea.NewError("an error has occurred"))
 		defer ptx.Assert(t)
 
 		query := mock.NewQuery(t)
@@ -351,7 +384,7 @@ func TestStore_Transaction(t *testing.T) {
 			Return("", nil, nil)
 		defer add.Assert(t)
 
-		tx := transaction{ctx: context.TODO(), tx: ptx}
+		tx := pgTransaction{ctx: context.TODO(), tx: ptx}
 		_, err := tx.Execute(add)
 		assert.Nil(t, err)
 
@@ -377,13 +410,13 @@ func TestStore_Transaction(t *testing.T) {
 	t.Run("raises commit errors", func(t *testing.T) {
 		ptx := NewPostgresTx(t)
 		ptx.Expect("Commit", context.TODO()).
-			Return(errors.New("an error has occurred"))
+			Return(tea.NewError("an error has occurred"))
 		defer ptx.Assert(t)
 
-		tx := transaction{ctx: context.TODO(), tx: ptx}
+		tx := pgTransaction{ctx: context.TODO(), tx: ptx}
 		err := tx.Commit()
 		assert.NotNil(t, err)
-		assert.True(t, errors.IsFatal(err))
+		assert.True(t, tea.IsFatal(err))
 	})
 
 	t.Run("can commit", func(t *testing.T) {
@@ -392,7 +425,7 @@ func TestStore_Transaction(t *testing.T) {
 			Return(nil)
 		defer ptx.Assert(t)
 
-		tx := transaction{ctx: context.TODO(), tx: ptx}
+		tx := pgTransaction{ctx: context.TODO(), tx: ptx}
 		err := tx.Commit()
 		assert.Nil(t, err)
 	})
@@ -400,13 +433,13 @@ func TestStore_Transaction(t *testing.T) {
 	t.Run("raises rollback errors", func(t *testing.T) {
 		ptx := NewPostgresTx(t)
 		ptx.Expect("Rollback", context.TODO()).
-			Return(errors.New("an error has occurred"))
+			Return(tea.NewError("an error has occurred"))
 		defer ptx.Assert(t)
 
-		tx := transaction{ctx: context.TODO(), tx: ptx}
+		tx := pgTransaction{ctx: context.TODO(), tx: ptx}
 		err := tx.Rollback()
 		assert.NotNil(t, err)
-		assert.True(t, errors.IsFatal(err))
+		assert.True(t, tea.IsFatal(err))
 	})
 
 	t.Run("can rollback", func(t *testing.T) {
@@ -415,13 +448,13 @@ func TestStore_Transaction(t *testing.T) {
 			Return(nil)
 		defer ptx.Assert(t)
 
-		tx := transaction{ctx: context.TODO(), tx: ptx}
+		tx := pgTransaction{ctx: context.TODO(), tx: ptx}
 		err := tx.Rollback()
 		assert.Nil(t, err)
 	})
 }
 
-func TestStore_Update(t *testing.T) {
+func TestPostgres_Update(t *testing.T) {
 	t.Run("can create new instance", func(t *testing.T) {
 		client, _, _ := setup(t)
 		assert.NotNil(t, client.Update())
@@ -429,11 +462,11 @@ func TestStore_Update(t *testing.T) {
 
 	t.Run("can execute", func(t *testing.T) {
 		client, _, _ := setup(t)
-		update := NewUpdate(client)
+		update := pgUpdate{client: client}
 
 		stmt, args, err := update.
 			In("tests").
-			Filter(Cond{}.Gt("coverage", 50)).
+			Filter(PgCond{}.Gt("coverage", 50)).
 			Item(map[string]interface{}{"coverage": 0}).
 			Statement()
 		assert.Nil(t, err)
@@ -442,9 +475,9 @@ func TestStore_Update(t *testing.T) {
 	})
 }
 
-func TestStore_Filter(t *testing.T) {
+func TestPostgres_Filter(t *testing.T) {
 	t.Run("raises invalid slice type errors", func(t *testing.T) {
-		f := Cond{}.
+		f := PgCond{}.
 			Eq("key", []interface{}{}).
 			Lt("key", []interface{}{}).
 			Gt("key", []interface{}{}).
@@ -452,21 +485,21 @@ func TestStore_Filter(t *testing.T) {
 
 		_, _, err := squirrel.Select("column").From("tests").Where(f).ToSql()
 		assert.NotNil(t, err)
-		assert.False(t, errors.IsFatal(err))
+		assert.False(t, tea.IsFatal(err))
 	})
 
 	t.Run("raises bad op errors", func(t *testing.T) {
-		f := Cond{}.
+		f := PgCond{}.
 			Lt("key", nil)
 
 		_, _, err := squirrel.Select("column").From("tests").Where(f).ToSql()
 		assert.NotNil(t, err)
-		assert.False(t, errors.IsFatal(err))
+		assert.False(t, tea.IsFatal(err))
 	})
 
 	t.Run("can sql-ize", func(t *testing.T) {
-		or := Cond{}.Lt("lt", 2)
-		and := Cond{}.Gt("gt", 3).
+		or := PgCond{}.Lt("lt", 2)
+		and := PgCond{}.Gt("gt", 3).
 			NotEq("ne", 4).
 			BeginsWith("prefix", "5").
 			EndsWith("suffix", "6").
@@ -477,7 +510,7 @@ func TestStore_Filter(t *testing.T) {
 			NotContains("notContainsSlice", []interface{}{8, 9, 10}).
 			NotContains("notContainsNumber", 11)
 
-		f := Cond{}.
+		f := PgCond{}.
 			Eq("eq", 1).
 			Or(or).
 			And(and)
@@ -492,7 +525,7 @@ func TestStore_Filter(t *testing.T) {
 type PostgresPool struct {
 	mock.Mock
 	t *testing.T
-	Pool
+	pgPool
 }
 
 func (p *PostgresPool) Exec(ctx context.Context, sql string, args ...interface{}) (pgconn.CommandTag, error) {
@@ -547,28 +580,26 @@ func NewPostgresPool(t *testing.T) *PostgresPool {
 	return &p
 }
 
-func setup(t *testing.T) (*Client, *PostgresPool, *PostgresPool) {
+func setup(t *testing.T) (*pgClient, *PostgresPool, *PostgresPool) {
 	t.Helper()
 
-	c := New("postgres://postgres:postgres@db:5432")
-	c.connect = func(ctx context.Context, config *pgxpool.Config) (*pgxpool.Pool, error) {
-		t.Helper()
-		assert.NotNil(t, config)
-		assert.IsType(t, &PGXLogger{}, config.ConnConfig.Logger)
-		assert.Equal(t, int32(DefaultSQLMaxOpenConns), config.MaxConns)
-		assert.Equal(t, time.Duration(0), config.MaxConnLifetime)
-		assert.Equal(t, c.primaryDSN, config.ConnString())
-
-		return &pgxpool.Pool{}, nil
+	client := pgClient{
+		conf: Config{
+			primary:   "postgres://postgres:postgres@db:5432",
+			secondary: "postgres://postgres:postgres@db:5432",
+		},
+		connect: func(ctx context.Context, config *pgxpool.Config) (*pgxpool.Pool, error) {
+			return &pgxpool.Pool{}, nil
+		},
 	}
-	err := c.Connect()
-	assert.Nil(t, err)
+
+	assert.Nil(t, client.Connect())
 	primary := NewPostgresPool(t)
 	secondary := NewPostgresPool(t)
-	c.pool = primary
-	c.secondary = secondary
+	client.pools.primary = primary
+	client.pools.secondary = secondary
 
-	return c, primary, secondary
+	return &client, primary, secondary
 }
 
 type PostgresTx struct {
@@ -739,7 +770,7 @@ func NewPostgresRows(t *testing.T) *PostgresRows {
 type ErrConnector struct{}
 
 func (e ErrConnector) Connect(_ context.Context) (driver.Conn, error) {
-	return nil, errors.New("an error has occurred")
+	return nil, tea.NewError("an error has occurred")
 }
 
 func (e ErrConnector) Driver() driver.Driver {

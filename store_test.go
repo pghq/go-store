@@ -1,36 +1,21 @@
-package datastore
+package ark
 
 import (
 	"context"
 	"testing"
 
-	"github.com/pghq/go-museum/museum/diagnostic/errors"
+	"github.com/pghq/go-tea"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/pghq/go-datastore/datastore/internal/mock"
+	"github.com/pghq/go-ark/internal/mock"
 )
 
-func TestRepository(t *testing.T) {
-	t.Run("raises error on undefined client", func(t *testing.T) {
-		_, err := New(nil)
-		assert.NotNil(t, err)
-	})
-
-	t.Run("raises error on disconnected client", func(t *testing.T) {
-		client := mock.NewDisconnectedClient(t)
-		client.Expect("Connect").Return(errors.New("an error has occurred"))
-		defer client.Assert(t)
-
-		_, err := New(client)
-		assert.NotNil(t, err)
-	})
-
+func TestStore(t *testing.T) {
 	t.Run("can create instance", func(t *testing.T) {
 		client := mock.NewClient(t)
 		defer client.Assert(t)
 
-		r, err := New(client)
-		assert.Nil(t, err)
+		r, _ := NewStore("", RawClient(client))
 		assert.NotNil(t, r)
 	})
 
@@ -43,13 +28,13 @@ func TestRepository(t *testing.T) {
 	})
 }
 
-func TestRepository_Add(t *testing.T) {
+func TestStore_Add(t *testing.T) {
 	t.Run("raises nil item errors", func(t *testing.T) {
 		client := mock.NewClient(t)
-		client.Expect("Transaction", context.TODO()).Return(expectFailedTransaction(t), nil)
+		client.Expect("Transaction", context.TODO(), false).Return(expectFailedTransaction(t), nil)
 		defer client.Assert(t)
 
-		r, _ := New(client)
+		r, _ := NewStore("", RawClient(client))
 		tx, _ := r.Context(context.TODO())
 		defer tx.Rollback()
 		err := tx.Add("tests", nil)
@@ -58,11 +43,11 @@ func TestRepository_Add(t *testing.T) {
 
 	t.Run("raises transaction errors", func(t *testing.T) {
 		client := mock.NewClient(t)
-		client.Expect("Transaction", context.TODO()).
-			Return(nil, errors.New("an error has occurred"))
+		client.Expect("Transaction", context.TODO(), false).
+			Return(nil, tea.NewError("an error has occurred"))
 		defer client.Assert(t)
 
-		r, _ := New(client)
+		r, _ := NewStore("", RawClient(client))
 
 		_, err := r.Context(context.TODO())
 		assert.NotNil(t, err)
@@ -77,13 +62,13 @@ func TestRepository_Add(t *testing.T) {
 		defer add.Assert(t)
 
 		client := mock.NewClient(t)
-		client.Expect("Transaction", context.TODO()).
+		client.Expect("Transaction", context.TODO(), false).
 			Return(expectFailedTransactionExecute(t, add), nil)
 		client.Expect("Add").
 			Return(add)
 		defer client.Assert(t)
 
-		r, _ := New(client)
+		r, _ := NewStore("", RawClient(client))
 
 		tx, _ := r.Context(context.TODO())
 		defer tx.Rollback()
@@ -100,13 +85,13 @@ func TestRepository_Add(t *testing.T) {
 		defer add.Assert(t)
 
 		client := mock.NewClient(t)
-		client.Expect("Transaction", context.TODO()).
+		client.Expect("Transaction", context.TODO(), false).
 			Return(expectFailedTransactionCommit(t, add), nil)
 		client.Expect("Add").
 			Return(add)
 		defer client.Assert(t)
 
-		r, _ := New(client)
+		r, _ := NewStore("", RawClient(client))
 
 		tx, _ := r.Context(context.TODO())
 		defer tx.Rollback()
@@ -119,9 +104,9 @@ func TestRepository_Add(t *testing.T) {
 
 	t.Run("raises bad item errors", func(t *testing.T) {
 		client := mock.NewClient(t)
-		client.Expect("Transaction", context.TODO()).Return(expectFailedTransaction(t), nil)
+		client.Expect("Transaction", context.TODO(), false).Return(expectFailedTransaction(t), nil)
 		defer client.Assert(t)
-		r, _ := New(client)
+		r, _ := NewStore("", RawClient(client))
 
 		tx, _ := r.Context(context.TODO())
 		defer tx.Rollback()
@@ -131,9 +116,9 @@ func TestRepository_Add(t *testing.T) {
 
 	t.Run("raises bad slice errors", func(t *testing.T) {
 		client := mock.NewClient(t)
-		client.Expect("Transaction", context.TODO()).Return(expectFailedTransaction(t), nil)
+		client.Expect("Transaction", context.TODO(), false).Return(expectFailedTransaction(t), nil)
 		defer client.Assert(t)
-		r, _ := New(client)
+		r, _ := NewStore("", RawClient(client))
 		tx, _ := r.Context(context.TODO())
 		defer tx.Rollback()
 		err := tx.Add("tests", []string{"item"})
@@ -142,9 +127,9 @@ func TestRepository_Add(t *testing.T) {
 
 	t.Run("raises empty slice errors", func(t *testing.T) {
 		client := mock.NewClient(t)
-		client.Expect("Transaction", context.TODO()).Return(expectFailedTransaction(t), nil)
+		client.Expect("Transaction", context.TODO(), false).Return(expectFailedTransaction(t), nil)
 		defer client.Assert(t)
-		r, _ := New(client)
+		r, _ := NewStore("", RawClient(client))
 		tx, _ := r.Context(context.TODO())
 		defer tx.Rollback()
 		err := tx.Add("tests", []interface{}{})
@@ -164,13 +149,13 @@ func TestRepository_Add(t *testing.T) {
 		defer add.Assert(t)
 
 		client := mock.NewClient(t)
-		client.Expect("Transaction", context.TODO()).
+		client.Expect("Transaction", context.TODO(), false).
 			Return(expectTransaction(t, add), nil)
 		client.Expect("Add").
 			Return(add)
 		defer client.Assert(t)
 
-		r, _ := New(client)
+		r, _ := NewStore("", RawClient(client))
 
 		var is struct {
 			Key       int    `db:"key"`
@@ -203,7 +188,7 @@ func TestRepository_Add(t *testing.T) {
 		defer add.Assert(t)
 
 		client := mock.NewClient(t)
-		client.Expect("Transaction", context.TODO()).
+		client.Expect("Transaction", context.TODO(), false).
 			Return(expectTransactions(t, add, add), nil)
 		for range items {
 			client.Expect("Add").
@@ -211,7 +196,7 @@ func TestRepository_Add(t *testing.T) {
 		}
 		defer client.Assert(t)
 
-		r, _ := New(client)
+		r, _ := NewStore("", RawClient(client))
 
 		var is struct {
 			Key int `db:"key"`
@@ -228,67 +213,141 @@ func TestRepository_Add(t *testing.T) {
 	})
 }
 
-func TestRepository_Search(t *testing.T) {
+func TestStore_Search(t *testing.T) {
 	t.Run("can create instance", func(t *testing.T) {
 		client := mock.NewClient(t)
 		client.Expect("Query").
 			Return(mock.NewQuery(t))
 		defer client.Assert(t)
 
-		r, _ := New(client)
+		r, _ := NewStore("", RawClient(client))
 		assert.NotNil(t, r.Query())
 	})
 
 	t.Run("raises execution errors", func(t *testing.T) {
 		var dst []map[string]interface{}
 		query := mock.NewQuery(t)
+		query.Expect("String").
+			Return("raises execution errors")
 		defer query.Assert(t)
 
 		client := mock.NewClient(t)
-		client.Expect("Transaction", context.TODO()).
+		client.Expect("Transaction", context.TODO(), false).
 			Return(expectFailedTransactionExecute(t, query, &dst), nil)
 		defer client.Assert(t)
 
-		r, _ := New(client)
+		r, _ := NewStore("", RawClient(client))
 
 		tx, _ := r.Context(context.TODO())
 		defer tx.Rollback()
-		err := tx.Search(query, &dst)
+		_, err := tx.Search(query, &dst, Consistent())
 		assert.NotNil(t, err)
 	})
 
-	t.Run("can execute", func(t *testing.T) {
+	t.Run("not found", func(t *testing.T) {
 		var dst []map[string]interface{}
 		query := mock.NewQuery(t)
+		query.Expect("String").
+			Return("can execute")
+		query.Expect("String").
+			Return("can execute")
 		defer query.Assert(t)
 
+		txn := mock.NewTransaction(t)
+		txn.Expect("Execute", append([]interface{}{query}, &dst)...).
+			Return(0, tea.NewNoContent("not found"))
+		txn.Expect("Rollback").
+			Return(nil)
+
 		client := mock.NewClient(t)
-		client.Expect("Transaction", context.TODO()).
-			Return(expectTransaction(t, query, &dst), nil)
+		client.Expect("Transaction", context.TODO(), false).
+			Return(txn, nil)
 		defer client.Assert(t)
 
-		r, _ := New(client)
+		r, _ := NewStore("", RawClient(client))
 
 		tx, _ := r.Context(context.TODO())
 		defer tx.Rollback()
-		err := tx.Search(query, &dst)
+		cached, err := tx.Search(query, &dst)
+		assert.NotNil(t, err)
+		assert.False(t, cached)
+
+		r.cache.Wait()
+		cached, err = tx.Search(query, &dst)
+		assert.NotNil(t, err)
+		assert.True(t, cached)
+	})
+
+	t.Run("transaction errors", func(t *testing.T) {
+		client := mock.NewClient(t)
+		client.Expect("Transaction", context.TODO(), false).
+			Return(nil, tea.NewError("an error has occurred"))
+		defer client.Assert(t)
+
+		r, _ := NewStore("", RawClient(client))
+		_, err := r.Get(context.TODO(), nil, nil)
+		assert.NotNil(t, err)
+	})
+
+	t.Run("can execute procedure", func(t *testing.T) {
+		var dst []map[string]interface{}
+		query := mock.NewQuery(t)
+		query.Expect("String").
+			Return("can execute")
+		query.Expect("String").
+			Return("can execute")
+		defer query.Assert(t)
+
+		client := mock.NewClient(t)
+		client.Expect("Transaction", context.TODO(), false).
+			Return(expectTransaction(t, query, &dst), nil)
+		defer client.Assert(t)
+
+		r, _ := NewStore("", RawClient(client))
+
+		tx, _ := r.Context(context.TODO())
+		defer tx.Rollback()
+		cached, err := tx.Search(query, &dst)
+		assert.Nil(t, err)
+		assert.False(t, cached)
+
+		r.cache.Wait()
+		cached, err = tx.Search(query, &dst)
+		assert.Nil(t, err)
+		assert.True(t, cached)
+	})
+
+	t.Run("can execute search", func(t *testing.T) {
+		var dst []map[string]interface{}
+		query := mock.NewQuery(t)
+		query.Expect("String").
+			Return("can execute")
+		defer query.Assert(t)
+
+		client := mock.NewClient(t)
+		client.Expect("Transaction", context.TODO(), true).
+			Return(expectTransaction(t, query, &dst), nil)
+		defer client.Assert(t)
+
+		r, _ := NewStore("", RawClient(client))
+		_, err := r.Get(context.TODO(), query, &dst, ReadOnly())
 		assert.Nil(t, err)
 	})
 }
 
-func TestRepository_Remove(t *testing.T) {
+func TestStore_Remove(t *testing.T) {
 	t.Run("raises execution errors", func(t *testing.T) {
 		remove := expectRemove(t)
 		defer remove.Assert(t)
 
 		client := mock.NewClient(t)
-		client.Expect("Transaction", context.TODO()).
+		client.Expect("Transaction", context.TODO(), false).
 			Return(expectFailedTransactionExecute(t, remove), nil)
 		client.Expect("Remove").
 			Return(remove)
 		defer client.Assert(t)
 
-		r, _ := New(client)
+		r, _ := NewStore("", RawClient(client))
 
 		tx, _ := r.Context(context.TODO())
 		defer tx.Rollback()
@@ -301,13 +360,13 @@ func TestRepository_Remove(t *testing.T) {
 		defer remove.Assert(t)
 
 		client := mock.NewClient(t)
-		client.Expect("Transaction", context.TODO()).
+		client.Expect("Transaction", context.TODO(), false).
 			Return(expectTransaction(t, remove), nil)
 		client.Expect("Remove").
 			Return(remove)
 		defer client.Assert(t)
 
-		r, _ := New(client)
+		r, _ := NewStore("", RawClient(client))
 
 		tx, _ := r.Context(context.TODO())
 		defer tx.Rollback()
@@ -316,11 +375,11 @@ func TestRepository_Remove(t *testing.T) {
 	})
 }
 
-func TestRepository_Update(t *testing.T) {
+func TestStore_Update(t *testing.T) {
 	t.Run("raises bad item errors", func(t *testing.T) {
 		client := mock.NewClient(t)
-		client.Expect("Transaction", context.TODO()).Return(expectFailedTransaction(t), nil)
-		r, _ := New(client)
+		client.Expect("Transaction", context.TODO(), false).Return(expectFailedTransaction(t), nil)
+		r, _ := NewStore("", RawClient(client))
 
 		tx, _ := r.Context(context.TODO())
 		defer tx.Rollback()
@@ -333,13 +392,13 @@ func TestRepository_Update(t *testing.T) {
 		defer update.Assert(t)
 
 		client := mock.NewClient(t)
-		client.Expect("Transaction", context.TODO()).
+		client.Expect("Transaction", context.TODO(), false).
 			Return(expectFailedTransactionExecute(t, update), nil)
 		client.Expect("Update").
 			Return(update)
 		defer client.Assert(t)
 
-		r, _ := New(client)
+		r, _ := NewStore("", RawClient(client))
 
 		tx, _ := r.Context(context.TODO())
 		defer tx.Rollback()
@@ -354,11 +413,11 @@ func TestRepository_Update(t *testing.T) {
 		client := mock.NewClient(t)
 		client.Expect("Update").
 			Return(update)
-		client.Expect("Transaction", context.TODO()).
+		client.Expect("Transaction", context.TODO(), false).
 			Return(expectTransaction(t, update), nil)
 		defer client.Assert(t)
 
-		r, _ := New(client)
+		r, _ := NewStore("", RawClient(client))
 
 		tx, _ := r.Context(context.TODO())
 		defer tx.Rollback()
@@ -367,28 +426,28 @@ func TestRepository_Update(t *testing.T) {
 	})
 }
 
-func TestRepository_Context(t *testing.T) {
+func TestStore_Context(t *testing.T) {
 	t.Run("should notify on procedure errors", func(t *testing.T) {
 		t.Run("new transaction failed", func(t *testing.T) {
 			client := mock.NewClient(t)
-			client.Expect("Transaction", context.TODO()).
-				Return(nil, errors.New("an error has occurred"))
+			client.Expect("Transaction", context.TODO(), false).
+				Return(nil, tea.NewError("an error has occurred"))
 
-			r, _ := New(client)
-			err := r.Procedure(context.TODO())
+			r, _ := NewStore("", RawClient(client))
+			err := r.Do(context.TODO())
 			assert.NotNil(t, err)
 		})
 
 		t.Run("subroutine failed", func(t *testing.T) {
 			client := mock.NewClient(t)
-			client.Expect("Transaction", context.TODO()).
+			client.Expect("Transaction", context.TODO(), false).
 				Return(expectTransactions(t), nil)
 
-			r, _ := New(client)
-			err := r.Procedure(context.TODO(), func(tx *Context) error {
-				return errors.New("an error")
+			r, _ := NewStore("", RawClient(client))
+			err := r.Do(context.TODO(), func(tx *Context) error {
+				return tea.NewError("an error")
 			}, func(tx *Context) error {
-				return errors.New("another error")
+				return tea.NewError("another error")
 			})
 
 			assert.NotNil(t, err)
@@ -398,11 +457,11 @@ func TestRepository_Context(t *testing.T) {
 
 	t.Run("should notify on success", func(t *testing.T) {
 		client := mock.NewClient(t)
-		client.Expect("Transaction", context.TODO()).
+		client.Expect("Transaction", context.TODO(), false).
 			Return(expectTransactions(t), nil)
 
-		r, _ := New(client)
-		err := r.Procedure(context.TODO(), func(tx *Context) error {
+		r, _ := NewStore("", RawClient(client))
+		err := r.Do(context.TODO(), func(tx *Context) error {
 			return nil
 		}, func(tx *Context) error {
 			return nil
@@ -460,7 +519,7 @@ func expectFailedTransactionCommit(t *testing.T, commands ...interface{}) *mock.
 	}
 
 	transaction.Expect("Commit").
-		Return(errors.New("an error has occurred"))
+		Return(tea.NewError("an error has occurred"))
 	transaction.Expect("Rollback").
 		Return(nil)
 
@@ -471,7 +530,7 @@ func expectFailedTransactionExecute(t *testing.T, command interface{}, dst ...in
 	transaction := mock.NewTransaction(t)
 
 	transaction.Expect("Execute", append([]interface{}{command}, dst...)...).
-		Return(0, errors.New("an error has occurred"))
+		Return(0, tea.NewError("an error has occurred"))
 
 	transaction.Expect("Rollback").
 		Return(nil)

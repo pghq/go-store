@@ -10,10 +10,8 @@ import (
 	"time"
 
 	"github.com/ory/dockertest/v3"
+	"github.com/pghq/go-tea"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/pghq/go-museum/museum/diagnostic/errors"
-	"github.com/pghq/go-museum/museum/diagnostic/log"
 )
 
 func TestPostgres(t *testing.T) {
@@ -26,26 +24,26 @@ func TestPostgres(t *testing.T) {
 	})
 
 	t.Run("raises bad docker endpoint errors", func(t *testing.T) {
-		log.Writer(io.Discard)
-		defer log.Reset()
+		tea.SetGlobalLogWriter(io.Discard)
+		defer tea.ResetGlobalLogger()
 		test := NewPostgresWithExit(t, 1)
 		test.DockerEndpoint = "https://[::1]:namedport"
 		RunPostgres(test)
-		assert.Nil(t, test.Repository)
+		assert.Nil(t, test.Store)
 	})
 
 	t.Run("raises bad image tag errors", func(t *testing.T) {
-		log.Writer(io.Discard)
-		defer log.Reset()
+		tea.SetGlobalLogWriter(io.Discard)
+		defer tea.ResetGlobalLogger()
 		test := NewPostgresWithExit(t, 1)
 		test.ImageTag = "0"
 		RunPostgres(test)
-		assert.Nil(t, test.Repository)
+		assert.Nil(t, test.Store)
 	})
 
 	t.Run("raises connection errors", func(t *testing.T) {
-		log.Writer(io.Discard)
-		defer log.Reset()
+		tea.SetGlobalLogWriter(io.Discard)
+		defer tea.ResetGlobalLogger()
 		fs := fstest.MapFS{
 			"migrations/test.sql": &fstest.MapFile{
 				Data: []byte("-- +goose Up\nCREATE TABLE IF NOT EXISTS tests (id uuid);"),
@@ -57,15 +55,15 @@ func TestPostgres(t *testing.T) {
 		test.Migration.FS = fs
 		test.Migration.Directory = "migrations"
 		RunPostgres(test)
-		assert.Nil(t, test.Repository)
+		assert.Nil(t, test.Store)
 	})
 
 	t.Run("raises purge errors", func(t *testing.T) {
-		log.Writer(io.Discard)
-		defer log.Reset()
+		tea.SetGlobalLogWriter(io.Discard)
+		defer tea.ResetGlobalLogger()
 		test := NewPostgresWithExit(t, 1)
 		test.purge = func(r *dockertest.Resource) error {
-			return errors.New("an error has occurred")
+			return tea.NewError("an error has occurred")
 		}
 		test.emit = func(err error) { assert.NotNil(t, err) }
 		RunPostgres(test)
@@ -84,6 +82,6 @@ func TestPostgres(t *testing.T) {
 		test.Migration.FS = fs
 		test.Migration.Directory = "migrations"
 		RunPostgres(test)
-		assert.NotNil(t, test.Repository)
+		assert.NotNil(t, test.Store)
 	})
 }

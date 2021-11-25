@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pghq/go-datastore/datastore/client"
+	"github.com/pghq/go-ark/client"
 )
 
 var (
@@ -33,6 +33,23 @@ type Query struct {
 	Mock
 	t    *testing.T
 	fail func(v ...interface{})
+}
+
+func (q *Query) String() string {
+	q.t.Helper()
+	res := q.Call(q.t)
+	if len(res) != 1 {
+		q.fail(q.t, "unexpected length of return values")
+		return ""
+	}
+
+	str, ok := res[0].(string)
+	if !ok {
+		q.fail(q.t, "unexpected type of return value")
+		return ""
+	}
+
+	return str
 }
 
 func (q *Query) Statement() (string, []interface{}, error) {

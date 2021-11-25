@@ -4,16 +4,16 @@ import (
 	"context"
 	"testing"
 
-	"github.com/pghq/go-datastore/datastore/client"
+	"github.com/pghq/go-ark/client"
 )
 
 var (
 	_ client.Transaction = NewTransaction(nil)
 )
 
-func (c *Client) Transaction(ctx context.Context) (client.Transaction, error) {
+func (c *Client) Transaction(ctx context.Context, ro bool) (client.Transaction, error) {
 	c.t.Helper()
-	res := c.Call(c.t, ctx)
+	res := c.Call(c.t, ctx, ro)
 	if len(res) != 2 {
 		c.fail(c.t, "unexpected length of return values")
 		return nil, nil
