@@ -1,25 +1,12 @@
-// Copyright 2021 PGHQ. All Rights Reserved.
-//
-// Licensed under the GNU General Public License, Version 3 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
-// Package internal provides our internal API resources.
-//
-// Any functionality provided by this package should not
-// depend on any external packages within the application.
 package internal
 
 import (
+	"reflect"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/pghq/go-tea"
 )
 
 var (
@@ -40,4 +27,63 @@ func ToSnakeCase(str string) string {
 	snake := matchFirstCap.ReplaceAllString(str, "${1}_${2}")
 	snake = matchAllCap.ReplaceAllString(snake, "${1}_${2}")
 	return strings.ToLower(snake)
+}
+
+// Fields gets all fields for datastore item(s)
+func Fields(args ...interface{}) []string {
+	var fields []string
+	for _, arg := range args {
+		switch v := arg.(type) {
+		case []string:
+			if len(v) > 0 {
+				return v
+			}
+		case string:
+			fields = append(fields, v)
+		default:
+			if i, err := toMap(v, true); err == nil {
+				for field, _ := range i {
+					fields = append(fields, field)
+				}
+			}
+		}
+	}
+
+	return fields
+}
+
+// toMap converts a struct (w. optional tags) to a map using reflection
+// variation of: https://play.golang.org/p/2Qi3thFf--
+// meant to be used for data persistence.
+func toMap(in interface{}, transient ...interface{}) (map[string]interface{}, error) {
+	if v, ok := in.(map[string]interface{}); ok {
+		return v, nil
+	}
+
+	v := reflect.ValueOf(in)
+	if v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
+
+	if v.Kind() != reflect.Struct {
+		return nil, tea.NewErrorf("item of type %T is not a struct", v)
+	}
+
+	item := make(map[string]interface{})
+	t := v.Type()
+	for i := 0; i < v.NumField(); i++ {
+		sf := t.Field(i)
+		key := sf.Tag.Get("db")
+		if key == "" {
+			key = sf.Name
+		}
+
+		if key == "-" || len(transient) == 0 && strings.HasSuffix(key, ",transient") {
+			continue
+		}
+
+		item[strings.Split(key, ",")[0]] = v.Field(i).Interface()
+	}
+
+	return item, nil
 }
