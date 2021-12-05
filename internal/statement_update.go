@@ -31,7 +31,7 @@ func (u Update) SQL(pp SQLPlaceholderPrefix) (string, []interface{}, error) {
 		Update(u.Table).
 		SetMap(item)
 
-	if pp != ""{
+	if pp != "" {
 		builder = builder.PlaceholderFormat(pp)
 	}
 

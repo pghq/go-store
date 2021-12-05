@@ -25,7 +25,7 @@ func (r Remove) SQL(pp SQLPlaceholderPrefix) (string, []interface{}, error) {
 		Delete(r.Table).
 		OrderBy(r.OrderBy...)
 
-	if pp != ""{
+	if pp != "" {
 		builder = builder.PlaceholderFormat(pp)
 	}
 

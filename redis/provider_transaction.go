@@ -14,7 +14,7 @@ import (
 )
 
 func (p *Provider) Txn(ctx context.Context, ro ...bool) (internal.Txn, error) {
-	if ctx.Err() != nil{
+	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
 

@@ -30,7 +30,7 @@ func (i Insert) SQL(pp SQLPlaceholderPrefix) (string, []interface{}, error) {
 		Insert(i.Table).
 		SetMap(item)
 
-	if pp != ""{
+	if pp != "" {
 		builder = builder.PlaceholderFormat(pp)
 	}
 

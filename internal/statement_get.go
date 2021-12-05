@@ -28,10 +28,9 @@ func (g Get) SQL(pp SQLPlaceholderPrefix) (string, []interface{}, error) {
 		Limit(1).
 		Where(g.Filter)
 
-	if pp != ""{
+	if pp != "" {
 		builder = builder.PlaceholderFormat(pp)
 	}
-
 
 	fields := Fields(g.Fields...)
 	for _, field := range fields {

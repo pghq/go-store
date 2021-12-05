@@ -25,7 +25,7 @@ func (p *Provider) Txn(ctx context.Context, ro ...bool) (internal.Txn, error) {
 type txn struct {
 	ctx context.Context
 	tx  *sqlx.Tx
-	pp internal.SQLPlaceholderPrefix
+	pp  internal.SQLPlaceholderPrefix
 }
 
 func (t *txn) Exec(statement internal.Stmt, dst ...interface{}) internal.Resolver {

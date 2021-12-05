@@ -45,12 +45,12 @@ func TestKVSConn_Do(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.TODO(), 0)
 		defer cancel()
 
-		err := conn.Do(ctx, func(tx *KVSTxn) error { return nil})
+		err := conn.Do(ctx, func(tx *KVSTxn) error { return nil })
 		assert.NotNil(t, err)
 	})
 
 	t.Run("fn error", func(t *testing.T) {
-		err := conn.Do(context.TODO(), func(tx *KVSTxn) error { return tea.NewError("fn error")})
+		err := conn.Do(context.TODO(), func(tx *KVSTxn) error { return tea.NewError("fn error") })
 		assert.NotNil(t, err)
 	})
 

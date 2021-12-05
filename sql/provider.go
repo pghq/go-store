@@ -76,13 +76,13 @@ func NewProvider(driver, dsn string, conf Config) *Provider {
 
 // Config is a configuration for the provider
 type Config struct {
-	TraceDriver        driver.Driver
-	DB                 *sql.DB
-	MaxConns           int
-	MaxConnLifetime    time.Duration
-	MaxIdleLifetime    time.Duration
-	MigrationFS        fs.FS
-	MigrationDirectory string
+	TraceDriver          driver.Driver
+	DB                   *sql.DB
+	MaxConns             int
+	MaxConnLifetime      time.Duration
+	MaxIdleLifetime      time.Duration
+	MigrationFS          fs.FS
+	MigrationDirectory   string
 	SQLPlaceholderPrefix internal.SQLPlaceholderPrefix
 }
 

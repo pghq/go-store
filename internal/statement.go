@@ -29,7 +29,7 @@ type StandardMethod struct {
 // SQLPlaceholderPrefix is a custom placeholder prefix for SQL
 type SQLPlaceholderPrefix string
 
-func (s SQLPlaceholderPrefix) ReplacePlaceholders(sql string) (string, error){
+func (s SQLPlaceholderPrefix) ReplacePlaceholders(sql string) (string, error) {
 	buf := &bytes.Buffer{}
 	i := 0
 	for {

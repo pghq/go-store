@@ -113,8 +113,8 @@ func (v *view) Resolve(dst interface{}) internal.Resolver {
 	if v.Value != nil {
 		rv := reflect.ValueOf(dst)
 		kind := rv.Kind()
-		if kind == reflect.Ptr || kind == reflect.Interface{
-			if rv := rv.Elem(); rv.CanSet(){
+		if kind == reflect.Ptr || kind == reflect.Interface {
+			if rv := rv.Elem(); rv.CanSet() {
 				rv.Set(reflect.ValueOf(v.Value).Elem())
 			}
 		}

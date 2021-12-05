@@ -34,7 +34,7 @@ func (l List) SQL(pp SQLPlaceholderPrefix) (string, []interface{}, error) {
 		From(l.Table).
 		OrderBy(l.OrderBy...)
 
-	if pp != ""{
+	if pp != "" {
 		builder = builder.PlaceholderFormat(pp)
 	}
 
