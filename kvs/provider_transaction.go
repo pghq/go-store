@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/gob"
+	"reflect"
 	"time"
 
 	"github.com/dgraph-io/badger/v3"
@@ -70,7 +71,13 @@ func (t *kvsTxn) Exec(statement internal.Stmt, args ...interface{}) internal.Res
 	if item != nil {
 		err = item.Value(func(b []byte) error {
 			dec := gob.NewDecoder(bytes.NewReader(b))
-			return dec.Decode(args[0])
+			v, ok := args[0].(*reflect.Value)
+			if !ok {
+				rv := reflect.ValueOf(args[0])
+				v = &rv
+			}
+
+			return dec.DecodeValue(*v)
 		})
 	}
 
