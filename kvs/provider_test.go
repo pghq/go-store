@@ -2,6 +2,7 @@ package kvs
 
 import (
 	"context"
+	"reflect"
 	"testing"
 	"time"
 
@@ -93,6 +94,11 @@ func TestProvider_Txn(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, 1, ra)
 		assert.Equal(t, "value", value)
+
+		rv := reflect.New(reflect.TypeOf(value))
+		ra, err = txn.Exec(internal.Get{Key: []byte("test")}, &rv).Resolve()
+		assert.Nil(t, err)
+		assert.Equal(t, "value", rv.Elem().String())
 
 		ra, err = txn.Exec(internal.Insert{Key: []byte("another"), Value: "money"}).Resolve()
 		assert.Nil(t, err)
