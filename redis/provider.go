@@ -16,7 +16,8 @@ type Provider struct {
 }
 
 // NewProvider creates a new Redis provider
-func NewProvider(dsn string, conf Config) *Provider {
+func NewProvider(source interface{}, conf Config) *Provider {
+	dsn, _ := source.(string)
 	return &Provider{
 		dsn:  dsn,
 		conf: conf,

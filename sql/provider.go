@@ -60,7 +60,8 @@ func (p *Provider) Connect(_ context.Context) error {
 }
 
 // NewProvider creates a new SQL provider
-func NewProvider(driver, dsn string, conf Config) *Provider {
+func NewProvider(driver string, source interface{}, conf Config) *Provider {
+	dsn, _ := source.(string)
 	return &Provider{
 		driver: driver,
 		dsn:    dsn,

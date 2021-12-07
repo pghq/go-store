@@ -28,12 +28,12 @@ import (
 // Mapper is a data mapper for various data providers.
 type Mapper struct {
 	driverName string
-	dsn        string
+	dsn        interface{}
 	cache      *ristretto.Cache
 	provider   internal.Provider
 }
 
-func (m *Mapper) DSN(dsn string) *Mapper {
+func (m *Mapper) DSN(dsn interface{}) *Mapper {
 	m.dsn = dsn
 	return m
 }
