@@ -144,7 +144,26 @@ func TestTxn(t *testing.T) {
 			assert.Equal(t, "", value)
 		})
 
-		t.Run("not cached", func(t *testing.T) {
+		t.Run("uncached error", func(t *testing.T) {
+			tx, _ := dm.txn(context.TODO())
+			defer tx.Rollback()
+			defer tx.cache.Wait()
+
+			var value string
+			_, err := tx.view(internal.Get{Key: []byte("not found")}, &value).Resolve()
+			assert.NotNil(t, err)
+		})
+
+		t.Run("cached error", func(t *testing.T) {
+			tx, _ := dm.txn(context.TODO())
+			defer tx.Rollback()
+
+			var value string
+			_, err := tx.view(internal.Get{Key: []byte("not found")}, &value).Resolve()
+			assert.NotNil(t, err)
+		})
+
+		t.Run("uncached response", func(t *testing.T) {
 			tx, _ := dm.txn(context.TODO())
 			defer tx.cache.Wait()
 			defer tx.Commit()
@@ -156,7 +175,7 @@ func TestTxn(t *testing.T) {
 			assert.Equal(t, "value", value)
 		})
 
-		t.Run("cached", func(t *testing.T) {
+		t.Run("cached response", func(t *testing.T) {
 			tx, _ := dm.txn(context.TODO())
 			defer tx.Commit()
 
