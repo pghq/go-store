@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/hashicorp/go-memdb"
 	"github.com/pghq/go-tea"
 	"github.com/stretchr/testify/assert"
 
@@ -22,57 +23,71 @@ func TestNewProvider(t *testing.T) {
 	})
 
 	t.Run("one index", func(t *testing.T) {
-		p := NewProvider(`{
-			"tests": {
-				"id": {
-					"unique": true, 
-					"fields": {
-						"Id": "string"
-					}
-				}
-			}
-		}`)
+		p := NewProvider(memdb.DBSchema{
+			Tables: map[string]*memdb.TableSchema{
+				"tests": {
+					Name: "tests",
+					Indexes: map[string]*memdb.IndexSchema{
+						"id": {
+							Name:    "id",
+							Unique:  true,
+							Indexer: &memdb.StringFieldIndex{Field: "Id"},
+						},
+					},
+				},
+			},
+		})
 		assert.Nil(t, p.Connect(context.TODO()))
 	})
 
 	t.Run("multiple indexes", func(t *testing.T) {
-		p := NewProvider(`{
-			"tests": {
-				"id": {
-					"unique": true, 
-					"fields": {
-						"Id": "string"
-					}
+		p := NewProvider(memdb.DBSchema{
+			Tables: map[string]*memdb.TableSchema{
+				"tests": {
+					Name: "tests",
+					Indexes: map[string]*memdb.IndexSchema{
+						"id": {
+							Name:    "id",
+							Unique:  true,
+							Indexer: &memdb.StringFieldIndex{Field: "Id"},
+						},
+						"failures": {
+							Name:    "failures",
+							Unique:  true,
+							Indexer: &memdb.StringFieldIndex{Field: "Id"},
+						},
+					},
 				},
-				"failures": {
-					"fields": {
-						"Id": "string"
-					}
-				}
-			}
-		}`)
+			},
+		})
 		assert.Nil(t, p.Connect(context.TODO()))
 	})
 
 	t.Run("multiple tables", func(t *testing.T) {
-		p := NewProvider(`{
-			"tests": {
-				"id": {
-					"unique": true, 
-					"fields": {
-						"Id": "string"
-					}
-				}
+		p := NewProvider(memdb.DBSchema{
+			Tables: map[string]*memdb.TableSchema{
+				"tests": {
+					Name: "tests",
+					Indexes: map[string]*memdb.IndexSchema{
+						"id": {
+							Name:    "id",
+							Unique:  true,
+							Indexer: &memdb.StringFieldIndex{Field: "Id"},
+						},
+					},
+				},
+				"units": {
+					Name: "units",
+					Indexes: map[string]*memdb.IndexSchema{
+						"id": {
+							Name:    "id",
+							Unique:  true,
+							Indexer: &memdb.StringFieldIndex{Field: "Id"},
+						},
+					},
+				},
 			},
-			"units": {
-				"id": {
-					"unique": true, 
-					"fields": {
-						"Id": "string"
-					}
-				}
-			}
-		}`)
+		})
 		assert.Nil(t, p.Connect(context.TODO()))
 	})
 }
@@ -86,32 +101,20 @@ func TestRDB_Txn(t *testing.T) {
 		Enabled   bool
 	}
 
-	p := NewProvider(`{
-		"tests": {
-			"id": {
-				"unique": true, 
-				"fields": {
-					"Id": "string"
-				}
+	p := NewProvider(memdb.DBSchema{
+		Tables: map[string]*memdb.TableSchema{
+			"tests": {
+				Name: "tests",
+				Indexes: map[string]*memdb.IndexSchema{
+					"id": {
+						Name:    "id",
+						Unique:  true,
+						Indexer: &memdb.StringFieldIndex{Field: "Id"},
+					},
+				},
 			},
-			"point": {
-				"fields": {
-					"Latitude": "string",
-					"Longitude": "string"
-				}
-			},
-			"count": {
-				"fields": {
-					"Count": "int"
-				}
-			},
-			"enabled": {
-				"fields": {
-					"Enabled": "bool"
-				}
-			}
-		}
-	}`)
+		},
+	})
 	assert.Nil(t, p.Connect(context.TODO()))
 
 	txn, err := p.Txn(context.TODO())

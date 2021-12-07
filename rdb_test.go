@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/hashicorp/go-memdb"
 	"github.com/pghq/go-tea"
 	"github.com/stretchr/testify/assert"
 
@@ -14,16 +15,20 @@ func TestRDBConn_Txn(t *testing.T) {
 	t.Parallel()
 
 	conn, _ := Open().
-		DSN(`{
-			"tests": {
-				"id": {
-					"unique": true,
-					"fields": {
-						"Id": "string"
-					}
-				}
-			}
-		}`).
+		DSN(memdb.DBSchema{
+			Tables: map[string]*memdb.TableSchema{
+				"tests": {
+					Name: "tests",
+					Indexes: map[string]*memdb.IndexSchema{
+						"id": {
+							Name:    "id",
+							Unique:  true,
+							Indexer: &memdb.StringFieldIndex{Field: "Id"},
+						},
+					},
+				},
+			},
+		}).
 		ConnectRDB(context.TODO(), "inmem")
 
 	t.Run("context timeout", func(t *testing.T) {
@@ -55,16 +60,20 @@ func TestRDBConn_Do(t *testing.T) {
 	t.Parallel()
 
 	conn, _ := Open().
-		DSN(`{
-			"tests": {
-				"id": {
-					"unique": true,
-					"fields": {
-						"Id": "string"
-					}
-				}
-			}
-		}`).
+		DSN(memdb.DBSchema{
+			Tables: map[string]*memdb.TableSchema{
+				"tests": {
+					Name: "tests",
+					Indexes: map[string]*memdb.IndexSchema{
+						"id": {
+							Name:    "id",
+							Unique:  true,
+							Indexer: &memdb.StringFieldIndex{Field: "Id"},
+						},
+					},
+				},
+			},
+		}).
 		ConnectRDB(context.TODO(), "inmem")
 
 	t.Run("context timeout", func(t *testing.T) {
@@ -90,16 +99,20 @@ func TestRDBTxn(t *testing.T) {
 	t.Parallel()
 
 	conn, _ := Open().
-		DSN(`{
-			"tests": {
-				"id": {
-					"unique": true,
-					"fields": {
-						"Id": "string"
-					}
-				}
-			}
-		}`).
+		DSN(memdb.DBSchema{
+			Tables: map[string]*memdb.TableSchema{
+				"tests": {
+					Name: "tests",
+					Indexes: map[string]*memdb.IndexSchema{
+						"id": {
+							Name:    "id",
+							Unique:  true,
+							Indexer: &memdb.StringFieldIndex{Field: "Id"},
+						},
+					},
+				},
+			},
+		}).
 		ConnectRDB(context.TODO(), "inmem")
 
 	type data struct {
