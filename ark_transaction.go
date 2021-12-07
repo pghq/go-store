@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	// cacheTL is the positive ttl for search queries
+	// cacheTTL is the cache ttl for search queries
 	cacheTTL = 500 * time.Millisecond
 )
 
@@ -72,31 +72,33 @@ func (tx *txn) view(statement internal.Stmt, dst interface{}, consistent ...bool
 
 // Commit a transaction
 func (tx *txn) Commit() error {
+	var err error
 	if tx.root {
 		tx.mutex.Lock()
 		defer tx.mutex.Unlock()
-
-		if err := tx.provider.Commit(); err != nil {
-			return tea.Error(err)
-		}
-
 		defer func() { tx.pending = nil }()
 
+		err = tx.provider.Commit()
 		for _, i := range tx.pending {
-			if _, err := i.Resolver.Resolve(); err == nil {
-				tx.cache.SetWithTTL(i.Key, i, 1, cacheTTL)
-			}
+			tx.cache.SetWithTTL(i.Key, i, 1, cacheTTL)
 		}
 	}
 
-	return nil
+	return err
 }
 
 // Rollback a transaction
 func (tx *txn) Rollback() error {
 	var err error
 	if tx.root {
+		tx.mutex.Lock()
+		defer tx.mutex.Unlock()
+		defer func() { tx.pending = nil }()
+
 		err = tx.provider.Rollback()
+		for _, i := range tx.pending {
+			tx.cache.SetWithTTL(i.Key, i, 1, cacheTTL)
+		}
 	}
 
 	return err
