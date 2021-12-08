@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/hashicorp/go-memdb"
 	"github.com/pghq/go-tea"
 	"github.com/stretchr/testify/assert"
 
@@ -17,75 +16,39 @@ func TestNewProvider(t *testing.T) {
 		assert.NotNil(t, p.Connect(context.TODO()))
 	})
 
-	t.Run("bad schema", func(t *testing.T) {
-		p := NewProvider("{}")
+	t.Run("no primary", func(t *testing.T) {
+		p := NewProvider(Schema{
+			"tests": map[string][]string{},
+		})
 		assert.NotNil(t, p.Connect(context.TODO()))
 	})
 
 	t.Run("one index", func(t *testing.T) {
-		p := NewProvider(memdb.DBSchema{
-			Tables: map[string]*memdb.TableSchema{
-				"tests": {
-					Name: "tests",
-					Indexes: map[string]*memdb.IndexSchema{
-						"id": {
-							Name:    "id",
-							Unique:  true,
-							Indexer: &memdb.StringFieldIndex{Field: "Id"},
-						},
-					},
-				},
+		p := NewProvider(Schema{
+			"tests": map[string][]string{
+				"primary": {"id"},
 			},
 		})
 		assert.Nil(t, p.Connect(context.TODO()))
 	})
 
 	t.Run("multiple indexes", func(t *testing.T) {
-		p := NewProvider(memdb.DBSchema{
-			Tables: map[string]*memdb.TableSchema{
-				"tests": {
-					Name: "tests",
-					Indexes: map[string]*memdb.IndexSchema{
-						"id": {
-							Name:    "id",
-							Unique:  true,
-							Indexer: &memdb.StringFieldIndex{Field: "Id"},
-						},
-						"failures": {
-							Name:    "failures",
-							Unique:  true,
-							Indexer: &memdb.StringFieldIndex{Field: "Id"},
-						},
-					},
-				},
+		p := NewProvider(Schema{
+			"tests": map[string][]string{
+				"primary":  {"id"},
+				"failures": {"failures"},
 			},
 		})
 		assert.Nil(t, p.Connect(context.TODO()))
 	})
 
 	t.Run("multiple tables", func(t *testing.T) {
-		p := NewProvider(memdb.DBSchema{
-			Tables: map[string]*memdb.TableSchema{
-				"tests": {
-					Name: "tests",
-					Indexes: map[string]*memdb.IndexSchema{
-						"id": {
-							Name:    "id",
-							Unique:  true,
-							Indexer: &memdb.StringFieldIndex{Field: "Id"},
-						},
-					},
-				},
-				"units": {
-					Name: "units",
-					Indexes: map[string]*memdb.IndexSchema{
-						"id": {
-							Name:    "id",
-							Unique:  true,
-							Indexer: &memdb.StringFieldIndex{Field: "Id"},
-						},
-					},
-				},
+		p := NewProvider(Schema{
+			"tests": map[string][]string{
+				"primary": {"id"},
+			},
+			"units": map[string][]string{
+				"primary": {"id"},
 			},
 		})
 		assert.Nil(t, p.Connect(context.TODO()))
@@ -94,25 +57,17 @@ func TestNewProvider(t *testing.T) {
 
 func TestRDB_Txn(t *testing.T) {
 	type value struct {
-		Id        string
+		Id        string `db:"id"`
 		Latitude  string
 		Longitude string
-		Count     int
-		Enabled   bool
+		Count     int  `db:"count"`
+		Enabled   bool `db:"enabled"`
 	}
 
-	p := NewProvider(memdb.DBSchema{
-		Tables: map[string]*memdb.TableSchema{
-			"tests": {
-				Name: "tests",
-				Indexes: map[string]*memdb.IndexSchema{
-					"id": {
-						Name:    "id",
-						Unique:  true,
-						Indexer: &memdb.StringFieldIndex{Field: "Id"},
-					},
-				},
-			},
+	p := NewProvider(Schema{
+		"tests": map[string][]string{
+			"primary": {"id"},
+			"count":   {"count", "enabled"},
 		},
 	})
 	assert.Nil(t, p.Connect(context.TODO()))
@@ -129,6 +84,43 @@ func TestRDB_Txn(t *testing.T) {
 		assert.NotNil(t, err)
 	})
 
+	t.Run("read only tx", func(t *testing.T) {
+		t.Run("no secondary", func(t *testing.T) {
+			p := NewProvider(Schema{
+				"tests": map[string][]string{
+					"primary": {"id"},
+				},
+			})
+			_ = p.Connect(context.TODO())
+
+			txn, _ := p.Txn(context.TODO(), true)
+
+			v := value{Id: "foo", Latitude: "1.0", Longitude: "1.0", Count: 2, Enabled: true}
+			_, err = txn.Exec(internal.Insert{Table: "tests", Value: v}).Resolve()
+			assert.NotNil(t, err)
+
+			_, err = txn.Exec(internal.Update{Table: "tests", Value: v, Filter: Ft().IdxEq("primary", "foo")}).Resolve()
+			assert.NotNil(t, err)
+
+			_, err = txn.Exec(internal.Remove{Table: "tests", Filter: Ft().IdxEq("primary", "foo")}).Resolve()
+			assert.NotNil(t, err)
+		})
+
+		t.Run("with secondary", func(t *testing.T) {
+			txn, _ := p.Txn(context.TODO(), true)
+
+			v := value{Id: "foo", Latitude: "1.0", Longitude: "1.0", Count: 2, Enabled: true}
+			_, err = txn.Exec(internal.Insert{Table: "tests", Value: v}).Resolve()
+			assert.NotNil(t, err)
+
+			_, err = txn.Exec(internal.Update{Table: "tests", Value: v, Filter: Ft().IdxEq("primary", "foo")}).Resolve()
+			assert.NotNil(t, err)
+
+			_, err = txn.Exec(internal.Remove{Table: "tests", Filter: Ft().IdxEq("primary", "foo")}).Resolve()
+			assert.NotNil(t, err)
+		})
+	})
+
 	t.Run("bad filter", func(t *testing.T) {
 		ra, err := txn.Exec(internal.List{Table: "units"}, nil).Resolve()
 		assert.NotNil(t, err)
@@ -143,11 +135,35 @@ func TestRDB_Txn(t *testing.T) {
 		assert.Equal(t, 0, ra)
 	})
 
-	t.Run("not found", func(t *testing.T) {
-		ra, err := txn.Exec(internal.List{Table: "tests"}, nil).Resolve()
+	t.Run("no content", func(t *testing.T) {
+		var values []string
+		ra, err := txn.Exec(internal.List{Table: "tests"}, &values).Resolve()
 		assert.NotNil(t, err)
 		assert.False(t, tea.IsFatal(err))
 		assert.Equal(t, 0, ra)
+
+		var v value
+		_, err = txn.Exec(internal.Get{Table: "tests", Filter: Ft().IdxEq("primary", "bar")}, &v).Resolve()
+		assert.NotNil(t, err)
+	})
+
+	t.Run("bad table", func(t *testing.T) {
+		var values []string
+		_, err := txn.Exec(internal.List{Table: "bad"}, &values).Resolve()
+		assert.NotNil(t, err)
+
+		v := value{Id: "foo", Latitude: "1.0", Longitude: "1.0", Count: 2, Enabled: true}
+		_, err = txn.Exec(internal.Insert{Table: "bad", Value: v}).Resolve()
+		assert.NotNil(t, err)
+
+		_, err = txn.Exec(internal.Update{Table: "bad", Value: v, Filter: Ft().IdxEq("primary", "foo")}).Resolve()
+		assert.NotNil(t, err)
+
+		_, err = txn.Exec(internal.Remove{Table: "bad", Filter: Ft().IdxEq("primary", "foo")}).Resolve()
+		assert.NotNil(t, err)
+
+		_, err = txn.Exec(internal.Get{Table: "bad", Filter: Ft().IdxEq("primary", "foo")}, &v).Resolve()
+		assert.NotNil(t, err)
 	})
 
 	t.Run("bad insert", func(t *testing.T) {
@@ -159,10 +175,25 @@ func TestRDB_Txn(t *testing.T) {
 		assert.NotNil(t, err)
 		assert.Equal(t, 0, ra)
 
-		var v value
-		ra, err = txn.Exec(internal.Insert{Table: "tests", Value: v}).Resolve()
+		ra, err = txn.Exec(internal.Insert{Table: "tests", Value: map[string]interface{}{}}).Resolve()
 		assert.NotNil(t, err)
 		assert.Equal(t, 0, ra)
+	})
+
+	t.Run("bad op", func(t *testing.T) {
+		var values []string
+		_, err := txn.Exec(internal.List{Table: "tests", Filter: Ft().IdxEq("primary", "foo")}, &values).Resolve()
+		assert.NotNil(t, err)
+
+		v := value{Id: "foo", Latitude: "1.0", Longitude: "1.0", Count: 2, Enabled: true}
+		_, err = txn.Exec(internal.Update{Table: "tests", Value: v, Filter: Ft().IdxEq("count", 2, true)}).Resolve()
+		assert.NotNil(t, err)
+
+		_, err = txn.Exec(internal.Remove{Table: "tests", Filter: Ft().IdxEq("count", 2, true)}).Resolve()
+		assert.NotNil(t, err)
+
+		_, err = txn.Exec(internal.Get{Table: "tests", Filter: Ft().IdxEq("count", 2, true)}, &v).Resolve()
+		assert.NotNil(t, err)
 	})
 
 	t.Run("can insert", func(t *testing.T) {
@@ -173,6 +204,16 @@ func TestRDB_Txn(t *testing.T) {
 		}}).Resolve()
 		assert.Nil(t, err)
 		assert.Equal(t, 1, ra)
+	})
+
+	t.Run("unique constraint", func(t *testing.T) {
+		_, err := txn.Exec(internal.Insert{Table: "tests", Value: &value{
+			Id:      "foo",
+			Count:   1,
+			Enabled: true,
+		}}).Resolve()
+		assert.NotNil(t, err)
+		assert.False(t, tea.IsFatal(err))
 	})
 
 	_ = txn.Commit()
@@ -195,8 +236,8 @@ func TestRDB_Txn(t *testing.T) {
 	txn, _ = p.Txn(context.TODO())
 	defer txn.Rollback()
 	t.Run("can update", func(t *testing.T) {
-		v := value{Id: "foo", Latitude: "1.0", Longitude: "1.0"}
-		ra, err := txn.Exec(internal.Update{Table: "tests", Value: v, Filter: Ft().IdxEq("id", "foo")}).Resolve()
+		v := value{Id: "foo", Latitude: "1.0", Longitude: "1.0", Count: 2, Enabled: true}
+		ra, err := txn.Exec(internal.Update{Table: "tests", Value: v, Filter: Ft().IdxEq("primary", "foo")}).Resolve()
 		assert.Nil(t, err)
 		assert.Equal(t, 1, ra)
 	})
@@ -217,41 +258,54 @@ func TestRDB_Txn(t *testing.T) {
 		ra, err = txn.Exec(internal.List{Table: "tests"}).Resolve()
 		assert.NotNil(t, err)
 		assert.Equal(t, 0, ra)
+
+		var v string
+		_, err = txn.Exec(internal.Get{Table: "tests", Filter: Ft().IdxEq("primary", "foo")}, &v).Resolve()
+		assert.NotNil(t, err)
+
+		var values []string
+		_, err = txn.Exec(internal.List{Table: "tests", Filter: Ft().IdxEq("count", 2, true)}, &values).Resolve()
+		assert.NotNil(t, err)
 	})
 
-	t.Run("can read all", func(t *testing.T) {
+	t.Run("orphan clean-up", func(t *testing.T) {
+		txn.Exec(internal.Insert{Table: "tests", Value: &value{
+			Id:      "foo2",
+			Count:   1,
+			Enabled: true,
+		}})
+
+		txn.Exec(internal.Insert{Table: "tests", Value: &value{
+			Id:      "foo3",
+			Count:   1,
+			Enabled: true,
+		}})
+
+		txn.Exec(internal.Remove{Table: "tests", Filter: Ft().IdxEq("primary", "foo2")})
+
 		var values []value
-		ra, err := txn.Exec(internal.List{Table: "tests"}, &values).Resolve()
+		ra, err := txn.Exec(internal.List{Table: "tests", Filter: Ft().IdxEq("count", 1, true)}, &values).Resolve()
+		assert.Nil(t, err)
+		assert.Equal(t, 1, ra)
+	})
+
+	t.Run("can list", func(t *testing.T) {
+		var values []value
+		ra, err := txn.Exec(internal.List{Table: "tests", Filter: Ft().IdxEq("count", 2, true)}, &values).Resolve()
 		assert.Nil(t, err)
 		assert.Equal(t, 1, ra)
 		assert.Len(t, values, 1)
-		assert.Equal(t, value{Id: "foo", Latitude: "1.0", Longitude: "1.0"}, values[0])
-	})
-
-	t.Run("can read filter", func(t *testing.T) {
-		var values []value
-		ra, err := txn.Exec(internal.List{Table: "tests", Filter: Ft().IdxEq("id", "foo")}, &values).Resolve()
-		assert.Nil(t, err)
-		assert.Equal(t, 1, ra)
-		assert.Len(t, values, 1)
-		assert.Equal(t, value{Id: "foo", Latitude: "1.0", Longitude: "1.0"}, values[0])
+		assert.Equal(t, value{Id: "foo", Latitude: "1.0", Longitude: "1.0", Count: 2, Enabled: true}, values[0])
 
 		var v value
-		ra, err = txn.Exec(internal.Get{Table: "tests", Filter: Ft().IdxEq("id", "foo")}, &v).Resolve()
+		ra, err = txn.Exec(internal.Get{Table: "tests", Filter: Ft().IdxEq("primary", "foo")}, &v).Resolve()
 		assert.Nil(t, err)
 		assert.Equal(t, 1, ra)
-		assert.Equal(t, value{Id: "foo", Latitude: "1.0", Longitude: "1.0"}, v)
-
-		values = []value{}
-		ra, err = txn.Exec(internal.List{Table: "tests", Filter: Ft().IdxBeginsWith("id", "f")}, &values).Resolve()
-		assert.Nil(t, err)
-		assert.Equal(t, 1, ra)
-		assert.Len(t, values, 1)
-		assert.Equal(t, value{Id: "foo", Latitude: "1.0", Longitude: "1.0"}, values[0])
+		assert.Equal(t, value{Id: "foo", Latitude: "1.0", Longitude: "1.0", Count: 2, Enabled: true}, v)
 	})
 
 	t.Run("can remove", func(t *testing.T) {
-		ra, err := txn.Exec(internal.Remove{Table: "tests", Filter: Ft().IdxEq("id", "foo")}).Resolve()
+		ra, err := txn.Exec(internal.Remove{Table: "tests", Filter: Ft().IdxEq("primary", "foo")}).Resolve()
 		assert.Nil(t, err)
 		assert.Equal(t, 1, ra)
 	})
