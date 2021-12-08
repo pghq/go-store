@@ -9,7 +9,7 @@ import (
 	"github.com/pghq/go-tea"
 
 	"github.com/pghq/go-ark/internal"
-	"github.com/pghq/go-ark/internal/compress"
+	"github.com/pghq/go-ark/internal/z"
 )
 
 func (p *Provider) Txn(ctx context.Context, ro ...bool) (internal.Txn, error) {
@@ -178,7 +178,7 @@ func (t *rdbTxn) removeSecondary(pk []byte) error {
 	var secondary [][]byte
 	item, err := t.btx.Get(append(pk, []byte("secondary")...))
 	if err == nil {
-		err = item.Value(func(b []byte) error { return compress.BrotliDecode(b, &secondary) })
+		err = item.Value(func(b []byte) error { return z.Decode(b, &secondary) })
 	}
 
 	for _, key := range secondary {
@@ -209,13 +209,13 @@ func (t *rdbTxn) get(tableName string, f interface{}, v interface{}) internal.Re
 	item, err := t.btx.Get(pk)
 	if err != nil {
 		if err == badger.ErrKeyNotFound {
-			err = tea.NewError(err)
+			err = tea.NoContent(err)
 		}
 
 		return internal.ExecResponse(0, tea.Error(err))
 	}
 
-	if err := item.Value(func(b []byte) error { return compress.BrotliDecode(b, v) }); err != nil {
+	if err := item.Value(func(b []byte) error { return z.Decode(b, v) }); err != nil {
 		return internal.ExecResponse(0, tea.Error(err))
 	}
 
@@ -262,11 +262,15 @@ func (t *rdbTxn) list(tableName string, f interface{}, v interface{}) internal.R
 		item, err := t.btx.Get(pk)
 		if err == nil {
 			rv := reflect.New(reflect.TypeOf(v).Elem().Elem())
-			if err := item.Value(func(b []byte) error { return compress.BrotliDecode(b, &rv) }); err != nil {
+			if err := item.Value(func(b []byte) error { return z.Decode(b, &rv) }); err != nil {
 				return internal.ExecResponse(0, tea.Error(err))
 			}
 			values = append(values, rv.Elem())
 		}
+	}
+
+	if len(values) == 0 {
+		return internal.ExecResponse(0, tea.NewNoContent("not found"))
 	}
 
 	rv.Set(reflect.Append(rv, values...))
