@@ -8,14 +8,17 @@ import (
 	"github.com/pghq/go-tea"
 )
 
+// Encode value using default encoder
 func Encode(v interface{}) ([]byte, error) {
 	return GobEncode(v)
 }
 
+// Decode value using default encoder
 func Decode(b []byte, v interface{}) error {
 	return GobDecode(b, v)
 }
 
+// Hash args using default encoder
 func Hash(args ...interface{}) ([]byte, error) {
 	return GobHash(args...)
 }
