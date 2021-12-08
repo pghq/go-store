@@ -9,12 +9,12 @@ import (
 
 	"github.com/Masterminds/squirrel"
 	"github.com/alicebob/miniredis/v2"
-	"github.com/hashicorp/go-memdb"
 	"github.com/pghq/go-tea"
 	_ "github.com/proullon/ramsql/driver"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/pghq/go-ark/internal"
+	"github.com/pghq/go-ark/rdb"
 )
 
 func TestOpen(t *testing.T) {
@@ -73,18 +73,9 @@ func TestMapper_ConnectRDB(t *testing.T) {
 	})
 
 	t.Run("inmem", func(t *testing.T) {
-		dm := Open().DSN(memdb.DBSchema{
-			Tables: map[string]*memdb.TableSchema{
-				"tests": {
-					Name: "tests",
-					Indexes: map[string]*memdb.IndexSchema{
-						"id": {
-							Name:    "id",
-							Unique:  true,
-							Indexer: &memdb.StringFieldIndex{Field: "Id"},
-						},
-					},
-				},
+		dm := Open().DSN(rdb.Schema{
+			"tests": map[string][]string{
+				"primary": {"id"},
 			},
 		})
 		conn, err := dm.ConnectRDB(context.TODO(), "inmem")

@@ -41,7 +41,7 @@ func Fields(args ...interface{}) []string {
 		case string:
 			fields = append(fields, v)
 		default:
-			if i, err := toMap(v, true); err == nil {
+			if i, err := ToMap(v, true); err == nil {
 				for field, _ := range i {
 					fields = append(fields, field)
 				}
@@ -52,10 +52,10 @@ func Fields(args ...interface{}) []string {
 	return fields
 }
 
-// toMap converts a struct (w. optional tags) to a map using reflection
+// ToMap converts a struct (w. optional tags) to a map using reflection
 // variation of: https://play.golang.org/p/2Qi3thFf--
 // meant to be used for data persistence.
-func toMap(in interface{}, transient ...interface{}) (map[string]interface{}, error) {
+func ToMap(in interface{}, transient ...interface{}) (map[string]interface{}, error) {
 	if v, ok := in.(map[string]interface{}); ok {
 		return v, nil
 	}

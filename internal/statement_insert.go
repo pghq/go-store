@@ -21,7 +21,7 @@ func (i Insert) Bytes() []byte {
 }
 
 func (i Insert) SQL(pp SQLPlaceholderPrefix) (string, []interface{}, error) {
-	item, err := toMap(i.Value)
+	item, err := ToMap(i.Value)
 	if err != nil {
 		return "", nil, tea.Error(err)
 	}

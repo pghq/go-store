@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/hashicorp/go-memdb"
 	"github.com/pghq/go-tea"
 	"github.com/stretchr/testify/assert"
 
@@ -15,18 +14,9 @@ func TestRDBConn_Txn(t *testing.T) {
 	t.Parallel()
 
 	conn, _ := Open().
-		DSN(memdb.DBSchema{
-			Tables: map[string]*memdb.TableSchema{
-				"tests": {
-					Name: "tests",
-					Indexes: map[string]*memdb.IndexSchema{
-						"id": {
-							Name:    "id",
-							Unique:  true,
-							Indexer: &memdb.StringFieldIndex{Field: "Id"},
-						},
-					},
-				},
+		DSN(rdb.Schema{
+			"tests": map[string][]string{
+				"primary": {"id"},
 			},
 		}).
 		ConnectRDB(context.TODO(), "inmem")
@@ -60,18 +50,9 @@ func TestRDBConn_Do(t *testing.T) {
 	t.Parallel()
 
 	conn, _ := Open().
-		DSN(memdb.DBSchema{
-			Tables: map[string]*memdb.TableSchema{
-				"tests": {
-					Name: "tests",
-					Indexes: map[string]*memdb.IndexSchema{
-						"id": {
-							Name:    "id",
-							Unique:  true,
-							Indexer: &memdb.StringFieldIndex{Field: "Id"},
-						},
-					},
-				},
+		DSN(rdb.Schema{
+			"tests": map[string][]string{
+				"primary": {"id"},
 			},
 		}).
 		ConnectRDB(context.TODO(), "inmem")
@@ -99,24 +80,15 @@ func TestRDBTxn(t *testing.T) {
 	t.Parallel()
 
 	conn, _ := Open().
-		DSN(memdb.DBSchema{
-			Tables: map[string]*memdb.TableSchema{
-				"tests": {
-					Name: "tests",
-					Indexes: map[string]*memdb.IndexSchema{
-						"id": {
-							Name:    "id",
-							Unique:  true,
-							Indexer: &memdb.StringFieldIndex{Field: "Id"},
-						},
-					},
-				},
+		DSN(rdb.Schema{
+			"tests": map[string][]string{
+				"primary": {"id"},
 			},
 		}).
 		ConnectRDB(context.TODO(), "inmem")
 
 	type data struct {
-		Id string
+		Id string `db:"id"`
 	}
 
 	t.Run("insert", func(t *testing.T) {
@@ -129,7 +101,7 @@ func TestRDBTxn(t *testing.T) {
 	t.Run("update", func(t *testing.T) {
 		tx, _ := conn.Txn(context.TODO())
 		defer tx.Commit()
-		_, err := tx.Update("tests", rdb.Ft().IdxEq("id", "test"), data{Id: "test"}).Resolve()
+		_, err := tx.Update("tests", rdb.Ft().IdxEq("primary", "test"), data{Id: "test"}).Resolve()
 		assert.Nil(t, err)
 	})
 
@@ -137,7 +109,7 @@ func TestRDBTxn(t *testing.T) {
 		tx, _ := conn.Txn(context.TODO())
 		defer tx.Commit()
 		var value data
-		_, err := tx.Get(Qy().Table("tests").Filter(rdb.Ft().IdxEq("id", "test")), &value).Resolve()
+		_, err := tx.Get(Qy().Table("tests").Filter(rdb.Ft().IdxEq("primary", "test")), &value).Resolve()
 		assert.Nil(t, err)
 	})
 
@@ -145,14 +117,14 @@ func TestRDBTxn(t *testing.T) {
 		tx, _ := conn.Txn(context.TODO())
 		defer tx.Commit()
 		var values []data
-		_, err := tx.List(Qy().Table("tests").Filter(rdb.Ft().IdxEq("id", "test")), &values).Resolve()
-		assert.Nil(t, err)
+		_, err := tx.List(Qy().Table("tests").Filter(rdb.Ft().IdxEq("primary", "test")), &values).Resolve()
+		assert.NotNil(t, err)
 	})
 
 	t.Run("remove", func(t *testing.T) {
 		tx, _ := conn.Txn(context.TODO())
 		defer tx.Commit()
-		_, err := tx.Remove("tests", rdb.Ft().IdxEq("id", "test")).Resolve()
+		_, err := tx.Remove("tests", rdb.Ft().IdxEq("primary", "test")).Resolve()
 		assert.Nil(t, err)
 	})
 }

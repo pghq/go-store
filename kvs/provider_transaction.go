@@ -1,16 +1,14 @@
 package kvs
 
 import (
-	"bytes"
 	"context"
-	"encoding/gob"
-	"reflect"
 	"time"
 
 	"github.com/dgraph-io/badger/v3"
 	"github.com/pghq/go-tea"
 
 	"github.com/pghq/go-ark/internal"
+	"github.com/pghq/go-ark/internal/compress"
 )
 
 func (p *Provider) Txn(ctx context.Context, ro ...bool) (internal.Txn, error) {
@@ -47,13 +45,12 @@ func (t *kvsTxn) Exec(statement internal.Stmt, args ...interface{}) internal.Res
 	}
 
 	if m.Insert || m.Update {
-		var buf bytes.Buffer
-		enc := gob.NewEncoder(&buf)
-		if err := enc.Encode(m.Value); err != nil {
+		b, err := compress.BrotliEncode(m.Value)
+		if err != nil {
 			return internal.ExecResponse(0, tea.Error(err))
 		}
 
-		entry := badger.NewEntry(m.Key, buf.Bytes())
+		entry := badger.NewEntry(m.Key, b)
 		if len(args) > 0 {
 			if ttl, ok := args[0].(time.Duration); ok {
 				entry = entry.WithTTL(ttl)
@@ -69,16 +66,7 @@ func (t *kvsTxn) Exec(statement internal.Stmt, args ...interface{}) internal.Res
 
 	item, err := t.provider.Get(m.Key)
 	if item != nil {
-		err = item.Value(func(b []byte) error {
-			dec := gob.NewDecoder(bytes.NewReader(b))
-			v, ok := args[0].(*reflect.Value)
-			if !ok {
-				rv := reflect.ValueOf(args[0])
-				v = &rv
-			}
-
-			return dec.DecodeValue(*v)
-		})
+		err = item.Value(func(b []byte) error { return compress.BrotliDecode(b, args[0]) })
 	}
 
 	if err != nil {

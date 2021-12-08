@@ -22,7 +22,7 @@ func (u Update) Bytes() []byte {
 }
 
 func (u Update) SQL(pp SQLPlaceholderPrefix) (string, []interface{}, error) {
-	item, err := toMap(u.Value)
+	item, err := ToMap(u.Value)
 	if err != nil {
 		return "", nil, tea.Error(err)
 	}
