@@ -3,13 +3,13 @@ package rdb
 import (
 	"context"
 	"encoding/binary"
-	"hash/fnv"
 
+	"github.com/cespare/xxhash"
 	"github.com/dgraph-io/badger/v3"
 	"github.com/pghq/go-tea"
 
 	"github.com/pghq/go-ark/internal"
-	"github.com/pghq/go-ark/internal/compress"
+	"github.com/pghq/go-ark/internal/z"
 )
 
 // Provider is a low-level in-memory RDB provider.
@@ -174,14 +174,12 @@ type indexValue struct {
 func namespace(base string, args ...interface{}) []byte {
 	raw := []byte(base)
 	if len(args) > 0 {
-		b, _ := compress.BrotliHash(args...)
+		b, _ := z.Hash(args...)
 		raw = append(raw, b...)
 	}
 
-	h := fnv.New64()
-	_, _ = h.Write(raw)
 	namespace := make([]byte, 8)
-	binary.LittleEndian.PutUint64(namespace, h.Sum64())
+	binary.LittleEndian.PutUint64(namespace, xxhash.Sum64(raw))
 	return namespace
 }
 
@@ -202,7 +200,7 @@ func key(indexName string, v interface{}, args ...interface{}) []byte {
 func value(v interface{}) []byte {
 	b, ok := v.([]byte)
 	if !ok {
-		b, _ = compress.BrotliEncode(v)
+		b, _ = z.Encode(v)
 	}
 
 	return b

@@ -8,7 +8,7 @@ import (
 	"github.com/pghq/go-tea"
 
 	"github.com/pghq/go-ark/internal"
-	"github.com/pghq/go-ark/internal/compress"
+	"github.com/pghq/go-ark/internal/z"
 )
 
 func (p *Provider) Txn(ctx context.Context, ro ...bool) (internal.Txn, error) {
@@ -45,7 +45,7 @@ func (t *kvsTxn) Exec(statement internal.Stmt, args ...interface{}) internal.Res
 	}
 
 	if m.Insert || m.Update {
-		b, err := compress.BrotliEncode(m.Value)
+		b, err := z.Encode(m.Value)
 		if err != nil {
 			return internal.ExecResponse(0, tea.Error(err))
 		}
@@ -66,7 +66,7 @@ func (t *kvsTxn) Exec(statement internal.Stmt, args ...interface{}) internal.Res
 
 	item, err := t.provider.Get(m.Key)
 	if item != nil {
-		err = item.Value(func(b []byte) error { return compress.BrotliDecode(b, args[0]) })
+		err = item.Value(func(b []byte) error { return z.Decode(b, args[0]) })
 	}
 
 	if err != nil {

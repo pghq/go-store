@@ -2,6 +2,7 @@ package rdb
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/pghq/go-tea"
@@ -137,7 +138,7 @@ func TestRDB_Txn(t *testing.T) {
 
 	t.Run("no content", func(t *testing.T) {
 		var values []string
-		ra, err := txn.Exec(internal.List{Table: "tests"}, &values).Resolve()
+		ra, err := txn.Exec(internal.List{Table: "tests", Filter: Ft().IdxEq("count", 1, true)}, &values).Resolve()
 		assert.NotNil(t, err)
 		assert.False(t, tea.IsFatal(err))
 		assert.Equal(t, 0, ra)
@@ -145,6 +146,14 @@ func TestRDB_Txn(t *testing.T) {
 		var v value
 		_, err = txn.Exec(internal.Get{Table: "tests", Filter: Ft().IdxEq("primary", "bar")}, &v).Resolve()
 		assert.NotNil(t, err)
+	})
+
+	t.Run("index not found", func(t *testing.T) {
+		var values []string
+		ra, err := txn.Exec(internal.List{Table: "tests"}, &values).Resolve()
+		assert.NotNil(t, err)
+		assert.False(t, tea.IsFatal(err))
+		assert.Equal(t, 0, ra)
 	})
 
 	t.Run("bad table", func(t *testing.T) {
@@ -308,5 +317,18 @@ func TestRDB_Txn(t *testing.T) {
 		ra, err := txn.Exec(internal.Remove{Table: "tests", Filter: Ft().IdxEq("primary", "foo")}).Resolve()
 		assert.Nil(t, err)
 		assert.Equal(t, 1, ra)
+	})
+
+	t.Run("can insert many", func(t *testing.T) {
+		txn, _ := p.Txn(context.TODO())
+		for i := 0; i < 50000; i++ {
+			txn.Exec(internal.Insert{Table: "tests", Value: &value{
+				Id:        fmt.Sprintf("foo%d", i+100),
+				Latitude:  "78.00",
+				Longitude: "-78.00",
+				Count:     1,
+				Enabled:   true,
+			}})
+		}
 	})
 }
