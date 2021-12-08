@@ -13,12 +13,12 @@ func Encode(v interface{}) ([]byte, error) {
 	return GobEncode(v)
 }
 
-// Decode value using default encoder
+// Decode value using default decoder
 func Decode(b []byte, v interface{}) error {
 	return GobDecode(b, v)
 }
 
-// Hash args using default encoder
+// Hash args using default hash
 func Hash(args ...interface{}) ([]byte, error) {
 	return GobHash(args...)
 }
