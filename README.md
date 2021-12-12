@@ -23,11 +23,7 @@ import (
 m := ark.New()
 
 // Create a transaction
-tx, err := m.Txn(context.Background())
-if err != nil{
-    panic(err)
-}
-
+tx := m.Txn(context.Background())
 defer tx.Rollback()
 
 // Commit some data

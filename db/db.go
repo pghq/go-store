@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"database/sql/driver"
+	"fmt"
 	"io/fs"
 	"time"
 
@@ -272,6 +273,7 @@ type Query struct {
 	NotXEq         []map[string]interface{}
 	Expressions    []Expression
 	Fields         []string
+	CacheKey       []interface{}
 	SQLPlaceholder string
 }
 
@@ -295,6 +297,7 @@ type QueryOption func(query *Query)
 func QueryKey(o string) QueryOption {
 	return func(query *Query) {
 		query.KeyName = o
+		query.CacheKey = append(query.CacheKey, "key", o)
 	}
 }
 
@@ -309,6 +312,7 @@ func QuerySQLPlaceholder(o string) QueryOption {
 func Page(o int) QueryOption {
 	return func(query *Query) {
 		query.Page = o
+		query.CacheKey = append(query.CacheKey, "page", o)
 	}
 }
 
@@ -316,6 +320,7 @@ func Page(o int) QueryOption {
 func Limit(o int) QueryOption {
 	return func(query *Query) {
 		query.Limit = o
+		query.CacheKey = append(query.CacheKey, "limit", o)
 	}
 }
 
@@ -323,6 +328,7 @@ func Limit(o int) QueryOption {
 func OrderBy(o string) QueryOption {
 	return func(query *Query) {
 		query.OrderBy = append(query.OrderBy, o)
+		query.CacheKey = append(query.CacheKey, "orderBy", o)
 	}
 }
 
@@ -330,6 +336,7 @@ func OrderBy(o string) QueryOption {
 func Eq(key string, value interface{}) QueryOption {
 	return func(query *Query) {
 		query.Eq = append(query.Eq, map[string]interface{}{key: value})
+		query.CacheKey = append(query.CacheKey, "eq", fmt.Sprintf("%s%+v", key, value))
 	}
 }
 
@@ -337,6 +344,7 @@ func Eq(key string, value interface{}) QueryOption {
 func NotEq(key string, value interface{}) QueryOption {
 	return func(query *Query) {
 		query.NotEq = append(query.NotEq, map[string]interface{}{key: value})
+		query.CacheKey = append(query.CacheKey, "neq", fmt.Sprintf("%s%+v", key, value))
 	}
 }
 
@@ -344,6 +352,7 @@ func NotEq(key string, value interface{}) QueryOption {
 func Lt(key string, value interface{}) QueryOption {
 	return func(query *Query) {
 		query.Lt = append(query.Lt, map[string]interface{}{key: value})
+		query.CacheKey = append(query.CacheKey, "lt", key, value)
 	}
 }
 
@@ -351,6 +360,7 @@ func Lt(key string, value interface{}) QueryOption {
 func Gt(key string, value interface{}) QueryOption {
 	return func(query *Query) {
 		query.Gt = append(query.Gt, map[string]interface{}{key: value})
+		query.CacheKey = append(query.CacheKey, "gt", key, value)
 	}
 }
 
@@ -358,6 +368,7 @@ func Gt(key string, value interface{}) QueryOption {
 func XEq(key string, value interface{}) QueryOption {
 	return func(query *Query) {
 		query.XEq = append(query.XEq, map[string]interface{}{key: value})
+		query.CacheKey = append(query.CacheKey, "xeq", fmt.Sprintf("%s%+v", key, value))
 	}
 }
 
@@ -365,6 +376,7 @@ func XEq(key string, value interface{}) QueryOption {
 func NotXEq(key string, value interface{}) QueryOption {
 	return func(query *Query) {
 		query.NotXEq = append(query.NotEq, map[string]interface{}{key: value})
+		query.CacheKey = append(query.CacheKey, "nxeq", fmt.Sprintf("%s%+v", key, value))
 	}
 }
 
@@ -372,6 +384,7 @@ func NotXEq(key string, value interface{}) QueryOption {
 func Expr(format string, args ...interface{}) QueryOption {
 	return func(query *Query) {
 		query.Expressions = append(query.Expressions, Expression{Format: format, Args: args})
+		query.CacheKey = append(query.CacheKey, "expr", fmt.Sprintf(format, args...))
 	}
 }
 
@@ -379,6 +392,7 @@ func Expr(format string, args ...interface{}) QueryOption {
 func Fields(fields ...string) QueryOption {
 	return func(query *Query) {
 		query.Fields = append(query.Fields, fields...)
+		query.CacheKey = append(query.CacheKey, "fields", fields)
 	}
 }
 
