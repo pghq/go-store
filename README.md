@@ -1,5 +1,5 @@
 # go-ark
-Go data mappers for database providers in use internally.
+Go data mapper for internally supported providers.
 
 ## Installation
 
@@ -47,6 +47,6 @@ if err := tx.Commit(); err != nil{
 ```
 
 ## Supported Providers
+- In-Memory
 - Redis
 - SQL
-- In-Memory
