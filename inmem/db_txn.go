@@ -34,7 +34,7 @@ func (d DB) Txn(ctx context.Context, opts ...db.TxnOption) db.Txn {
 	return tx
 }
 
-// txn | in-memory database transaction
+// txn in-memory database transaction
 type txn struct {
 	ctx      context.Context
 	table    func(name string) (table, error)

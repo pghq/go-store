@@ -7,7 +7,7 @@ import (
 	"github.com/pghq/go-tea"
 )
 
-// Map | Convert a struct (w. optional tags) to a map using reflection
+// Map Convert a struct (w. optional tags) to a map using reflection
 // variation of: https://play.golang.org/p/2Qi3thFf--
 // meant to be used for data persistence.
 func Map(in interface{}, transient ...interface{}) (map[string]interface{}, error) {
@@ -43,7 +43,7 @@ func Map(in interface{}, transient ...interface{}) (map[string]interface{}, erro
 	return item, nil
 }
 
-// Copy | Copy src value to destination
+// Copy Copy src value to destination
 func Copy(src, dst interface{}) error {
 	dv := reflect.Indirect(reflect.ValueOf(dst))
 	if !dv.CanSet() {

@@ -21,7 +21,7 @@ import (
 	"github.com/pghq/go-ark/inmem"
 )
 
-// Mapper | Data mapper for various backends
+// Mapper Data mapper for various backends
 type Mapper struct {
 	config []db.Option
 	db     db.DB
@@ -29,7 +29,7 @@ type Mapper struct {
 	cache  *ristretto.Cache
 }
 
-// WithOpts | Configure mapper with custom ops
+// WithOpts Configure mapper with custom ops
 func (m Mapper) WithOpts(opts []Option) Mapper {
 	for _, opt := range opts {
 		opt(&m)
@@ -38,7 +38,7 @@ func (m Mapper) WithOpts(opts []Option) Mapper {
 	return m
 }
 
-// New | Create a new mapper
+// New Create a new mapper
 func New(opts ...Option) *Mapper {
 	m := defaultMapper().WithOpts(opts)
 	if m.db == nil {
@@ -49,7 +49,7 @@ func New(opts ...Option) *Mapper {
 	return &m
 }
 
-// defaultMapper | create a new default mapper
+// defaultMapper create a new default mapper
 func defaultMapper() Mapper {
 	cache, _ := ristretto.NewCache(&ristretto.Config{
 		NumCounters: 1e7,
@@ -62,10 +62,10 @@ func defaultMapper() Mapper {
 	}
 }
 
-// Option | Mapper option
+// Option Mapper option
 type Option func(m *Mapper)
 
-// DB | DB Mapper option
+// DB DB Mapper option
 func DB(o db.DB) Option {
 	return func(m *Mapper) {
 		m.db = o

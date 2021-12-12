@@ -6,7 +6,7 @@ import (
 	"github.com/pghq/go-ark/db"
 )
 
-// List | Retrieve a listing of values
+// List Retrieve a listing of values
 func (tx Txn) List(table string, v interface{}, opts ...db.QueryOption) error {
 	if tx.err != nil {
 		return tea.Error(tx.err)

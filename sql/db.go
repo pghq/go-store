@@ -16,7 +16,7 @@ import (
 	"github.com/pghq/go-ark/db"
 )
 
-// DB | SQL database
+// DB SQL database
 type DB struct {
 	backend *sqlx.DB
 	err     error
@@ -30,7 +30,7 @@ func (d DB) Ping(ctx context.Context) error {
 	return d.backend.PingContext(ctx)
 }
 
-// NewDB | Create a new SQL database
+// NewDB Create a new SQL database
 func NewDB(opts ...db.Option) *DB {
 	config := db.ConfigWith(opts)
 	d := DB{}
@@ -69,7 +69,7 @@ func NewDB(opts ...db.Option) *DB {
 	return &d
 }
 
-// gooseLogger | Custom goose logger implementation
+// gooseLogger Custom goose logger implementation
 type gooseLogger struct{}
 
 func (g gooseLogger) Fatal(v ...interface{}) {
@@ -92,7 +92,7 @@ func (g gooseLogger) Printf(format string, v ...interface{}) {
 	tea.Logf("info", format, v...)
 }
 
-// placeholder | placeholder prefix for replacing ?s
+// placeholder placeholder prefix for replacing ?s
 type placeholder string
 
 func (ph placeholder) ReplacePlaceholders(sql string) (string, error) {
@@ -124,7 +124,7 @@ func (ph placeholder) ReplacePlaceholders(sql string) (string, error) {
 	return buf.String(), nil
 }
 
-// trace | register a new logging hook for the driver
+// trace register a new logging hook for the driver
 func trace(driverName string, driver driver.Driver) {
 	drivers := sql.Drivers()
 	present := false

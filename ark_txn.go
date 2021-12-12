@@ -9,7 +9,7 @@ import (
 	"github.com/pghq/go-ark/db"
 )
 
-// Txn | Begin or fork a transaction
+// Txn Begin or fork a transaction
 func (m *Mapper) Txn(ctx context.Context, opts ...db.TxnOption) Txn {
 	if tx, ok := ctx.(Txn); ok {
 		tx.root = false
@@ -28,7 +28,7 @@ func (m *Mapper) Txn(ctx context.Context, opts ...db.TxnOption) Txn {
 	}
 }
 
-// Do | Write and or read using a callback
+// Do Write and or read using a callback
 func (m *Mapper) Do(ctx context.Context, fn func(tx db.Txn) error, opts ...db.TxnOption) error {
 	if m.err != nil {
 		return tea.Error(m.err)
@@ -44,7 +44,7 @@ func (m *Mapper) Do(ctx context.Context, fn func(tx db.Txn) error, opts ...db.Tx
 	return tx.Commit()
 }
 
-// View | Read using a callback
+// View Read using a callback
 func (m *Mapper) View(ctx context.Context, fn func(tx db.Txn) error, opts ...db.TxnOption) error {
 	if m.err != nil {
 		return tea.Error(m.err)
@@ -60,7 +60,7 @@ func (m *Mapper) View(ctx context.Context, fn func(tx db.Txn) error, opts ...db.
 	return tx.Commit()
 }
 
-// Txn | A unit of work
+// Txn A unit of work
 type Txn struct {
 	context.Context
 	root    bool
@@ -71,7 +71,7 @@ type Txn struct {
 	err     error
 }
 
-// Commit | Submit a unit of work
+// Commit Submit a unit of work
 func (tx Txn) Commit() error {
 	if tx.err != nil {
 		return tea.Error(tx.err)
@@ -98,7 +98,7 @@ func (tx Txn) Commit() error {
 	}
 }
 
-// Rollback | Cancel a unit of work
+// Rollback Cancel a unit of work
 func (tx Txn) Rollback() error {
 	if tx.err != nil {
 		return tea.Error(tx.err)
@@ -111,7 +111,7 @@ func (tx Txn) Rollback() error {
 	return tx.backend.Rollback()
 }
 
-// view | A single view to be cached
+// view A single view to be cached
 type view struct {
 	Key   []byte
 	Value interface{}
