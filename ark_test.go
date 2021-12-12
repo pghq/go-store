@@ -184,7 +184,7 @@ func TestTxn_List(t *testing.T) {
 	t.Run("bad query", func(t *testing.T) {
 		tx := m.Txn(context.TODO())
 		var v []string
-		assert.NotNil(t, tx.List("", &v, db.NotEq("foo", func() {})))
+		assert.NotNil(t, tx.List("", &v, db.Gt("foo", func() {})))
 	})
 
 	t.Run("not found", func(t *testing.T) {

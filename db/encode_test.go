@@ -12,7 +12,13 @@ func TestEncode(t *testing.T) {
 		assert.NotNil(t, err)
 	})
 
-	t.Run("can encode", func(t *testing.T) {
+	t.Run("interface slice", func(t *testing.T) {
+		b, err := Encode([]interface{}{"foo", nil})
+		assert.Nil(t, err)
+		assert.NotNil(t, b)
+	})
+
+	t.Run("string", func(t *testing.T) {
 		b, err := Encode("a really long run-on sentence, a really long run-on sentence")
 		assert.Nil(t, err)
 		assert.NotNil(t, b)
@@ -25,8 +31,14 @@ func TestHash(t *testing.T) {
 		assert.NotNil(t, err)
 	})
 
-	t.Run("can encode", func(t *testing.T) {
+	t.Run("string", func(t *testing.T) {
 		b, err := Hash("a really long run-on sentence, a really long run-on sentence")
+		assert.Nil(t, err)
+		assert.NotNil(t, b)
+	})
+
+	t.Run("interface slice", func(t *testing.T) {
+		b, err := Hash([]interface{}{"foo", nil})
 		assert.Nil(t, err)
 		assert.NotNil(t, b)
 	})

@@ -12,7 +12,7 @@ func (tx Txn) List(table string, v interface{}, opts ...db.QueryOption) error {
 		return tea.Error(tx.err)
 	}
 
-	key, err := db.Encode(db.QueryWith(opts))
+	key, err := db.Hash(db.QueryWith(opts).CacheKey)
 	if err != nil {
 		return tea.Error(err)
 	}

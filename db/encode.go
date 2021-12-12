@@ -18,7 +18,7 @@ func Decode(b []byte, v interface{}) error {
 	return GobDecode(b, v)
 }
 
-// Hash | Hash arguments to bytes
+// Hash | Hash arguments
 func Hash(args ...interface{}) ([]byte, error) {
 	return GobHash(args...)
 }
