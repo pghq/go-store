@@ -385,16 +385,17 @@ func TestTxn_List(t *testing.T) {
 	})
 
 	t.Run("pk not found", func(t *testing.T) {
-		_ = d.backend.Update(func(txn *badger.Txn) error {
-			return txn.Set([]byte{196, 244, 4, 229, 84, 195, 52, 33}, nil)
+		err := d.backend.Update(func(txn *badger.Txn) error {
+			return txn.Set([]byte{196, 244, 4, 229, 84, 195, 52, 33, 1, 2, 3}, nil)
 		})
 		defer d.backend.Update(func(txn *badger.Txn) error {
-			return txn.Delete([]byte{196, 244, 4, 229, 84, 195, 52, 33})
+			return txn.Delete([]byte{196, 244, 4, 229, 84, 195, 52, 33, 1, 2, 3})
 		})
+		assert.Nil(t, err)
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
 		var v []map[string]interface{}
-		err := tx.List("tests", &v, db.Eq("count", []interface{}{1, nil}))
+		err = tx.List("tests", &v, db.Eq("count", []interface{}{1, nil}))
 		assert.NotNil(t, err)
 	})
 
