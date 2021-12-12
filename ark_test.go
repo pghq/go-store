@@ -2,210 +2,219 @@ package ark
 
 import (
 	"context"
-	"database/sql"
-	"fmt"
 	"testing"
-	"time"
 
-	"github.com/Masterminds/squirrel"
-	"github.com/alicebob/miniredis/v2"
 	"github.com/pghq/go-tea"
-	_ "github.com/proullon/ramsql/driver"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/pghq/go-ark/internal"
-	"github.com/pghq/go-ark/rdb"
+	"github.com/pghq/go-ark/db"
+	"github.com/pghq/go-ark/inmem"
+	"github.com/pghq/go-ark/sql"
 )
 
-func TestOpen(t *testing.T) {
+func TestNew(t *testing.T) {
 	t.Parallel()
 
-	t.Run("no backend", func(t *testing.T) {
-		assert.NotNil(t, Open())
+	t.Run("bad open", func(t *testing.T) {
+		m := New(DB(sql.NewDB()))
+		assert.NotNil(t, m.Txn(context.TODO()).Commit())
+		assert.NotNil(t, m.Txn(context.TODO()).Rollback())
+		assert.NotNil(t, m.Txn(context.TODO()).Get("", "", nil))
+		assert.NotNil(t, m.Txn(context.TODO()).Insert("", "", nil))
+		assert.NotNil(t, m.Txn(context.TODO()).Remove("", ""))
+		assert.NotNil(t, m.Txn(context.TODO()).Update("", "", nil))
+		assert.NotNil(t, m.Txn(context.TODO()).List("", ""))
+		assert.NotNil(t, m.Do(context.TODO(), func(tx db.Txn) error { return nil }))
+		assert.NotNil(t, m.View(context.TODO(), func(tx db.Txn) error { return nil }))
 	})
 
-	t.Run("dsn", func(t *testing.T) {
-		dm := Open().Driver("postgres").DSN("postgres://user:pass@pg.example.com/db")
-		assert.NotNil(t, dm)
+	t.Run("with default db", func(t *testing.T) {
+		m := New()
+		assert.NotNil(t, m)
+		assert.Nil(t, m.err)
+	})
+
+	t.Run("with custom db", func(t *testing.T) {
+		m := New(DB(inmem.NewDB()))
+		assert.NotNil(t, m)
+		assert.Nil(t, m.err)
 	})
 }
 
-func TestMapper_ConnectKVS(t *testing.T) {
+func TestMapper_View(t *testing.T) {
 	t.Parallel()
 
-	t.Run("bad provider", func(t *testing.T) {
-		_, err := Open().ConnectKVS(context.TODO(), "bad")
+	m := New()
+	t.Run("with fn error", func(t *testing.T) {
+		err := m.View(context.TODO(), func(tx db.Txn) error { return tea.NewError("with fn error") })
 		assert.NotNil(t, err)
 	})
 
-	t.Run("bad connect", func(t *testing.T) {
-		_, err := Open().ConnectKVS(context.TODO(), "redis")
-		assert.NotNil(t, err)
-	})
-
-	t.Run("inmem", func(t *testing.T) {
-		conn, err := Open().ConnectKVS(context.TODO(), "inmem")
+	t.Run("without fn error", func(t *testing.T) {
+		err := m.View(context.TODO(), func(tx db.Txn) error { return nil })
 		assert.Nil(t, err)
-		assert.NotNil(t, conn)
-	})
-
-	t.Run("redis", func(t *testing.T) {
-		s, _ := miniredis.Run()
-		defer s.Close()
-
-		conn, err := Open().DSN(s.Addr()).ConnectKVS(context.TODO(), "redis", RedisConfig{Network: "tcp"})
-		assert.Nil(t, err)
-		assert.NotNil(t, conn)
 	})
 }
 
-func TestMapper_ConnectRDB(t *testing.T) {
+func TestMapper_Do(t *testing.T) {
 	t.Parallel()
 
-	t.Run("bad provider", func(t *testing.T) {
-		_, err := Open().ConnectRDB(context.TODO(), "bad")
+	m := New()
+	t.Run("with fn error", func(t *testing.T) {
+		err := m.Do(context.TODO(), func(tx db.Txn) error { return tea.NewError("with fn error") })
 		assert.NotNil(t, err)
 	})
 
-	t.Run("bad connect", func(t *testing.T) {
-		_, err := Open().ConnectRDB(context.TODO(), "inmem")
-		assert.NotNil(t, err)
-	})
-
-	t.Run("inmem", func(t *testing.T) {
-		dm := Open().DSN(rdb.Schema{
-			"tests": map[string][]string{
-				"primary": {"id"},
-			},
-		})
-		conn, err := dm.ConnectRDB(context.TODO(), "inmem")
+	t.Run("without fn error", func(t *testing.T) {
+		err := m.Do(context.TODO(), func(tx db.Txn) error { return nil })
 		assert.Nil(t, err)
-		assert.NotNil(t, conn)
-	})
-
-	t.Run("sql", func(t *testing.T) {
-		db, _ := sql.Open("ramsql", "")
-		defer db.Close()
-
-		conn, err := Open().ConnectRDB(context.TODO(), "sql", SQLConfig{DB: db})
-		assert.Nil(t, err)
-		assert.NotNil(t, conn)
 	})
 }
 
-func TestTxn(t *testing.T) {
+func TestMapper_Txn(t *testing.T) {
 	t.Parallel()
 
-	dm := Open()
-	_, _ = dm.ConnectKVS(context.TODO(), "inmem")
+	m := New()
 
-	t.Run("context timeout", func(t *testing.T) {
-		ctx, cancel := context.WithTimeout(context.TODO(), 0)
-		defer cancel()
-		_, err := dm.txn(ctx)
-		assert.NotNil(t, err)
+	t.Run("bad commit", func(t *testing.T) {
+		tx := m.Txn(context.TODO())
+		tx.Insert("", "foo", "bar")
+		tx.Rollback()
+		assert.NotNil(t, tx.Commit())
 	})
 
-	t.Run("update", func(t *testing.T) {
-		tx, _ := dm.txn(context.TODO())
-		ra, err := tx.update(internal.Insert{Key: []byte("test"), Value: "value"}).Resolve()
-		assert.Nil(t, err)
-		assert.Equal(t, 1, ra)
+	t.Run("child", func(t *testing.T) {
+		tx := m.Txn(m.Txn(context.TODO()))
+		assert.False(t, tx.root)
+		assert.Nil(t, tx.Commit())
+		assert.Nil(t, tx.Rollback())
+	})
+}
+
+func TestTxn_Insert(t *testing.T) {
+	t.Parallel()
+
+	m := New()
+
+	t.Run("can insert", func(t *testing.T) {
+		tx := m.Txn(context.TODO())
+		defer tx.Rollback()
+		assert.Nil(t, tx.Insert("", "foo", "bar"))
+	})
+}
+
+func TestTxn_Update(t *testing.T) {
+	t.Parallel()
+
+	m := New()
+	tx := m.Txn(context.TODO())
+	tx.Insert("", "foo", "bar")
+	tx.Commit()
+
+	t.Run("can update", func(t *testing.T) {
+		tx := m.Txn(context.TODO())
+		defer tx.Rollback()
+		assert.Nil(t, tx.Update("", "foo", "bar"))
+	})
+}
+
+func TestTxn_Remove(t *testing.T) {
+	t.Parallel()
+
+	m := New()
+	tx := m.Txn(context.TODO())
+	tx.Insert("", "foo", "bar")
+	tx.Commit()
+
+	t.Run("can remove", func(t *testing.T) {
+		tx := m.Txn(context.TODO())
+		defer tx.Rollback()
+		assert.Nil(t, tx.Remove("", "foo"))
+	})
+}
+
+func TestTxn_Get(t *testing.T) {
+	t.Parallel()
+
+	m := New()
+	tx := m.Txn(context.TODO())
+	tx.Insert("", "foo", "bar")
+	tx.Commit()
+
+	t.Run("not found", func(t *testing.T) {
+		tx := m.Txn(context.TODO())
+		defer tx.Rollback()
+		var v string
+		assert.NotNil(t, tx.Get("", "not found", &v))
 	})
 
-	t.Run("view", func(t *testing.T) {
-		tx, _ := dm.txn(context.TODO())
-		_ = tx.update(internal.Insert{Key: []byte("test"), Value: "value"})
+	t.Run("read batch size exhausted", func(t *testing.T) {
+		tx := m.Txn(context.TODO())
+		defer tx.Rollback()
+		var v string
+		tx.Get("", "foo", &v)
+		assert.NotNil(t, tx.Get("", "foo", &v))
+	})
+
+	t.Run("can get", func(t *testing.T) {
+		tx := m.Txn(context.TODO())
+		defer tx.Rollback()
+		var v string
+		assert.Nil(t, tx.Get("", "foo", &v))
 		tx.Commit()
+		tx.cache.Wait()
+	})
 
-		t.Run("bad commit", func(t *testing.T) {
-			s, _ := miniredis.Run()
-			defer s.Close()
-
-			dm := Open().DSN(s.Addr())
-			_, _ = dm.ConnectKVS(context.TODO(), "redis", RedisConfig{Network: "tcp"})
-
-			tx, _ := dm.txn(context.TODO())
-			defer tx.Rollback()
-			var value string
-			_ = tx.view(internal.Get{Key: []byte("not found")}, &value)
-			err := tx.Commit()
-			assert.NotNil(t, err)
-			assert.False(t, tea.IsFatal(err))
-			assert.Equal(t, "", value)
-		})
-
-		t.Run("uncached error", func(t *testing.T) {
-			tx, _ := dm.txn(context.TODO())
-			defer tx.Rollback()
-			defer tx.cache.Wait()
-
-			var value string
-			_, err := tx.view(internal.Get{Key: []byte("not found")}, &value).Resolve()
-			assert.NotNil(t, err)
-		})
-
-		t.Run("cached error", func(t *testing.T) {
-			tx, _ := dm.txn(context.TODO())
-			defer tx.Rollback()
-
-			var value string
-			_, err := tx.view(internal.Get{Key: []byte("not found")}, &value).Resolve()
-			assert.NotNil(t, err)
-		})
-
-		t.Run("uncached response", func(t *testing.T) {
-			tx, _ := dm.txn(context.TODO())
-			defer tx.cache.Wait()
-			defer tx.Commit()
-
-			var value string
-			ra, err := tx.view(internal.Get{Key: []byte("test")}, &value).Resolve()
-			assert.Nil(t, err)
-			assert.Equal(t, 1, ra)
-			assert.Equal(t, "value", value)
-		})
-
-		t.Run("cached response", func(t *testing.T) {
-			tx, _ := dm.txn(context.TODO())
-			defer tx.Commit()
-
-			var value string
-			ra, err := tx.view(internal.Get{Key: []byte("test")}, &value).Resolve()
-			assert.Nil(t, err)
-			assert.Equal(t, 1, ra)
-			assert.Equal(t, "value", value)
-		})
+	t.Run("can get cached", func(t *testing.T) {
+		tx := m.Txn(context.TODO())
+		defer tx.Rollback()
+		var v string
+		assert.Nil(t, tx.Get("", "foo", &v))
 	})
 }
 
-func TestQy(t *testing.T) {
+func TestTxn_List(t *testing.T) {
 	t.Parallel()
 
-	now := time.Now()
-	q := Qy().
-		Table("tests").
-		LeftJoin("units ON units.id = ?", 1).
-		After("tests.created_at", &now).
-		Filter(squirrel.Eq{"tests.id": 1}).
-		Fields("id").
-		OrderBy("created_at").
-		FieldFunc(func(s string) string {
-			return fmt.Sprintf("tests.%s", s)
-		}).
-		First(1)
+	m := New()
+	tx := m.Txn(context.TODO())
+	tx.Insert("", "foo", "bar")
+	tx.Commit()
 
-	t.Run("list sql", func(t *testing.T) {
-		s, args, err := q.l.SQL("$")
-		assert.Nil(t, err)
-		assert.Equal(t, "SELECT tests.id FROM tests LEFT JOIN units ON units.id = $1 WHERE tests.created_at > $2 AND tests.id = $3 ORDER BY created_at LIMIT 1", s)
-		assert.Equal(t, []interface{}{1, &now, 1}, args)
+	t.Run("bad query", func(t *testing.T) {
+		tx := m.Txn(context.TODO())
+		var v []string
+		assert.NotNil(t, tx.List("", &v, db.NotEq("foo", func() {})))
 	})
 
-	t.Run("get sql", func(t *testing.T) {
-		s, args, err := q.get().SQL("$")
-		assert.Nil(t, err)
-		assert.Equal(t, "SELECT tests.id FROM tests WHERE tests.id = $1 LIMIT 1", s)
-		assert.Equal(t, []interface{}{1}, args)
+	t.Run("not found", func(t *testing.T) {
+		tx := m.Txn(context.TODO())
+		defer tx.Rollback()
+		var v []string
+		assert.NotNil(t, tx.List("", &v, db.Limit(0)))
+	})
+
+	t.Run("read batch size exhausted", func(t *testing.T) {
+		tx := m.Txn(context.TODO())
+		defer tx.Rollback()
+		var v []string
+		tx.List("", &v)
+		assert.NotNil(t, tx.List("", &v))
+	})
+
+	t.Run("can list", func(t *testing.T) {
+		tx := m.Txn(context.TODO())
+		defer tx.Rollback()
+		var v []string
+		assert.Nil(t, tx.List("", &v))
+		tx.Commit()
+		tx.cache.Wait()
+	})
+
+	t.Run("can list cached", func(t *testing.T) {
+		tx := m.Txn(context.TODO())
+		defer tx.Rollback()
+		var v []string
+		assert.Nil(t, tx.List("", &v))
 	})
 }

@@ -1,5 +1,5 @@
 # go-ark
-Go data mappers for internally supported database providers.
+Go data mapper for internally supported providers.
 
 ## Installation
 
@@ -13,19 +13,17 @@ go get github.com/pghq/go-ark
 A typical usage scenario:
 
 ```
-import "github.com/pghq/go-ark"
+import (
+    "context"
+    
+    "github.com/pghq/go-ark"
+)
 
 // Open an in-memory data mapper
-dm := ark.Open()
-
-// Connect to the key/value store instance
-conn, err := dm.ConnectKVS("inmem")
-if err != nil{
-    panic(err)
-}
+m := ark.New()
 
 // Create a transaction
-tx, err := conn.Txn(context.Background())
+tx, err := m.Txn(context.Background())
 if err != nil{
     panic(err)
 }
@@ -33,12 +31,12 @@ if err != nil{
 defer tx.Rollback()
 
 // Commit some data
-err := tx.Insert([]byte("dog"), "roof")
+err := tx.Insert("", []byte("dog"), "roof")
 if err != nil{
     panic(err)
 }
 
-err := tx.InsertWithTTL([]byte("cat"), "meow")
+err := tx.Insert("", []byte("cat"), "meow", db.TTL(0))
 if err != nil{
     panic(err)
 }
@@ -46,16 +44,9 @@ if err != nil{
 if err := tx.Commit(); err != nil{
     panic(err)
 }
-
-// Fork a transaction: any commits and rollbacks are ignored.
-_, err = conn.Txn(tx)
-if err != nil{
-    panic(err)
-}
 ```
 
 ## Supported Providers
+- In-Memory
 - Redis
 - SQL
-- KVS (in-memory)
-- RDB (in-memory)
