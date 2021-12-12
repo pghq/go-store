@@ -16,124 +16,58 @@ import (
 	"context"
 
 	"github.com/dgraph-io/ristretto"
-	"github.com/pghq/go-tea"
 
-	"github.com/pghq/go-ark/internal"
-	"github.com/pghq/go-ark/kvs"
-	"github.com/pghq/go-ark/rdb"
-	"github.com/pghq/go-ark/redis"
-	"github.com/pghq/go-ark/sql"
+	"github.com/pghq/go-ark/db"
+	"github.com/pghq/go-ark/inmem"
 )
 
-// Mapper is a data mapper for various data providers.
+// Mapper | Data mapper for various backends
 type Mapper struct {
-	driverName string
-	dsn        interface{}
-	cache      *ristretto.Cache
-	provider   internal.Provider
+	config []db.Option
+	db     db.DB
+	err    error
+	cache  *ristretto.Cache
 }
 
-func (m *Mapper) DSN(dsn interface{}) *Mapper {
-	m.dsn = dsn
+// WithOpts | Configure mapper with custom ops
+func (m Mapper) WithOpts(opts []Option) Mapper {
+	for _, opt := range opts {
+		opt(&m)
+	}
+
 	return m
 }
 
-func (m *Mapper) Driver(name string) *Mapper {
-	m.driverName = name
-	return m
+// New | Create a new mapper
+func New(opts ...Option) *Mapper {
+	m := defaultMapper().WithOpts(opts)
+	if m.db == nil {
+		m.db = inmem.NewDB(m.config...)
+	}
+
+	m.err = m.db.Ping(context.Background())
+	return &m
 }
 
-// ConnectKVS creates a KVS connection
-func (m *Mapper) ConnectKVS(ctx context.Context, provider string, opts ...Option) (*KVSConn, error) {
-	conf := Config{}
-	for _, opt := range opts {
-		opt.Apply(&conf)
-	}
-
-	switch provider {
-	case "inmem":
-		m.provider = kvs.NewProvider()
-	case "redis":
-		m.provider = redis.NewProvider(m.dsn, conf.redis)
-	default:
-		return nil, tea.NewError("bad provider")
-	}
-
-	if err := m.provider.Connect(ctx); err != nil {
-		return nil, tea.Error(err)
-	}
-
-	conn := KVSConn{
-		mapper: m,
-	}
-
-	return &conn, nil
-}
-
-// ConnectRDB creates an RDB connection
-func (m *Mapper) ConnectRDB(ctx context.Context, provider string, opts ...Option) (*RDBConn, error) {
-	conf := Config{}
-	for _, opt := range opts {
-		opt.Apply(&conf)
-	}
-
-	switch provider {
-	case "inmem":
-		m.provider = rdb.NewProvider(m.dsn)
-	case "sql":
-		m.provider = sql.NewProvider(m.driverName, m.dsn, conf.sql)
-	default:
-		return nil, tea.NewError("bad provider")
-	}
-
-	if err := m.provider.Connect(ctx); err != nil {
-		return nil, tea.Error(err)
-	}
-
-	conn := RDBConn{
-		mapper: m,
-	}
-
-	return &conn, nil
-}
-
-// Open a database mapper
-func Open() *Mapper {
-	m := Mapper{}
-	m.cache, _ = ristretto.NewCache(&ristretto.Config{
+// defaultMapper | create a new default mapper
+func defaultMapper() Mapper {
+	cache, _ := ristretto.NewCache(&ristretto.Config{
 		NumCounters: 1e7,
 		MaxCost:     1 << 30,
 		BufferItems: 64,
 	})
 
-	return &m
-}
-
-// Config is a configuration for the store
-type Config struct {
-	sql   sql.Config
-	redis redis.Config
-}
-
-// Option sets a single configuration for the client
-type Option interface {
-	Apply(conf *Config)
-}
-
-// SQLConfig is the SQL configuration option
-type SQLConfig sql.Config
-
-func (o SQLConfig) Apply(conf *Config) {
-	if conf != nil {
-		conf.sql = sql.Config(o)
+	return Mapper{
+		cache: cache,
 	}
 }
 
-// RedisConfig is the Redis configuration option
-type RedisConfig redis.Config
+// Option | Mapper option
+type Option func(m *Mapper)
 
-func (o RedisConfig) Apply(conf *Config) {
-	if conf != nil {
-		conf.redis = redis.Config(o)
+// DB | DB Mapper option
+func DB(o db.DB) Option {
+	return func(m *Mapper) {
+		m.db = o
 	}
 }
