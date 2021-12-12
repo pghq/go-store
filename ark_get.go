@@ -6,7 +6,7 @@ import (
 	"github.com/pghq/go-ark/db"
 )
 
-// Get | Retrieve a value
+// Get Retrieve a value
 func (tx Txn) Get(table, k string, v interface{}, opts ...db.QueryOption) error {
 	if tx.err != nil {
 		return tea.Error(tx.err)

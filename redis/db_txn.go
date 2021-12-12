@@ -25,7 +25,7 @@ func (d DB) Txn(ctx context.Context, opts ...db.TxnOption) db.Txn {
 	}
 }
 
-// txn | Redis transaction
+// txn Redis transaction
 type txn struct {
 	ctx     context.Context
 	unit    redis.Pipeliner
@@ -82,7 +82,7 @@ func (tx txn) Rollback() error {
 	return tx.unit.Discard()
 }
 
-// read | A single read from the redis database
+// read A single read from the redis database
 type read struct {
 	v   interface{}
 	cmd redis.Cmder

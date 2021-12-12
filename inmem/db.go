@@ -11,7 +11,7 @@ import (
 	"github.com/pghq/go-ark/db"
 )
 
-// DB | In-memory database
+// DB In-memory database
 type DB struct {
 	backend *badger.DB
 	schema  db.Schema
@@ -20,7 +20,7 @@ type DB struct {
 
 func (d DB) Ping(_ context.Context) error { return nil }
 
-// table | Get a table by name
+// table Get a table by name
 func (d DB) table(name string) (table, error) {
 	if name == "" && d.schema == nil {
 		return table{}, nil
@@ -34,7 +34,7 @@ func (d DB) table(name string) (table, error) {
 	return tbl, nil
 }
 
-// NewDB | Create a new in-memory database
+// NewDB Create a new in-memory database
 func NewDB(opts ...db.Option) *DB {
 	config := db.ConfigWith(opts)
 	d := DB{
@@ -68,14 +68,14 @@ func NewDB(opts ...db.Option) *DB {
 	return &d
 }
 
-// table | in-memory table
+// table in-memory table
 type table struct {
 	primary primary
 	prefix  []byte
 	indexes map[string]index
 }
 
-// document | Get indexes and encoded bytes for arbitrary values
+// document Get indexes and encoded bytes for arbitrary values
 func (tbl table) document(v interface{}) (document, error) {
 	doc := document{}
 	if len(tbl.indexes) > 0 {
@@ -104,7 +104,7 @@ func (tbl table) document(v interface{}) (document, error) {
 	return doc, nil
 }
 
-// index | lookup an index in a value
+// index lookup an index in a value
 func (tbl table) index(name string, v interface{}) (index, error) {
 	idx, present := tbl.indexes[name]
 	if !present {
@@ -118,29 +118,29 @@ func (tbl table) index(name string, v interface{}) (index, error) {
 	return idx, nil
 }
 
-// document | in-memory representation of value
+// document in-memory representation of value
 type document struct {
 	m       map[string]interface{}
 	value   []byte
 	indexes []index
 }
 
-// primary | primary index for documents
+// primary primary index for documents
 type primary struct {
 	prefix []byte
 }
 
-// pk | get primary key
+// pk get primary key
 func (p primary) pk(k []byte) []byte {
 	return append(p.prefix, append([]byte{0}, k...)...)
 }
 
-// ck | get composite key
+// ck get composite key
 func (p primary) ck(k []byte) []byte {
 	return append(p.prefix, append([]byte{1}, k...)...)
 }
 
-// index | index identifying structure of documents used for querying data
+// index index identifying structure of documents used for querying data
 type index struct {
 	primary primary
 	name    string
@@ -148,7 +148,7 @@ type index struct {
 	prefix  []byte
 }
 
-// build | get all index properties from value
+// build get all index properties from value
 func (i *index) build(v interface{}) error {
 	if m, ok := v.(map[string]interface{}); ok {
 		values := make([]interface{}, len(i.columns))
@@ -177,12 +177,12 @@ func (i *index) build(v interface{}) error {
 	return nil
 }
 
-// key | get cache key for index
+// key get cache key for index
 func (i index) key(pk []byte) []byte {
 	return append(i.prefix, pk...)
 }
 
-// prefix | fixed size prefix for keys
+// prefix fixed size prefix for keys
 func prefix(base []byte, args ...interface{}) ([]byte, error) {
 	if len(args) > 0 {
 		b, err := db.Hash(args...)

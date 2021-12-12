@@ -12,29 +12,29 @@ import (
 )
 
 const (
-	// DefaultLimit | Default limit for paginated queries
+	// DefaultLimit Default limit for paginated queries
 	DefaultLimit = 50
 
-	// DefaultMaxConns | Default max connections
+	// DefaultMaxConns Default max connections
 	DefaultMaxConns = 100
 
-	// DefaultMaxIdleLifetime | Default maximum idle time
+	// DefaultMaxIdleLifetime Default maximum idle time
 	DefaultMaxIdleLifetime = 5 * time.Minute
 
-	// DefaultBatchReadSize | Default batch read size
+	// DefaultBatchReadSize Default batch read size
 	DefaultBatchReadSize = 1
 
-	// DefaultViewTTL | Default view TTL
+	// DefaultViewTTL Default view TTL
 	DefaultViewTTL = 500 * time.Millisecond
 )
 
-// DB | A database technology
+// DB A database technology
 type DB interface {
 	Txn(ctx context.Context, opts ...TxnOption) Txn
 	Ping(ctx context.Context) error
 }
 
-// Txn | A unit of work performed within a database
+// Txn A unit of work performed within a database
 type Txn interface {
 	Get(table, k string, v interface{}, opts ...QueryOption) error
 	Insert(table, k string, v interface{}, opts ...CommandOption) error
@@ -45,10 +45,10 @@ type Txn interface {
 	Rollback() error
 }
 
-// Schema | Schema for in-memory database
+// Schema Schema for in-memory database
 type Schema map[string]map[string][]string
 
-// Config | Database configuration
+// Config Database configuration
 type Config struct {
 	Schema             map[string]map[string][]string
 	DSN                string
@@ -65,7 +65,7 @@ type Config struct {
 	RedisOptions       redis.Options
 }
 
-// ConfigWith | Configure the database with custom ops
+// ConfigWith Configure the database with custom ops
 func ConfigWith(opts []Option) Config {
 	config := Config{
 		MaxConns:        DefaultMaxConns,
@@ -80,73 +80,73 @@ func ConfigWith(opts []Option) Config {
 	return config
 }
 
-// Option | A database option
+// Option A database option
 type Option func(*Config)
 
-// RDB | In-memory database schema option
+// RDB In-memory database schema option
 func RDB(o Schema) Option {
 	return func(config *Config) {
 		config.Schema = o
 	}
 }
 
-// DSN | Database DSN option
+// DSN Database DSN option
 func DSN(o string) Option {
 	return func(config *Config) {
 		config.DSN = o
 	}
 }
 
-// SQL | Custom SQL database backend
+// SQL Custom SQL database backend
 func SQL(o *sql.DB) Option {
 	return func(config *Config) {
 		config.SQL = o
 	}
 }
 
-// SQLTrace | Enable logging db statements
+// SQLTrace Enable logging db statements
 func SQLTrace(o driver.Driver) Option {
 	return func(config *Config) {
 		config.SQLTraceDriver = o
 	}
 }
 
-// SQLOpen | Custom SQL open func
+// SQLOpen Custom SQL open func
 func SQLOpen(o func(driverName, dataSourceName string) (*sql.DB, error)) Option {
 	return func(config *Config) {
 		config.SQLOpenFunc = o
 	}
 }
 
-// DriverName | Configure database driver name
+// DriverName Configure database driver name
 func DriverName(o string) Option {
 	return func(config *Config) {
 		config.DriverName = o
 	}
 }
 
-// MaxConns | Set maximum conns
+// MaxConns Set maximum conns
 func MaxConns(o int) Option {
 	return func(config *Config) {
 		config.MaxConns = o
 	}
 }
 
-// MaxIdleLifetime | Set max idle lifetime
+// MaxIdleLifetime Set max idle lifetime
 func MaxIdleLifetime(o time.Duration) Option {
 	return func(config *Config) {
 		config.MaxIdleLifetime = o
 	}
 }
 
-// MaxConnLifetime | Set max conn lifetime
+// MaxConnLifetime Set max conn lifetime
 func MaxConnLifetime(o time.Duration) Option {
 	return func(config *Config) {
 		config.MaxConnLifetime = o
 	}
 }
 
-// Migration | Configure a database migration
+// Migration Configure a database migration
 func Migration(fs fs.FS, directory string) Option {
 	return func(config *Config) {
 		config.MigrationFS = fs
@@ -154,14 +154,14 @@ func Migration(fs fs.FS, directory string) Option {
 	}
 }
 
-// Redis | Configure redis
+// Redis Configure redis
 func Redis(o redis.Options) Option {
 	return func(config *Config) {
 		config.RedisOptions = o
 	}
 }
 
-// TxnConfig | Transaction level configuration
+// TxnConfig Transaction level configuration
 type TxnConfig struct {
 	ReadOnly      bool
 	BatchWrite    bool
@@ -169,7 +169,7 @@ type TxnConfig struct {
 	BatchReadSize int
 }
 
-// TxnConfigWith | Configure transaction with custom ops
+// TxnConfigWith Configure transaction with custom ops
 func TxnConfigWith(opts []TxnOption) TxnConfig {
 	config := TxnConfig{
 		BatchReadSize: DefaultBatchReadSize,
@@ -183,10 +183,10 @@ func TxnConfigWith(opts []TxnOption) TxnConfig {
 	return config
 }
 
-// TxnOption | A transaction option
+// TxnOption A transaction option
 type TxnOption func(config *TxnConfig)
 
-// ReadOnly | Read only transactions
+// ReadOnly Read only transactions
 func ReadOnly() TxnOption {
 	return func(config *TxnConfig) {
 		config.ReadOnly = true
@@ -194,7 +194,7 @@ func ReadOnly() TxnOption {
 	}
 }
 
-// BatchWrite | Batch write transactions
+// BatchWrite Batch write transactions
 func BatchWrite() TxnOption {
 	return func(config *TxnConfig) {
 		config.BatchWrite = true
@@ -202,21 +202,21 @@ func BatchWrite() TxnOption {
 	}
 }
 
-// ViewTTL | Cache time for transaction views
+// ViewTTL Cache time for transaction views
 func ViewTTL(o time.Duration) TxnOption {
 	return func(config *TxnConfig) {
 		config.ViewTTL = o
 	}
 }
 
-// BatchReadSize | Batch read size for client side transactions (e.g., Redis Pipelines)
+// BatchReadSize Batch read size for client side transactions (e.g., Redis Pipelines)
 func BatchReadSize(o int) TxnOption {
 	return func(config *TxnConfig) {
 		config.BatchReadSize = o
 	}
 }
 
-// Command | A database command
+// Command A database command
 type Command struct {
 	Expire         bool
 	TTL            time.Duration
@@ -224,7 +224,7 @@ type Command struct {
 	SQLPlaceholder string
 }
 
-// CommandWith | Configure command with custom ops
+// CommandWith Configure command with custom ops
 func CommandWith(opts []CommandOption) Command {
 	cmd := Command{}
 	for _, opt := range opts {
@@ -234,10 +234,10 @@ func CommandWith(opts []CommandOption) Command {
 	return cmd
 }
 
-// CommandOption | A command option
+// CommandOption A command option
 type CommandOption func(*Command)
 
-// TTL | TTL for inserts
+// TTL TTL for inserts
 func TTL(o time.Duration) CommandOption {
 	return func(cmd *Command) {
 		cmd.TTL = o
@@ -245,21 +245,21 @@ func TTL(o time.Duration) CommandOption {
 	}
 }
 
-// CommandKey | Key name / column for primaries
+// CommandKey Key name / column for primaries
 func CommandKey(o string) CommandOption {
 	return func(cmd *Command) {
 		cmd.KeyName = o
 	}
 }
 
-// CommandSQLPlaceholder | Custom SQL placeholder prefix (e.g., "$")
+// CommandSQLPlaceholder Custom SQL placeholder prefix (e.g., "$")
 func CommandSQLPlaceholder(o string) CommandOption {
 	return func(cmd *Command) {
 		cmd.SQLPlaceholder = o
 	}
 }
 
-// Query | Database query
+// Query Database query
 type Query struct {
 	Page           int
 	Limit          int
@@ -277,7 +277,7 @@ type Query struct {
 	SQLPlaceholder string
 }
 
-// QueryWith | Configure query with custom ops
+// QueryWith Configure query with custom ops
 func QueryWith(opts []QueryOption) Query {
 	query := Query{
 		Limit: DefaultLimit,
@@ -290,10 +290,10 @@ func QueryWith(opts []QueryOption) Query {
 	return query
 }
 
-// QueryOption | A query option
+// QueryOption A query option
 type QueryOption func(query *Query)
 
-// QueryKey | Key name / column for primaries
+// QueryKey Key name / column for primaries
 func QueryKey(o string) QueryOption {
 	return func(query *Query) {
 		query.KeyName = o
@@ -301,14 +301,14 @@ func QueryKey(o string) QueryOption {
 	}
 }
 
-// QuerySQLPlaceholder | Custom SQL placeholder prefix (e.g., "$")
+// QuerySQLPlaceholder Custom SQL placeholder prefix (e.g., "$")
 func QuerySQLPlaceholder(o string) QueryOption {
 	return func(query *Query) {
 		query.SQLPlaceholder = o
 	}
 }
 
-// Page | Set a page offset
+// Page Set a page offset
 func Page(o int) QueryOption {
 	return func(query *Query) {
 		query.Page = o
@@ -316,7 +316,7 @@ func Page(o int) QueryOption {
 	}
 }
 
-// Limit | Set a result limit
+// Limit Set a result limit
 func Limit(o int) QueryOption {
 	return func(query *Query) {
 		query.Limit = o
@@ -324,7 +324,7 @@ func Limit(o int) QueryOption {
 	}
 }
 
-// OrderBy | Order results by a field
+// OrderBy Order results by a field
 func OrderBy(o string) QueryOption {
 	return func(query *Query) {
 		query.OrderBy = append(query.OrderBy, o)
@@ -332,7 +332,7 @@ func OrderBy(o string) QueryOption {
 	}
 }
 
-// Eq | Filter values where field equals value
+// Eq Filter values where field equals value
 func Eq(key string, value interface{}) QueryOption {
 	return func(query *Query) {
 		query.Eq = append(query.Eq, map[string]interface{}{key: value})
@@ -340,7 +340,7 @@ func Eq(key string, value interface{}) QueryOption {
 	}
 }
 
-// NotEq | Filter values where field does not equal value
+// NotEq Filter values where field does not equal value
 func NotEq(key string, value interface{}) QueryOption {
 	return func(query *Query) {
 		query.NotEq = append(query.NotEq, map[string]interface{}{key: value})
@@ -348,7 +348,7 @@ func NotEq(key string, value interface{}) QueryOption {
 	}
 }
 
-// Lt | Filter values where field is less than value
+// Lt Filter values where field is less than value
 func Lt(key string, value interface{}) QueryOption {
 	return func(query *Query) {
 		query.Lt = append(query.Lt, map[string]interface{}{key: value})
@@ -356,7 +356,7 @@ func Lt(key string, value interface{}) QueryOption {
 	}
 }
 
-// Gt | Filter values where field is greater than value
+// Gt Filter values where field is greater than value
 func Gt(key string, value interface{}) QueryOption {
 	return func(query *Query) {
 		query.Gt = append(query.Gt, map[string]interface{}{key: value})
@@ -364,7 +364,7 @@ func Gt(key string, value interface{}) QueryOption {
 	}
 }
 
-// XEq | Filter values where field matches a regular expression
+// XEq Filter values where field matches a regular expression
 func XEq(key string, value interface{}) QueryOption {
 	return func(query *Query) {
 		query.XEq = append(query.XEq, map[string]interface{}{key: value})
@@ -372,7 +372,7 @@ func XEq(key string, value interface{}) QueryOption {
 	}
 }
 
-// NotXEq | Filter values where field does not match a regular expression
+// NotXEq Filter values where field does not match a regular expression
 func NotXEq(key string, value interface{}) QueryOption {
 	return func(query *Query) {
 		query.NotXEq = append(query.NotEq, map[string]interface{}{key: value})
@@ -380,7 +380,7 @@ func NotXEq(key string, value interface{}) QueryOption {
 	}
 }
 
-// Expr | Raw statement inclusion
+// Expr Raw statement inclusion
 func Expr(format string, args ...interface{}) QueryOption {
 	return func(query *Query) {
 		query.Expressions = append(query.Expressions, Expression{Format: format, Args: args})
@@ -388,7 +388,7 @@ func Expr(format string, args ...interface{}) QueryOption {
 	}
 }
 
-// Fields | Fields to be returned
+// Fields Fields to be returned
 func Fields(fields ...string) QueryOption {
 	return func(query *Query) {
 		query.Fields = append(query.Fields, fields...)
@@ -396,7 +396,7 @@ func Fields(fields ...string) QueryOption {
 	}
 }
 
-// Expression | Printf like formatted expression
+// Expression Printf like formatted expression
 type Expression struct {
 	Format string
 	Args   []interface{}

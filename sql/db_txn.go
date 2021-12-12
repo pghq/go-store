@@ -24,7 +24,7 @@ func (d DB) Txn(ctx context.Context, opts ...db.TxnOption) db.Txn {
 	}
 }
 
-// txn | SQL transaction
+// txn SQL transaction
 type txn struct {
 	ctx  context.Context
 	unit *sqlx.Tx
