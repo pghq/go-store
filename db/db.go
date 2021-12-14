@@ -333,10 +333,15 @@ func OrderBy(o string) QueryOption {
 }
 
 // Eq Filter values where field equals value
-func Eq(key string, value interface{}) QueryOption {
+func Eq(key string, values ...interface{}) QueryOption {
 	return func(query *Query) {
-		query.Eq = append(query.Eq, map[string]interface{}{key: value})
-		query.CacheKey = append(query.CacheKey, "eq", fmt.Sprintf("%s%+v", key, value))
+		var v interface{} = values
+		if len(values) == 1 {
+			v = values[0]
+		}
+
+		query.Eq = append(query.Eq, map[string]interface{}{key: v})
+		query.CacheKey = append(query.CacheKey, "eq", fmt.Sprintf("%s%+v", key, v))
 	}
 }
 

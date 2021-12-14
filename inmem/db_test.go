@@ -395,7 +395,7 @@ func TestTxn_List(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
 		var v []map[string]interface{}
-		err = tx.List("tests", &v, db.Eq("count", []interface{}{1, nil}))
+		err = tx.List("tests", &v, db.Eq("count", 1, nil))
 		assert.NotNil(t, err)
 	})
 
@@ -403,7 +403,7 @@ func TestTxn_List(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
 		var v []string
-		err := tx.List("tests", &v, db.Eq("count", []interface{}{1, nil}))
+		err := tx.List("tests", &v, db.Eq("count", 1, nil))
 		assert.NotNil(t, err)
 	})
 
@@ -411,15 +411,23 @@ func TestTxn_List(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
 		var v []map[string]interface{}
-		err := tx.List("tests", &v, db.Eq("count", []interface{}{1, nil}), db.Limit(0))
+		err := tx.List("tests", &v, db.Eq("count", 1, nil), db.Limit(0))
 		assert.NotNil(t, err)
+	})
+
+	t.Run("ignore nil", func(t *testing.T) {
+		tx := d.Txn(context.TODO())
+		defer tx.Rollback()
+		var v []map[string]interface{}
+		err := tx.List("tests", &v, db.Eq("count", 1), db.Limit(1), db.Page(1))
+		assert.Nil(t, err)
 	})
 
 	t.Run("next page", func(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
 		var v []map[string]interface{}
-		err := tx.List("tests", &v, db.Eq("count", []interface{}{1, nil}), db.Limit(1), db.Page(1))
+		err := tx.List("tests", &v, db.Eq("count", 1, nil), db.Limit(1), db.Page(1))
 		assert.Nil(t, err)
 	})
 }

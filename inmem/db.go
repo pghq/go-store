@@ -150,11 +150,12 @@ type index struct {
 
 // build get all index properties from value
 func (i *index) build(v interface{}) error {
-	if m, ok := v.(map[string]interface{}); ok {
-		values := make([]interface{}, len(i.columns))
+	values := make([]interface{}, len(i.columns))
+	switch vt := v.(type) {
+	case map[string]interface{}:
 		isNil := true
 		for x, column := range i.columns {
-			cv, present := m[column]
+			cv, present := vt[column]
 			values[x] = cv
 			if present {
 				isNil = false
@@ -164,11 +165,15 @@ func (i *index) build(v interface{}) error {
 		if isNil {
 			return tea.NewNoContent("index not found")
 		}
-
-		v = values
+	case []interface{}:
+		for x := 0; x < len(i.columns) && x < len(vt); x++ {
+			values[x] = vt[x]
+		}
+	default:
+		values[0] = v
 	}
 
-	pfx, err := prefix([]byte(i.name), v)
+	pfx, err := prefix([]byte(i.name), values)
 	if err != nil {
 		return tea.Error(err)
 	}
