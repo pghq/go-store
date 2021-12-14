@@ -108,7 +108,7 @@ func (tbl table) document(v interface{}) (document, error) {
 func (tbl table) index(name string, v interface{}) (index, error) {
 	idx, present := tbl.indexes[name]
 	if !present {
-		return index{}, tea.NewNoContent("index not found")
+		return index{}, tea.NewNotFound("index not found")
 	}
 
 	if err := idx.build(v); err != nil {
@@ -163,7 +163,7 @@ func (i *index) build(v interface{}) error {
 		}
 
 		if isNil {
-			return tea.NewNoContent("index not found")
+			return tea.NewNotFound("index not found")
 		}
 	case []interface{}:
 		for x := 0; x < len(i.columns) && x < len(vt); x++ {

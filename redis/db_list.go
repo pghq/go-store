@@ -23,7 +23,7 @@ func (tx txn) List(table string, v interface{}, opts ...db.QueryOption) error {
 	query := db.QueryWith(opts)
 	cmd := tx.unit.Scan(tx.ctx, uint64(query.Page), fmt.Sprintf("%s.*", table), int64(query.Limit))
 	select {
-	case tx.reads <- read{cmd: cmd, v: v}:
+	case tx.reads <- read{cmd: cmd, v: v, limit: query.Limit}:
 	default:
 		return tea.NewError("read batch size exhausted")
 	}

@@ -234,7 +234,14 @@ func TestTxn_List(t *testing.T) {
 	t.Run("not found", func(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		var v []map[string]interface{}
-		tx.List("not found", &v)
+		tx.List("tests", &v, db.Page(10))
+		assert.NotNil(t, tx.Commit())
+	})
+
+	t.Run("not found limit", func(t *testing.T) {
+		tx := d.Txn(context.TODO())
+		var v []map[string]interface{}
+		tx.List("tests", &v, db.Page(10), db.Limit(1))
 		assert.NotNil(t, tx.Commit())
 	})
 

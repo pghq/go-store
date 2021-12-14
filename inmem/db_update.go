@@ -19,7 +19,7 @@ func (tx txn) Update(table, k string, v interface{}, opts ...db.CommandOption) e
 
 	if _, err := tx.reader.Get(tbl.primary.pk([]byte(k))); err != nil {
 		if err == badger.ErrKeyNotFound {
-			return tea.NoContent(err)
+			return tea.NotFound(err)
 		}
 
 		return tea.Error(err)

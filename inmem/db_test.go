@@ -407,6 +407,14 @@ func TestTxn_List(t *testing.T) {
 		assert.NotNil(t, err)
 	})
 
+	t.Run("not found", func(t *testing.T) {
+		tx := d.Txn(context.TODO())
+		defer tx.Rollback()
+		var v []map[string]interface{}
+		err := tx.List("tests", &v, db.Eq("count", 1337, true), db.Limit(1))
+		assert.NotNil(t, err)
+	})
+
 	t.Run("no limit", func(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()

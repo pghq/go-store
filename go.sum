@@ -288,8 +288,8 @@ github.com/opencontainers/runtime-spec v1.0.3-0.20210326190908-1c3f411f0417/go.m
 github.com/opencontainers/selinux v1.8.2/go.mod h1:MUIHuUEvKB1wtJjQdOyYRgOnLD2xAPP8dBsCoU0KuF8=
 github.com/ory/dockertest/v3 v3.8.0/go.mod h1:9zPATATlWQru+ynXP+DytBQrsXV7Tmlx7K86H6fQaDo=
 github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=
-github.com/pghq/go-tea v0.0.30 h1:Oh0t/y+e65HWYemS47l895I+ZS7T+o1HPN2a2pKLLuQ=
-github.com/pghq/go-tea v0.0.30/go.mod h1:5efVLSVXUUwm4SqhNr7J6phtqHD/5fwwWne27btyruY=
+github.com/pghq/go-tea v0.0.33 h1:ZqyN/2v/F5+zIvbhgsLfN/Asg0XltisCtWqPyVFBxvU=
+github.com/pghq/go-tea v0.0.33/go.mod h1:5efVLSVXUUwm4SqhNr7J6phtqHD/5fwwWne27btyruY=
 github.com/pierrec/lz4 v2.0.5+incompatible/go.mod h1:pdkljMzZIN41W+lC3N2tnIh5sFi+IEE17M5jbnwPHcY=
 github.com/pingcap/errors v0.11.4 h1:lFuQV/oaUMGcD2tqt+01ROSmJs75VG1ToEOkZIZ4nE4=
 github.com/pingcap/errors v0.11.4/go.mod h1:Oi8TUi2kEtXXLMJk9l1cGmz20kV3TaQ0usTwv5KuLY8=
