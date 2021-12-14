@@ -23,15 +23,15 @@ func (m *Mapper) Txn(ctx context.Context, opts ...db.TxnOption) Txn {
 		backend: m.db.Txn(ctx, opts...),
 		root:    true,
 		opts:    opts,
-		err:     m.err,
+		err:     m.Error(),
 		views:   make(chan view, config.BatchReadSize),
 	}
 }
 
 // Do Write and or read using a callback
 func (m *Mapper) Do(ctx context.Context, fn func(tx db.Txn) error, opts ...db.TxnOption) error {
-	if m.err != nil {
-		return tea.Error(m.err)
+	if err := m.Error(); err != nil {
+		return tea.Error(err)
 	}
 
 	tx := m.Txn(ctx, opts...)
@@ -46,8 +46,8 @@ func (m *Mapper) Do(ctx context.Context, fn func(tx db.Txn) error, opts ...db.Tx
 
 // View Read using a callback
 func (m *Mapper) View(ctx context.Context, fn func(tx db.Txn) error, opts ...db.TxnOption) error {
-	if m.err != nil {
-		return tea.Error(m.err)
+	if err := m.Error(); err != nil {
+		return tea.Error(err)
 	}
 
 	tx := m.Txn(ctx, append(opts, db.ReadOnly())...)
