@@ -66,6 +66,11 @@ func NewRedis(opts ...db.Option) *Mapper {
 	return New(DB(redis.NewDB(opts...)))
 }
 
+// NewRDB Creates a new in-memory RDB mapper
+func NewRDB(schema db.Schema, opts ...db.Option) *Mapper {
+	return New(DB(inmem.NewDB(append(opts, db.RDB(schema))...)))
+}
+
 // defaultMapper create a new default mapper
 func defaultMapper() Mapper {
 	cache, _ := ristretto.NewCache(&ristretto.Config{

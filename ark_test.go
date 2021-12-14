@@ -44,6 +44,12 @@ func TestNew(t *testing.T) {
 		assert.NotNil(t, m)
 		assert.NotNil(t, m.err)
 	})
+
+	t.Run("rdb", func(t *testing.T) {
+		m := NewRDB(db.Schema{})
+		assert.NotNil(t, m)
+		assert.Nil(t, m.err)
+	})
 }
 
 func TestMapper_View(t *testing.T) {
