@@ -19,6 +19,8 @@ import (
 
 	"github.com/pghq/go-ark/db"
 	"github.com/pghq/go-ark/inmem"
+	"github.com/pghq/go-ark/redis"
+	"github.com/pghq/go-ark/sql"
 )
 
 // Mapper Data mapper for various backends
@@ -49,6 +51,16 @@ func New(opts ...Option) *Mapper {
 	return &m
 }
 
+// NewSQL Creates a new SQL mapper
+func NewSQL(opts ...db.Option) *Mapper {
+	return New(DB(sql.NewDB(opts...)))
+}
+
+// NewRedis Creates a new Redis mapper
+func NewRedis(opts ...db.Option) *Mapper {
+	return New(DB(redis.NewDB(opts...)))
+}
+
 // defaultMapper create a new default mapper
 func defaultMapper() Mapper {
 	cache, _ := ristretto.NewCache(&ristretto.Config{
@@ -62,10 +74,10 @@ func defaultMapper() Mapper {
 	}
 }
 
-// Option Mapper option
+// Option for Mapper
 type Option func(m *Mapper)
 
-// DB DB Mapper option
+// DB mapper option
 func DB(o db.DB) Option {
 	return func(m *Mapper) {
 		m.db = o
