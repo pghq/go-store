@@ -31,6 +31,11 @@ type Mapper struct {
 	cache  *ristretto.Cache
 }
 
+// Error exposes any underlying mapper errors
+func (m Mapper) Error() error {
+	return m.err
+}
+
 // WithOpts Configure mapper with custom ops
 func (m Mapper) WithOpts(opts []Option) Mapper {
 	for _, opt := range opts {
