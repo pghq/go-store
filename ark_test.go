@@ -9,14 +9,13 @@ import (
 
 	"github.com/pghq/go-ark/db"
 	"github.com/pghq/go-ark/inmem"
-	"github.com/pghq/go-ark/sql"
 )
 
 func TestNew(t *testing.T) {
 	t.Parallel()
 
 	t.Run("bad open", func(t *testing.T) {
-		m := New(DB(sql.NewDB()))
+		m := NewSQL()
 		assert.NotNil(t, m.Txn(context.TODO()).Commit())
 		assert.NotNil(t, m.Txn(context.TODO()).Rollback())
 		assert.NotNil(t, m.Txn(context.TODO()).Get("", "", nil))
@@ -38,6 +37,12 @@ func TestNew(t *testing.T) {
 		m := New(DB(inmem.NewDB()))
 		assert.NotNil(t, m)
 		assert.Nil(t, m.err)
+	})
+
+	t.Run("redis", func(t *testing.T) {
+		m := NewRedis()
+		assert.NotNil(t, m)
+		assert.NotNil(t, m.err)
 	})
 }
 
