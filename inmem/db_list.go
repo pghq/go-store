@@ -77,6 +77,10 @@ func (tx txn) List(table string, v interface{}, opts ...db.QueryOption) error {
 	}
 
 	if len(values) == 0 {
+		if query.Limit == 1 {
+			return tea.NewNotFound("not found")
+		}
+
 		return tea.NewNoContent("not found")
 	}
 

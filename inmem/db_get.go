@@ -20,7 +20,7 @@ func (tx txn) Get(table, k string, v interface{}, _ ...db.QueryOption) error {
 	item, err := tx.reader.Get(tbl.primary.pk([]byte(k)))
 	if err != nil {
 		if err == badger.ErrKeyNotFound {
-			return tea.NoContent(err)
+			return tea.NotFound(err)
 		}
 
 		return tea.Error(err)

@@ -37,7 +37,7 @@ func (tx txn) Commit() error {
 	defer tx.unit.Close()
 	if _, err := tx.unit.Exec(tx.ctx); err != nil {
 		if err == redis.Nil {
-			return tea.NoContent(err)
+			return tea.NotFound(err)
 		}
 		return tea.Error(err)
 	}
@@ -65,6 +65,10 @@ func (tx txn) Commit() error {
 				}
 
 				if len(values) == 0 {
+					if read.limit == 1 {
+						return tea.NewNotFound("not found")
+					}
+
 					return tea.NewNoContent("not found")
 				}
 
@@ -84,6 +88,7 @@ func (tx txn) Rollback() error {
 
 // read A single read from the redis database
 type read struct {
-	v   interface{}
-	cmd redis.Cmder
+	v     interface{}
+	cmd   redis.Cmder
+	limit int
 }

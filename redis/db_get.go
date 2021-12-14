@@ -11,7 +11,7 @@ import (
 func (tx txn) Get(table, k string, v interface{}, _ ...db.QueryOption) error {
 	cmd := tx.unit.Get(tx.ctx, fmt.Sprintf("%s.%s", table, k))
 	select {
-	case tx.reads <- read{cmd: cmd, v: v}:
+	case tx.reads <- read{cmd: cmd, v: v, limit: 1}:
 	default:
 		return tea.NewError("read batch size exhausted")
 	}

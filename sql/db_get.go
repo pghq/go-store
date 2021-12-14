@@ -33,7 +33,7 @@ func (tx txn) Get(table, k string, v interface{}, opts ...db.QueryOption) error 
 
 	if err := tx.unit.GetContext(tx.ctx, v, stmt, args...); err != nil {
 		if err == sql.ErrNoRows {
-			return tea.NoContent(err)
+			return tea.NotFound(err)
 		}
 		return err
 	}
