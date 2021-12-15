@@ -40,6 +40,8 @@ func TestMap(t *testing.T) {
 }
 
 func TestCopy(t *testing.T) {
+	t.Parallel()
+
 	t.Run("can not set", func(t *testing.T) {
 		err := Copy(func() {}, "")
 		assert.NotNil(t, err)

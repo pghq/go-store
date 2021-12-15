@@ -395,8 +395,26 @@ func Expr(format string, args ...interface{}) QueryOption {
 	}
 }
 
-// Fields Fields to be returned
-func Fields(fields ...string) QueryOption {
+// Fields gets the fields to return
+func Fields(args ...interface{}) QueryOption {
+	var fields []string
+	for _, arg := range args {
+		switch v := arg.(type) {
+		case []string:
+			if len(v) > 0 {
+				fields = v
+			}
+		case string:
+			fields = append(fields, v)
+		default:
+			if m, err := Map(v, true); err == nil {
+				for field, _ := range m {
+					fields = append(fields, field)
+				}
+			}
+		}
+	}
+
 	return func(query *Query) {
 		query.Fields = append(query.Fields, fields...)
 		query.CacheKey = append(query.CacheKey, "fields", fields)
