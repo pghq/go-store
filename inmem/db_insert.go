@@ -1,13 +1,15 @@
 package inmem
 
 import (
+	"fmt"
+
 	"github.com/dgraph-io/badger/v3"
 	"github.com/pghq/go-tea"
 
 	"github.com/pghq/go-ark/db"
 )
 
-func (tx txn) Insert(table, k string, v interface{}, opts ...db.CommandOption) error {
+func (tx txn) Insert(table string, k, v interface{}, opts ...db.CommandOption) error {
 	cmd := db.CommandWith(opts)
 	tbl, err := tx.table(table)
 	if err != nil {
@@ -19,7 +21,8 @@ func (tx txn) Insert(table, k string, v interface{}, opts ...db.CommandOption) e
 		return tea.Error(err)
 	}
 
-	pk := tbl.primary.pk([]byte(k))
+	key := []byte(fmt.Sprintf("%s", k))
+	pk := tbl.primary.pk(key)
 	var composite [][]byte
 	for _, index := range doc.indexes {
 		key := index.key(pk)
@@ -37,7 +40,7 @@ func (tx txn) Insert(table, k string, v interface{}, opts ...db.CommandOption) e
 
 	if len(composite) > 0 {
 		b, _ := db.Encode(composite)
-		entry := badger.NewEntry(tbl.primary.ck([]byte(k)), b)
+		entry := badger.NewEntry(tbl.primary.ck(key), b)
 		if cmd.Expire {
 			entry = entry.WithTTL(cmd.TTL)
 		}

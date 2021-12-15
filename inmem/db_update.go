@@ -1,13 +1,15 @@
 package inmem
 
 import (
+	"fmt"
+
 	"github.com/dgraph-io/badger/v3"
 	"github.com/pghq/go-tea"
 
 	"github.com/pghq/go-ark/db"
 )
 
-func (tx txn) Update(table, k string, v interface{}, opts ...db.CommandOption) error {
+func (tx txn) Update(table string, k, v interface{}, opts ...db.CommandOption) error {
 	if tx.reader == nil {
 		return tea.NewError("not a read capable tx")
 	}
@@ -17,7 +19,8 @@ func (tx txn) Update(table, k string, v interface{}, opts ...db.CommandOption) e
 		return tea.Error(err)
 	}
 
-	if _, err := tx.reader.Get(tbl.primary.pk([]byte(k))); err != nil {
+	key := []byte(fmt.Sprintf("%s", k))
+	if _, err := tx.reader.Get(tbl.primary.pk(key)); err != nil {
 		if err == badger.ErrKeyNotFound {
 			return tea.NotFound(err)
 		}

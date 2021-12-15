@@ -152,6 +152,13 @@ func TestTxn_Get(t *testing.T) {
 	tx.Insert("", "foo", "bar")
 	tx.Commit()
 
+	t.Run("bad key", func(t *testing.T) {
+		tx := m.Txn(context.TODO())
+		defer tx.Rollback()
+		var v string
+		assert.NotNil(t, tx.Get("", func() {}, &v))
+	})
+
 	t.Run("not found", func(t *testing.T) {
 		tx := m.Txn(context.TODO())
 		defer tx.Rollback()
@@ -191,12 +198,6 @@ func TestTxn_List(t *testing.T) {
 	tx := m.Txn(context.TODO())
 	tx.Insert("", "foo", "bar")
 	tx.Commit()
-
-	t.Run("bad query", func(t *testing.T) {
-		tx := m.Txn(context.TODO())
-		var v []string
-		assert.NotNil(t, tx.List("", &v, db.Gt("foo", func() {})))
-	})
 
 	t.Run("not found", func(t *testing.T) {
 		tx := m.Txn(context.TODO())

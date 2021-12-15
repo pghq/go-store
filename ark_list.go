@@ -1,6 +1,8 @@
 package ark
 
 import (
+	"fmt"
+
 	"github.com/pghq/go-tea"
 
 	"github.com/pghq/go-ark/db"
@@ -12,11 +14,7 @@ func (tx Txn) List(table string, v interface{}, opts ...db.QueryOption) error {
 		return tea.Error(tx.err)
 	}
 
-	key, err := db.Hash(db.QueryWith(opts).CacheKey)
-	if err != nil {
-		return tea.Error(err)
-	}
-
+	key := []byte(fmt.Sprintf("%s", db.QueryWith(opts).CacheKey))
 	if cv, present := tx.cache.Get(key); present {
 		return db.Copy(cv, v)
 	}

@@ -7,7 +7,7 @@ import (
 	"github.com/pghq/go-ark/db"
 )
 
-func (tx txn) Remove(table, k string, opts ...db.CommandOption) error {
+func (tx txn) Remove(table string, k interface{}, opts ...db.CommandOption) error {
 	if tx.err != nil {
 		return tea.Error(tx.err)
 	}

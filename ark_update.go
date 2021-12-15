@@ -7,7 +7,7 @@ import (
 )
 
 // Update Replace an existing value
-func (tx Txn) Update(table, k string, v interface{}, opts ...db.CommandOption) error {
+func (tx Txn) Update(table string, k, v interface{}, opts ...db.CommandOption) error {
 	if tx.err != nil {
 		return tea.Error(tx.err)
 	}
