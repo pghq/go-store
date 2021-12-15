@@ -396,7 +396,6 @@ func TestTxn_List(t *testing.T) {
 		defer tx.Rollback()
 		var v []map[string]interface{}
 		err = tx.List("tests", &v, db.Eq("count", 1, nil))
-		// todo: this is failing build
 		assert.NotNil(t, err)
 	})
 
