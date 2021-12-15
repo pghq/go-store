@@ -3,6 +3,7 @@ package inmem
 import (
 	"context"
 	"encoding/binary"
+	"fmt"
 
 	"github.com/cespare/xxhash/v2"
 	"github.com/dgraph-io/badger/v3"
@@ -49,12 +50,13 @@ func NewDB(opts ...db.Option) *DB {
 	)
 
 	for key, indexes := range d.schema {
-		tbl := table{indexes: make(map[string]index)}
-		tbl.prefix, _ = prefix([]byte(key))
-		pm := primary{}
-		pm.prefix, _ = prefix([]byte(key), "id")
-		tbl.primary = pm
-		d.tables[key] = tbl
+		d.tables[key] = table{
+			indexes: make(map[string]index),
+			prefix:  prefix([]byte(key)),
+			primary: primary{
+				prefix: prefix([]byte(key), "id"),
+			},
+		}
 
 		for indexName, columns := range indexes {
 			d.tables[key].indexes[indexName] = index{
@@ -86,10 +88,7 @@ func (tbl table) document(v interface{}) (document, error) {
 
 		for _, idx := range tbl.indexes {
 			if err := idx.build(m); err != nil {
-				if tea.IsFatal(err) {
-					return document{}, tea.Error(err)
-				}
-				continue
+				return document{}, tea.Error(err)
 			}
 			doc.indexes = append(doc.indexes, idx)
 		}
@@ -108,13 +107,10 @@ func (tbl table) document(v interface{}) (document, error) {
 func (tbl table) index(name string, v interface{}) (index, error) {
 	idx, present := tbl.indexes[name]
 	if !present {
-		return index{}, tea.NewNotFound("index not found")
+		return index{}, tea.NewError("index not found")
 	}
 
-	if err := idx.build(v); err != nil {
-		return index{}, tea.Error(err)
-	}
-
+	_ = idx.build(v)
 	return idx, nil
 }
 
@@ -125,7 +121,7 @@ type document struct {
 	indexes []index
 }
 
-// primary primary index for documents
+// primary the primary index for documents
 type primary struct {
 	prefix []byte
 }
@@ -140,7 +136,7 @@ func (p primary) ck(k []byte) []byte {
 	return append(p.prefix, append([]byte{1}, k...)...)
 }
 
-// index index identifying structure of documents used for querying data
+// index the secondary index for the database
 type index struct {
 	primary primary
 	name    string
@@ -163,7 +159,7 @@ func (i *index) build(v interface{}) error {
 		}
 
 		if isNil {
-			return tea.NewNotFound("index not found")
+			return tea.NewError("index value not found")
 		}
 	case []interface{}:
 		for x := 0; x < len(i.columns) && x < len(vt); x++ {
@@ -173,12 +169,7 @@ func (i *index) build(v interface{}) error {
 		values[0] = v
 	}
 
-	pfx, err := prefix([]byte(i.name), values)
-	if err != nil {
-		return tea.Error(err)
-	}
-
-	i.prefix = pfx
+	i.prefix = prefix([]byte(i.name), values)
 	return nil
 }
 
@@ -188,17 +179,12 @@ func (i index) key(pk []byte) []byte {
 }
 
 // prefix fixed size prefix for keys
-func prefix(base []byte, args ...interface{}) ([]byte, error) {
+func prefix(base []byte, args ...interface{}) []byte {
 	if len(args) > 0 {
-		b, err := db.Hash(args...)
-		if err != nil {
-			return nil, tea.Error(err)
-		}
-
-		base = append(base, b...)
+		base = append(base, []byte(fmt.Sprintf("%s", args))...)
 	}
 
 	table := make([]byte, 8)
 	binary.LittleEndian.PutUint64(table, xxhash.Sum64(base))
-	return table, nil
+	return table
 }

@@ -18,7 +18,7 @@ func TestOption(t *testing.T) {
 		MaxConns(0),
 		MaxIdleLifetime(0),
 		MaxConnLifetime(0),
-		Migration(nil, ""),
+		Migration(nil, "", ""),
 		Redis(redis.Options{}),
 	}
 	config := ConfigWith(opts)

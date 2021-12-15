@@ -38,7 +38,7 @@ func TestNewDB(t *testing.T) {
 	defer sdb.Close()
 
 	t.Run("bad migration", func(t *testing.T) {
-		d := NewDB(db.SQL(sdb), db.Migration(embed.FS{}, "migrations"))
+		d := NewDB(db.SQL(sdb), db.Migration(embed.FS{}, "migrations", "migrations"))
 		assert.NotNil(t, d.err)
 	})
 

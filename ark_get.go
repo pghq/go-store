@@ -1,18 +1,20 @@
 package ark
 
 import (
+	"fmt"
+
 	"github.com/pghq/go-tea"
 
 	"github.com/pghq/go-ark/db"
 )
 
 // Get Retrieve a value
-func (tx Txn) Get(table, k string, v interface{}, opts ...db.QueryOption) error {
+func (tx Txn) Get(table string, k, v interface{}, opts ...db.QueryOption) error {
 	if tx.err != nil {
 		return tea.Error(tx.err)
 	}
 
-	key := []byte(table + k)
+	key := []byte(fmt.Sprintf("%s%s", table, k))
 	if cv, present := tx.cache.Get(key); present {
 		return db.Copy(cv, v)
 	}

@@ -8,7 +8,7 @@ import (
 	"github.com/pghq/go-ark/db"
 )
 
-func (tx txn) Insert(table, k string, v interface{}, opts ...db.CommandOption) error {
+func (tx txn) Insert(table string, k, v interface{}, opts ...db.CommandOption) error {
 	b, err := db.Encode(v)
 	if err != nil {
 		return tea.Error(err)

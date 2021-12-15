@@ -18,11 +18,6 @@ func Decode(b []byte, v interface{}) error {
 	return GobDecode(b, v)
 }
 
-// Hash Hash arguments
-func Hash(args ...interface{}) ([]byte, error) {
-	return GobHash(args...)
-}
-
 // GobEncode Encode a value to bytes (using gob)
 func GobEncode(v interface{}) ([]byte, error) {
 	var buf bytes.Buffer
@@ -42,19 +37,4 @@ func GobDecode(b []byte, v interface{}) error {
 		rvp = &rv
 	}
 	return dec.DecodeValue(*rvp)
-}
-
-// GobHash Hash arguments to bytes (using gob)
-func GobHash(args ...interface{}) ([]byte, error) {
-	var b []byte
-	for _, v := range args {
-		var buf bytes.Buffer
-		enc := gob.NewEncoder(&buf)
-		if err := enc.Encode(v); err != nil {
-			return nil, tea.Error(err)
-		}
-		b = append(b, buf.Bytes()...)
-	}
-
-	return b, nil
 }

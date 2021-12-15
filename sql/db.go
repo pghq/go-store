@@ -54,6 +54,7 @@ func NewDB(opts ...db.Option) *DB {
 	if config.MigrationFS != nil && config.MigrationDirectory != "" {
 		goose.SetLogger(gooseLogger{})
 		goose.SetBaseFS(config.MigrationFS)
+		goose.SetTableName(config.MigrationTable)
 		if err := goose.Up(config.SQL, config.MigrationDirectory); err != nil {
 			_ = goose.Down(config.SQL, config.MigrationDirectory)
 			d.err = err

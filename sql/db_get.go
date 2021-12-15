@@ -9,7 +9,7 @@ import (
 	"github.com/pghq/go-ark/db"
 )
 
-func (tx txn) Get(table, k string, v interface{}, opts ...db.QueryOption) error {
+func (tx txn) Get(table string, k, v interface{}, opts ...db.QueryOption) error {
 	if tx.err != nil {
 		return tea.Error(tx.err)
 	}

@@ -1,12 +1,14 @@
 package inmem
 
 import (
+	"fmt"
+
 	"github.com/pghq/go-tea"
 
 	"github.com/pghq/go-ark/db"
 )
 
-func (tx txn) Remove(table, k string, _ ...db.CommandOption) error {
+func (tx txn) Remove(table string, k interface{}, _ ...db.CommandOption) error {
 	if tx.reader == nil {
 		return tea.NewError("not a read tx")
 	}
@@ -16,8 +18,9 @@ func (tx txn) Remove(table, k string, _ ...db.CommandOption) error {
 		return tea.Error(err)
 	}
 
+	key := []byte(fmt.Sprintf("%s", k))
 	if table != "" {
-		ck := tbl.primary.ck([]byte(k))
+		ck := tbl.primary.ck(key)
 		var composite [][]byte
 		item, err := tx.reader.Get(ck)
 		if err != nil {
@@ -35,5 +38,5 @@ func (tx txn) Remove(table, k string, _ ...db.CommandOption) error {
 		}
 	}
 
-	return tx.delete(tbl.primary.pk([]byte(k)))
+	return tx.delete(tbl.primary.pk(key))
 }

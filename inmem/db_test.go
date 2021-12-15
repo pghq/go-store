@@ -89,7 +89,7 @@ func TestTxn_Insert(t *testing.T) {
 		tx := NewDB(db.RDB(db.Schema{"tests": {"name": {"name"}}})).Txn(context.TODO())
 		defer tx.Rollback()
 		err := tx.Insert("tests", "foo", map[string]interface{}{})
-		assert.Nil(t, err)
+		assert.NotNil(t, err)
 	})
 
 	t.Run("bad index value", func(t *testing.T) {
@@ -293,7 +293,7 @@ func TestTxn_Remove(t *testing.T) {
 		_ = tx.Insert("tests", "foo", map[string]interface{}{"name": "bar"})
 		_ = tx.Commit()
 		_ = d.backend.Update(func(txn *badger.Txn) error {
-			pfx, _ := prefix([]byte("tests"), "id")
+			pfx := prefix([]byte("tests"), "id")
 			return txn.Set(append(pfx, append([]byte{1}, []byte("foo")...)...), nil)
 		})
 		tx = d.Txn(context.TODO())
@@ -308,7 +308,7 @@ func TestTxn_Remove(t *testing.T) {
 		_ = tx.Insert("tests", "foo", map[string]interface{}{"name": "bar"})
 		_ = tx.Commit()
 		_ = d.backend.Update(func(txn *badger.Txn) error {
-			pfx, _ := prefix([]byte("tests"), "id")
+			pfx := prefix([]byte("tests"), "id")
 			b, _ := db.Encode([][]byte{[]byte("!badger!")})
 			return txn.Set(append(pfx, append([]byte{1}, []byte("foo")...)...), b)
 		})
@@ -386,10 +386,10 @@ func TestTxn_List(t *testing.T) {
 
 	t.Run("pk not found", func(t *testing.T) {
 		err := d.backend.Update(func(txn *badger.Txn) error {
-			return txn.Set([]byte{196, 244, 4, 229, 84, 195, 52, 33, 1, 2, 3}, nil)
+			return txn.Set([]byte{130, 109, 226, 134, 114, 109, 33, 122, 1, 2, 3}, nil)
 		})
 		defer d.backend.Update(func(txn *badger.Txn) error {
-			return txn.Delete([]byte{196, 244, 4, 229, 84, 195, 52, 33, 1, 2, 3})
+			return txn.Delete([]byte{130, 109, 226, 134, 114, 109, 33, 122, 1, 2, 3})
 		})
 		assert.Nil(t, err)
 		tx := d.Txn(context.TODO())

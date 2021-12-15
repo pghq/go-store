@@ -36,10 +36,10 @@ type DB interface {
 
 // Txn A unit of work performed within a database
 type Txn interface {
-	Get(table, k string, v interface{}, opts ...QueryOption) error
-	Insert(table, k string, v interface{}, opts ...CommandOption) error
-	Update(table, k string, v interface{}, opts ...CommandOption) error
-	Remove(table, k string, opts ...CommandOption) error
+	Get(table string, k, v interface{}, opts ...QueryOption) error
+	Insert(table string, k, v interface{}, opts ...CommandOption) error
+	Update(table string, k, v interface{}, opts ...CommandOption) error
+	Remove(table string, k interface{}, opts ...CommandOption) error
 	List(table string, v interface{}, opts ...QueryOption) error
 	Commit() error
 	Rollback() error
@@ -61,6 +61,7 @@ type Config struct {
 	MaxIdleLifetime    time.Duration
 	MigrationFS        fs.FS
 	MigrationDirectory string
+	MigrationTable     string
 	PlaceholderPrefix  string
 	RedisOptions       redis.Options
 }
@@ -147,10 +148,11 @@ func MaxConnLifetime(o time.Duration) Option {
 }
 
 // Migration Configure a database migration
-func Migration(fs fs.FS, directory string) Option {
+func Migration(fs fs.FS, directory, table string) Option {
 	return func(config *Config) {
 		config.MigrationFS = fs
 		config.MigrationDirectory = directory
+		config.MigrationTable = table
 	}
 }
 
