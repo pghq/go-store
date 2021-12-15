@@ -7,6 +7,8 @@ import (
 )
 
 func TestEncode(t *testing.T) {
+	t.Parallel()
+
 	t.Run("bad value", func(t *testing.T) {
 		_, err := Encode(func() {})
 		assert.NotNil(t, err)
@@ -26,6 +28,8 @@ func TestEncode(t *testing.T) {
 }
 
 func TestDecode(t *testing.T) {
+	t.Parallel()
+
 	t.Run("can decode", func(t *testing.T) {
 		var v string
 		b, _ := Encode("foo")
