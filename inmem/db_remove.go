@@ -3,6 +3,7 @@ package inmem
 import (
 	"fmt"
 
+	"github.com/dgraph-io/badger/v3"
 	"github.com/pghq/go-tea"
 
 	"github.com/pghq/go-ark/db"
@@ -24,6 +25,9 @@ func (tx txn) Remove(table string, k interface{}, _ ...db.CommandOption) error {
 		var composite [][]byte
 		item, err := tx.reader.Get(ck)
 		if err != nil {
+			if err == badger.ErrKeyNotFound {
+				err = tea.NotFound(err)
+			}
 			return tea.Error(err)
 		}
 

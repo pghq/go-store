@@ -63,6 +63,9 @@ func (tx txn) List(table string, v interface{}, opts ...db.QueryOption) error {
 			key := item.Key()
 			pk := bytes.TrimPrefix(key, io.Prefix)
 			if item, err = tx.reader.Get(pk); err != nil {
+				if err == badger.ErrKeyNotFound {
+					err = tea.NotFound(err)
+				}
 				return tea.Error(err)
 			}
 		}

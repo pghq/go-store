@@ -10,23 +10,19 @@ import (
 // Map Convert a struct (w. optional tags) to a map using reflection
 // variation of: https://play.golang.org/p/2Qi3thFf--
 // meant to be used for data persistence.
-func Map(in interface{}, transient ...interface{}) (map[string]interface{}, error) {
-	if v, ok := in.(map[string]interface{}); ok {
-		return v, nil
+func Map(v interface{}, transient ...interface{}) (map[string]interface{}, error) {
+	if m, ok := v.(map[string]interface{}); ok {
+		return m, nil
 	}
 
-	v := reflect.ValueOf(in)
-	if v.Kind() == reflect.Ptr {
-		v = v.Elem()
-	}
-
-	if v.Kind() != reflect.Struct {
+	rv := reflect.Indirect(reflect.ValueOf(v))
+	if rv.Kind() != reflect.Struct {
 		return nil, tea.NewErrorf("item of type %T is not a struct", v)
 	}
 
 	item := make(map[string]interface{})
-	t := v.Type()
-	for i := 0; i < v.NumField(); i++ {
+	t := rv.Type()
+	for i := 0; i < rv.NumField(); i++ {
 		sf := t.Field(i)
 		key := sf.Tag.Get("db")
 		if key == "" {
@@ -37,7 +33,7 @@ func Map(in interface{}, transient ...interface{}) (map[string]interface{}, erro
 			continue
 		}
 
-		item[strings.Split(key, ",")[0]] = v.Field(i).Interface()
+		item[strings.Split(key, ",")[0]] = rv.Field(i).Interface()
 	}
 
 	return item, nil

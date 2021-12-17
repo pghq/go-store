@@ -279,6 +279,13 @@ func TestTxn_Remove(t *testing.T) {
 		assert.NotNil(t, err)
 	})
 
+	t.Run("key not found", func(t *testing.T) {
+		tx := NewDB(db.RDB(db.Schema{"tests": {"name": {"name"}}})).Txn(context.TODO())
+		defer tx.Rollback()
+		err := tx.Remove("tests", "foo")
+		assert.NotNil(t, err)
+	})
+
 	t.Run("rolled back", func(t *testing.T) {
 		tx := NewDB(db.RDB(db.Schema{"tests": {"name": {"name"}}})).Txn(context.TODO())
 		_ = tx.Insert("tests", "foo", map[string]interface{}{"name": "bar"})
