@@ -34,6 +34,10 @@ func (m *Mapper) Do(ctx context.Context, fn func(tx db.Txn) error, opts ...db.Tx
 		return tea.Error(err)
 	}
 
+	if err := ctx.Err(); err != nil {
+		return tea.Error(err)
+	}
+
 	tx := m.Txn(ctx, opts...)
 	defer tx.Rollback()
 
@@ -47,6 +51,10 @@ func (m *Mapper) Do(ctx context.Context, fn func(tx db.Txn) error, opts ...db.Tx
 // View Read using a callback
 func (m *Mapper) View(ctx context.Context, fn func(tx db.Txn) error, opts ...db.TxnOption) error {
 	if err := m.Error(); err != nil {
+		return tea.Error(err)
+	}
+
+	if err := ctx.Err(); err != nil {
 		return tea.Error(err)
 	}
 
