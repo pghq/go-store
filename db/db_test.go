@@ -72,6 +72,7 @@ func TestQueryOption(t *testing.T) {
 	}
 	query := QueryWith(opts)
 	assert.NotEqual(t, Query{}, query)
+	assert.True(t, query.HasFilter())
 }
 
 func TestFields(t *testing.T) {

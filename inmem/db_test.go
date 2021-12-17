@@ -64,13 +64,6 @@ func TestDB_Txn(t *testing.T) {
 func TestTxn_Insert(t *testing.T) {
 	t.Parallel()
 
-	t.Run("table not found", func(t *testing.T) {
-		tx := NewDB().Txn(context.TODO())
-		defer tx.Rollback()
-		err := tx.Insert("tests", "foo", "bar")
-		assert.NotNil(t, err)
-	})
-
 	t.Run("bad document schema", func(t *testing.T) {
 		tx := NewDB(db.RDB(db.Schema{"tests": {"name": {"name"}}})).Txn(context.TODO())
 		defer tx.Rollback()
@@ -82,13 +75,6 @@ func TestTxn_Insert(t *testing.T) {
 		tx := NewDB().Txn(context.TODO())
 		defer tx.Rollback()
 		err := tx.Insert("", "foo", func() {})
-		assert.NotNil(t, err)
-	})
-
-	t.Run("missing index", func(t *testing.T) {
-		tx := NewDB(db.RDB(db.Schema{"tests": {"name": {"name"}}})).Txn(context.TODO())
-		defer tx.Rollback()
-		err := tx.Insert("tests", "foo", map[string]interface{}{})
 		assert.NotNil(t, err)
 	})
 
@@ -235,6 +221,19 @@ func TestTxn_Get(t *testing.T) {
 		assert.False(t, tea.IsFatal(err))
 	})
 
+	t.Run("bad decode", func(t *testing.T) {
+		d := NewDB()
+		d.backend.Update(func(txn *badger.Txn) error {
+			return txn.Set([]byte("foo"), []byte("bad"))
+		})
+
+		tx := d.Txn(context.TODO())
+		defer tx.Rollback()
+		err := tx.Get("", "foo", nil)
+		assert.NotNil(t, err)
+		assert.True(t, tea.IsFatal(err))
+	})
+
 	t.Run("rolled back", func(t *testing.T) {
 		tx := NewDB().Txn(context.TODO())
 		_ = tx.Insert("", "foo", "bar")
@@ -300,8 +299,9 @@ func TestTxn_Remove(t *testing.T) {
 		_ = tx.Insert("tests", "foo", map[string]interface{}{"name": "bar"})
 		_ = tx.Commit()
 		_ = d.backend.Update(func(txn *badger.Txn) error {
-			pfx := prefix([]byte("tests"), "id")
-			return txn.Set(append(pfx, append([]byte{1}, []byte("foo")...)...), nil)
+			pfx := prefix([]byte("tests"))
+			pfx = prefix(pfx, []byte{1})
+			return txn.Set(append(pfx, []byte("foo")...), nil)
 		})
 		tx = d.Txn(context.TODO())
 		defer tx.Rollback()
@@ -315,9 +315,10 @@ func TestTxn_Remove(t *testing.T) {
 		_ = tx.Insert("tests", "foo", map[string]interface{}{"name": "bar"})
 		_ = tx.Commit()
 		_ = d.backend.Update(func(txn *badger.Txn) error {
-			pfx := prefix([]byte("tests"), "id")
+			pfx := prefix([]byte("tests"))
+			pfx = prefix(pfx, []byte{1})
 			b, _ := db.Encode([][]byte{[]byte("!badger!")})
-			return txn.Set(append(pfx, append([]byte{1}, []byte("foo")...)...), b)
+			return txn.Set(append(pfx, []byte("foo")...), b)
 		})
 		tx = d.Txn(context.TODO())
 		defer tx.Rollback()
@@ -391,19 +392,46 @@ func TestTxn_List(t *testing.T) {
 		assert.NotNil(t, err)
 	})
 
-	t.Run("pk not found", func(t *testing.T) {
-		err := d.backend.Update(func(txn *badger.Txn) error {
-			return txn.Set([]byte{130, 109, 226, 134, 114, 109, 33, 122, 1, 2, 3}, nil)
+	t.Run("bad decode", func(t *testing.T) {
+		d := NewDB()
+		d.backend.Update(func(txn *badger.Txn) error {
+			return txn.Set([]byte("foo"), []byte("bad"))
 		})
-		defer d.backend.Update(func(txn *badger.Txn) error {
-			return txn.Delete([]byte{130, 109, 226, 134, 114, 109, 33, 122, 1, 2, 3})
-		})
-		assert.Nil(t, err)
+
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
 		var v []map[string]interface{}
-		err = tx.List("tests", &v, db.Eq("count", 1, nil))
+		err := tx.List("", &v)
 		assert.NotNil(t, err)
+		assert.True(t, tea.IsFatal(err))
+	})
+
+	t.Run("bad copy", func(t *testing.T) {
+		d := NewDB()
+		d.backend.Update(func(txn *badger.Txn) error {
+			b, _ := db.Encode(Document{})
+			return txn.Set([]byte("foo"), b)
+		})
+
+		tx := d.Txn(context.TODO())
+		defer tx.Rollback()
+		var v []string
+		err := tx.List("", &v)
+		assert.NotNil(t, err)
+		assert.True(t, tea.IsFatal(err))
+	})
+
+	t.Run("pk not found", func(t *testing.T) {
+		assert.Nil(t, d.backend.Update(func(txn *badger.Txn) error {
+			return txn.Set([]byte{170, 192, 24, 205, 201, 54, 12, 77, 1, 2, 3}, nil)
+		}))
+		defer d.backend.Update(func(txn *badger.Txn) error {
+			return txn.Delete([]byte{170, 192, 24, 205, 201, 54, 12, 77, 1, 2, 3})
+		})
+		tx := d.Txn(context.TODO())
+		defer tx.Rollback()
+		var v []map[string]interface{}
+		assert.NotNil(t, tx.List("tests", &v, db.Eq("count", 1, nil)))
 	})
 
 	t.Run("bad slice", func(t *testing.T) {
@@ -444,5 +472,41 @@ func TestTxn_List(t *testing.T) {
 		var v []map[string]interface{}
 		err := tx.List("tests", &v, db.Eq("count", 1, nil), db.Limit(1), db.Page(1))
 		assert.Nil(t, err)
+	})
+}
+
+func TestSubIndex(t *testing.T) {
+	t.Parallel()
+
+	t.Run("not equal", func(t *testing.T) {
+		i := SubIndex{Columns: []string{"foo"}}
+		assert.False(t, i.Equal(map[string]interface{}{"foo": "bar"}, map[string]interface{}{"foo": "baz"}))
+	})
+
+	t.Run("bad build value", func(t *testing.T) {
+		i := SubIndex{}
+		assert.NotNil(t, i.Build(func() {}))
+	})
+}
+
+func TestAttributes_Contains(t *testing.T) {
+	t.Parallel()
+
+	t.Run("not equal", func(t *testing.T) {
+		a := Attributes{}
+		query := db.QueryWith([]db.QueryOption{db.NotEq("foo", "bar")})
+		assert.False(t, a.Contains(query, map[string]interface{}{"foo": "bar"}))
+	})
+
+	t.Run("not equal index miss", func(t *testing.T) {
+		a := Attributes{"foo": SubIndex{Columns: []string{"foo"}}}
+		query := db.QueryWith([]db.QueryOption{db.NotEq("foo", "bar")})
+		assert.False(t, a.Contains(query, map[string]interface{}{"foo": "bar"}))
+	})
+
+	t.Run("not equal index match", func(t *testing.T) {
+		a := Attributes{"foo": SubIndex{Columns: []string{"foo"}}}
+		query := db.QueryWith([]db.QueryOption{db.NotEq("foo", "baz")})
+		assert.True(t, a.Contains(query, map[string]interface{}{"foo": "bar"}))
 	})
 }

@@ -15,7 +15,18 @@ func Map(v interface{}, transient ...interface{}) (map[string]interface{}, error
 		return m, nil
 	}
 
+	if m, ok := v.(*map[string]interface{}); ok {
+		return *m, nil
+	}
+
 	rv := reflect.Indirect(reflect.ValueOf(v))
+	for {
+		if rv.Kind() != reflect.Ptr {
+			break
+		}
+		rv = reflect.Indirect(rv)
+	}
+
 	if rv.Kind() != reflect.Struct {
 		return nil, tea.NewErrorf("item of type %T is not a struct", v)
 	}
@@ -39,7 +50,7 @@ func Map(v interface{}, transient ...interface{}) (map[string]interface{}, error
 	return item, nil
 }
 
-// Copy Copy src value to destination
+// Copy Copies src value to destination
 func Copy(src, dst interface{}) error {
 	dv := reflect.Indirect(reflect.ValueOf(dst))
 	if !dv.CanSet() {
@@ -47,6 +58,10 @@ func Copy(src, dst interface{}) error {
 	}
 
 	sv := reflect.Indirect(reflect.ValueOf(src))
+	if dv.Type() != sv.Type() {
+		return tea.NewError("type mismatch")
+	}
+
 	dv.Set(sv)
 	return nil
 }

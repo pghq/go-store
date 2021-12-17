@@ -12,23 +12,21 @@ func (d DB) Txn(ctx context.Context, opts ...db.TxnOption) db.Txn {
 	config := db.TxnConfigWith(opts)
 
 	tx := txn{
-		ctx:   ctx,
-		table: d.table,
+		DB:  d,
+		ctx: ctx,
 	}
 
 	if config.BatchWrite {
-		batch := d.backend.NewWriteBatch()
-		tx.set = batch.SetEntry
-		tx.delete = batch.Delete
-		tx.commit = batch.Flush
-		tx.rollback = batch.Cancel
+		backend := d.backend.NewWriteBatch()
+		tx.writer = backend
+		tx.commit = backend.Flush
+		tx.rollback = backend.Cancel
 	} else {
-		unit := d.backend.NewTransaction(!config.ReadOnly)
-		tx.set = unit.SetEntry
-		tx.delete = unit.Delete
-		tx.commit = unit.Commit
-		tx.rollback = unit.Discard
-		tx.reader = unit
+		backend := d.backend.NewTransaction(!config.ReadOnly)
+		tx.writer = backend
+		tx.reader = backend
+		tx.commit = backend.Commit
+		tx.rollback = backend.Discard
 	}
 
 	return tx
@@ -36,12 +34,16 @@ func (d DB) Txn(ctx context.Context, opts ...db.TxnOption) db.Txn {
 
 // txn in-memory database transaction
 type txn struct {
-	ctx      context.Context
-	table    func(name string) (table, error)
-	index    func(name string) (index, error)
-	reader   *badger.Txn
-	set      func(e *badger.Entry) error
-	delete   func(key []byte) error
+	DB
+	ctx    context.Context
+	reader interface {
+		Get(key []byte) (*badger.Item, error)
+		NewIterator(opt badger.IteratorOptions) *badger.Iterator
+	}
+	writer interface {
+		SetEntry(e *badger.Entry) error
+		Delete(k []byte) error
+	}
 	commit   func() error
 	rollback func()
 }
