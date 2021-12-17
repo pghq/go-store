@@ -61,6 +61,13 @@ func TestMapper_View(t *testing.T) {
 		assert.NotNil(t, err)
 	})
 
+	t.Run("timeout", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.TODO(), 0)
+		defer cancel()
+		err := m.View(ctx, func(tx db.Txn) error { return nil })
+		assert.NotNil(t, err)
+	})
+
 	t.Run("without fn error", func(t *testing.T) {
 		err := m.View(context.TODO(), func(tx db.Txn) error { return nil })
 		assert.Nil(t, err)
@@ -73,6 +80,13 @@ func TestMapper_Do(t *testing.T) {
 	m := New()
 	t.Run("with fn error", func(t *testing.T) {
 		err := m.Do(context.TODO(), func(tx db.Txn) error { return tea.NewError("with fn error") })
+		assert.NotNil(t, err)
+	})
+
+	t.Run("timeout", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.TODO(), 0)
+		defer cancel()
+		err := m.Do(ctx, func(tx db.Txn) error { return nil })
 		assert.NotNil(t, err)
 	})
 
