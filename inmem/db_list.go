@@ -12,7 +12,7 @@ import (
 
 func (tx txn) List(table string, v interface{}, opts ...db.QueryOption) error {
 	if tx.reader == nil {
-		return tea.NewError("not a read capable tx")
+		return tea.NewError("write only")
 	}
 
 	query := db.QueryWith(opts)
@@ -26,24 +26,9 @@ func (tx txn) List(table string, v interface{}, opts ...db.QueryOption) error {
 		return tea.NewError("dst must be a pointer to slice")
 	}
 
-	tbl, err := tx.table(table)
-	if err != nil {
-		return tea.Error(err)
-	}
-
-	io := badger.DefaultIteratorOptions
-	if len(query.Eq) > 0 {
-		eq := query.Eq[0]
-		for indexName, indexValue := range eq {
-			index, err := tbl.index(indexName, indexValue)
-			if err != nil {
-				return tea.Error(err)
-			}
-			io.Prefix = index.prefix
-		}
-	}
-
-	it := tx.reader.NewIterator(io)
+	tbl := tx.Table(table)
+	io := tbl.IteratorOptions(query)
+	it := tx.reader.NewIterator(io.badger)
 	defer it.Close()
 
 	var values []reflect.Value
@@ -59,9 +44,10 @@ func (tx txn) List(table string, v interface{}, opts ...db.QueryOption) error {
 		}
 
 		item := it.Item()
-		if io.Prefix != nil {
+		if io.indexing {
+			var err error
 			key := item.Key()
-			pk := bytes.TrimPrefix(key, io.Prefix)
+			pk := bytes.TrimPrefix(key, io.badger.Prefix)
 			if item, err = tx.reader.Get(pk); err != nil {
 				if err == badger.ErrKeyNotFound {
 					err = tea.NotFound(err)
@@ -70,8 +56,18 @@ func (tx txn) List(table string, v interface{}, opts ...db.QueryOption) error {
 			}
 		}
 
+		doc := tbl.NewDocument(item.Key())
+		if err := item.Value(func(b []byte) error { return doc.Decode(b) }); err != nil {
+			return tea.Error(err)
+		}
+
 		rv := reflect.New(reflect.TypeOf(v).Elem().Elem())
-		if err := item.Value(func(b []byte) error { return db.Decode(b, &rv) }); err != nil {
+		v := rv.Interface()
+		if !doc.Matches(query, v) {
+			continue
+		}
+
+		if err := doc.Copy(v); err != nil {
 			return tea.Error(err)
 		}
 

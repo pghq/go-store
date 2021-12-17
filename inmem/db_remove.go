@@ -1,8 +1,6 @@
 package inmem
 
 import (
-	"fmt"
-
 	"github.com/dgraph-io/badger/v3"
 	"github.com/pghq/go-tea"
 
@@ -11,19 +9,13 @@ import (
 
 func (tx txn) Remove(table string, k interface{}, _ ...db.CommandOption) error {
 	if tx.reader == nil {
-		return tea.NewError("not a read tx")
+		return tea.NewError("write only")
 	}
 
-	tbl, err := tx.table(table)
-	if err != nil {
-		return tea.Error(err)
-	}
-
-	key := []byte(fmt.Sprintf("%s", k))
+	doc := tx.Table(table).NewDocument(k)
 	if table != "" {
-		ck := tbl.primary.ck(key)
-		var composite [][]byte
-		item, err := tx.reader.Get(ck)
+		var indexes [][]byte
+		item, err := tx.reader.Get(doc.AttributeKey)
 		if err != nil {
 			if err == badger.ErrKeyNotFound {
 				err = tea.NotFound(err)
@@ -31,16 +23,16 @@ func (tx txn) Remove(table string, k interface{}, _ ...db.CommandOption) error {
 			return tea.Error(err)
 		}
 
-		if err := item.Value(func(b []byte) error { return db.Decode(b, &composite) }); err != nil {
+		if err := item.Value(func(b []byte) error { return db.Decode(b, &indexes) }); err != nil {
 			return tea.Error(err)
 		}
 
-		for _, key := range composite {
-			if err := tx.delete(key); err != nil {
+		for _, key := range indexes {
+			if err := tx.writer.Delete(key); err != nil {
 				return tea.Error(err)
 			}
 		}
 	}
 
-	return tx.delete(tbl.primary.pk(key))
+	return tx.writer.Delete(doc.PrimaryKey)
 }

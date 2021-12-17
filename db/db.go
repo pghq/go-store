@@ -279,6 +279,11 @@ type Query struct {
 	SQLPlaceholder string
 }
 
+// HasFilter checks if the query has any filter params
+func (q Query) HasFilter() bool {
+	return q.Eq != nil || q.NotEq != nil || q.Lt != nil || q.Gt != nil || q.XEq != nil || q.NotXEq != nil
+}
+
 // QueryWith Configure query with custom ops
 func QueryWith(opts []QueryOption) Query {
 	query := Query{

@@ -14,6 +14,17 @@ func TestMap(t *testing.T) {
 		assert.Equal(t, map[string]interface{}{"id": "foo"}, m)
 	})
 
+	t.Run("map pointer", func(t *testing.T) {
+		m, _ := Map(&map[string]interface{}{"id": "foo"})
+		assert.Equal(t, map[string]interface{}{"id": "foo"}, m)
+	})
+
+	t.Run("pointer to map pointer", func(t *testing.T) {
+		pm := &map[string]interface{}{"id": "foo"}
+		_, err := Map(&pm)
+		assert.NotNil(t, err)
+	})
+
 	t.Run("unrecognized type", func(t *testing.T) {
 		_, err := Map(func() {})
 		assert.NotNil(t, err)
@@ -45,6 +56,11 @@ func TestCopy(t *testing.T) {
 	t.Run("can not set", func(t *testing.T) {
 		err := Copy(func() {}, "")
 		assert.NotNil(t, err)
+	})
+
+	t.Run("type mismatch", func(t *testing.T) {
+		var v string
+		assert.NotNil(t, Copy(1, &v))
 	})
 
 	t.Run("ok", func(t *testing.T) {
