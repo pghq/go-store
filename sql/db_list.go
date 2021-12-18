@@ -22,6 +22,10 @@ func (tx txn) List(table string, v interface{}, opts ...db.QueryOption) error {
 		OrderBy(query.OrderBy...).
 		PlaceholderFormat(placeholder(query.SQLPlaceholder))
 
+	for _, expr := range query.Tables {
+		builder = builder.JoinClause(squirrel.Expr(expr.Format, expr.Args...))
+	}
+
 	for _, eq := range query.Eq {
 		builder = builder.Where(squirrel.Eq(eq))
 	}
@@ -46,7 +50,7 @@ func (tx txn) List(table string, v interface{}, opts ...db.QueryOption) error {
 		builder = builder.Where(squirrel.NotILike(nxeq))
 	}
 
-	for _, expr := range query.Expressions {
+	for _, expr := range query.Filters {
 		builder = builder.Where(squirrel.Expr(expr.Format, expr.Args...))
 	}
 

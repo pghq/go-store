@@ -440,7 +440,8 @@ func TestTxn_List(t *testing.T) {
 			db.OrderBy("name"),
 			db.Gt("num", 0),
 			db.Lt("num", 2),
-			db.Expr("name = 'bar4'"),
+			db.Table("units ON units.id = tests.id"),
+			db.Filter("name = 'bar4'"),
 			db.QuerySQLPlaceholder("?"),
 		}
 		err := tx.List("tests", &d, opts...)

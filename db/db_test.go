@@ -68,7 +68,8 @@ func TestQueryOption(t *testing.T) {
 		OrderBy(""),
 		Gt("", 0),
 		Lt("", 0),
-		Expr(""),
+		Table(""),
+		Filter(""),
 	}
 	query := QueryWith(opts)
 	assert.NotEqual(t, Query{}, query)
