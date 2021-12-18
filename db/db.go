@@ -273,7 +273,8 @@ type Query struct {
 	Gt             []map[string]interface{}
 	XEq            []map[string]interface{}
 	NotXEq         []map[string]interface{}
-	Expressions    []Expression
+	Tables         []Expression
+	Filters        []Expression
 	Fields         []string
 	CacheKey       []interface{}
 	SQLPlaceholder string
@@ -392,11 +393,19 @@ func NotXEq(key string, value interface{}) QueryOption {
 	}
 }
 
-// Expr Raw statement inclusion
-func Expr(format string, args ...interface{}) QueryOption {
+// Filter raw filter
+func Filter(format string, args ...interface{}) QueryOption {
 	return func(query *Query) {
-		query.Expressions = append(query.Expressions, Expression{Format: format, Args: args})
-		query.CacheKey = append(query.CacheKey, "expr", fmt.Sprintf(format, args...))
+		query.Filters = append(query.Filters, Expression{Format: format, Args: args})
+		query.CacheKey = append(query.CacheKey, "filter", fmt.Sprintf(format, args...))
+	}
+}
+
+// Table raw filter
+func Table(format string, args ...interface{}) QueryOption {
+	return func(query *Query) {
+		query.Tables = append(query.Tables, Expression{Format: format, Args: args})
+		query.CacheKey = append(query.CacheKey, "table", fmt.Sprintf(format, args...))
 	}
 }
 
