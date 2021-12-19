@@ -13,20 +13,17 @@ func (tx txn) Update(table string, k, v interface{}, opts ...db.CommandOption) e
 	}
 
 	cmd := db.CommandWith(opts)
-	if cmd.KeyName == "" {
-		return tea.NewError("missing key name")
-	}
-
+	keyName := cmd.KeyName(v)
 	m, err := db.Map(v)
 	if err != nil {
 		return tea.Error(err)
 	}
 
-	m[cmd.KeyName] = k
+	m[keyName] = k
 	stmt, args, err := squirrel.StatementBuilder.
 		Update(table).
 		SetMap(m).
-		Where(squirrel.Eq{cmd.KeyName: k}).
+		Where(squirrel.Eq{keyName: k}).
 		PlaceholderFormat(placeholder(cmd.SQLPlaceholder)).
 		ToSql()
 	if err != nil {

@@ -100,12 +100,24 @@ func TestFields(t *testing.T) {
 		query := QueryWith([]QueryOption{Fields(&v)})
 		assert.Len(t, query.Fields, 2)
 		assert.Contains(t, query.Fields, "field1")
-		assert.Contains(t, query.Fields, "Field2")
+		assert.Contains(t, query.Fields, "field2")
 	})
 
 	t.Run("unknown type", func(t *testing.T) {
 		var v int
 		query := QueryWith([]QueryOption{Fields(&v)})
 		assert.Len(t, query.Fields, 0)
+	})
+}
+
+func TestCommand_KeyName(t *testing.T) {
+	t.Run("nil", func(t *testing.T) {
+		assert.Equal(t, "id", Command{}.KeyName(nil))
+	})
+}
+
+func TestQueryKey(t *testing.T) {
+	t.Run("nil", func(t *testing.T) {
+		assert.Equal(t, "id", Query{}.KeyName(nil))
 	})
 }

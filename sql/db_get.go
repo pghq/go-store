@@ -15,17 +15,14 @@ func (tx txn) Get(table string, k, v interface{}, opts ...db.QueryOption) error 
 	}
 
 	query := db.QueryWith(opts)
-	if query.KeyName == "" {
-		return tea.NewError("missing key name")
-	}
-
+	keyName := query.KeyName(v)
 	stmt, args, err := squirrel.StatementBuilder.
 		Select().
 		From(table).
 		Limit(1).
 		Columns(query.Fields...).
 		PlaceholderFormat(placeholder(query.SQLPlaceholder)).
-		Where(squirrel.Eq{query.KeyName: k}).
+		Where(squirrel.Eq{keyName: k}).
 		ToSql()
 	if err != nil {
 		return tea.NewError(err)

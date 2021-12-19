@@ -7,6 +7,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"math"
+	"reflect"
 
 	"github.com/cespare/xxhash/v2"
 	"github.com/dgraph-io/badger/v3"
@@ -178,7 +179,10 @@ func NewDocument(table Table, k interface{}) *Document {
 	}
 
 	doc.PrimaryKey = append(table.index, doc.Key...)
-	doc.AttributeKey = append(prefix(table.index, []byte{1}), doc.Key...)
+	if len(table.subIndices) > 0 {
+		doc.AttributeKey = append(prefix(table.index, []byte{1}), doc.Key...)
+	}
+
 	return &doc
 }
 
@@ -201,7 +205,7 @@ func (a Attributes) Contains(query db.Query, hash map[string]interface{}) bool {
 			}
 
 			value, _ := hash[k]
-			if value != v {
+			if !reflect.DeepEqual(value, v) {
 				return false
 			}
 		}
@@ -217,20 +221,11 @@ func (a Attributes) Contains(query db.Query, hash map[string]interface{}) bool {
 			}
 
 			value, _ := hash[k]
-			if value == v {
+			if reflect.DeepEqual(value, v) {
 				return false
 			}
 		}
 	}
-
-	//for _, gt := range query.Gt{
-	//	for k, v := range gt{
-	//		value, _ := hash[k]
-	//		if value < v{
-	//			return false
-	//		}
-	//	}
-	//}
 
 	return true
 }

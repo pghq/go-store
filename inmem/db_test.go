@@ -271,13 +271,6 @@ func TestTxn_Remove(t *testing.T) {
 		assert.NotNil(t, err)
 	})
 
-	t.Run("table not found", func(t *testing.T) {
-		tx := NewDB().Txn(context.TODO())
-		defer tx.Rollback()
-		err := tx.Remove("tests", "foo")
-		assert.NotNil(t, err)
-	})
-
 	t.Run("key not found", func(t *testing.T) {
 		tx := NewDB(db.RDB(db.Schema{"tests": {"name": {"name"}}})).Txn(context.TODO())
 		defer tx.Rollback()
@@ -326,10 +319,38 @@ func TestTxn_Remove(t *testing.T) {
 		assert.NotNil(t, err)
 	})
 
-	t.Run("can remove", func(t *testing.T) {
+	t.Run("can remove by key", func(t *testing.T) {
 		tx := NewDB(db.RDB(db.Schema{"tests": {"name": {"name"}}})).Txn(context.TODO())
 		defer tx.Rollback()
 		_ = tx.Insert("tests", "foo", map[string]interface{}{"name": "bar"})
+		err := tx.Remove("tests", "foo")
+		assert.Nil(t, err)
+	})
+
+	t.Run("can remove by attribute", func(t *testing.T) {
+		tx := NewDB(db.RDB(db.Schema{"tests": {}})).Txn(context.TODO())
+		defer tx.Rollback()
+
+		type uuid [16]byte
+		type value struct {
+			Id *uuid `db:"id"`
+		}
+
+		assert.Nil(t, tx.Insert("tests", "foo", value{Id: &uuid{1}}))
+
+		var v []value
+		assert.Nil(t, tx.List("tests", &v, db.Eq("id", &uuid{1})))
+
+		for range v {
+			err := tx.Remove("tests", "foo")
+			assert.Nil(t, err)
+		}
+	})
+
+	t.Run("can remove no index", func(t *testing.T) {
+		tx := NewDB(db.RDB(db.Schema{"tests": {}})).Txn(context.TODO())
+		defer tx.Rollback()
+		assert.Nil(t, tx.Insert("tests", "foo", map[string]interface{}{"name": "bar"}))
 		err := tx.Remove("tests", "foo")
 		assert.Nil(t, err)
 	})

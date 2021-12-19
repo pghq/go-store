@@ -173,13 +173,6 @@ func TestTxn_Insert(t *testing.T) {
 
 	d := NewDB(db.SQL(sdb))
 
-	t.Run("missing key name", func(t *testing.T) {
-		tx := d.Txn(context.TODO())
-		defer tx.Rollback()
-		err := tx.Insert("tests", "foo", map[string]interface{}{"id": "foo"})
-		assert.NotNil(t, err)
-	})
-
 	t.Run("bad value", func(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
@@ -225,13 +218,6 @@ func TestTxn_Update(t *testing.T) {
 	sdb.Exec("CREATE TABLE tests (id TEXT)")
 
 	d := NewDB(db.SQL(sdb))
-
-	t.Run("missing key name", func(t *testing.T) {
-		tx := d.Txn(context.TODO())
-		defer tx.Rollback()
-		err := tx.Update("tests", "foo", map[string]interface{}{"id": "foo"})
-		assert.NotNil(t, err)
-	})
 
 	t.Run("bad value", func(t *testing.T) {
 		tx := d.Txn(context.TODO())
@@ -346,13 +332,6 @@ func TestTxn_Remove(t *testing.T) {
 	sdb.Exec("CREATE TABLE tests (id TEXT)")
 
 	d := NewDB(db.SQL(sdb))
-
-	t.Run("missing key name", func(t *testing.T) {
-		tx := d.Txn(context.TODO())
-		defer tx.Rollback()
-		err := tx.Remove("tests", "foo")
-		assert.NotNil(t, err)
-	})
 
 	t.Run("bad sql", func(t *testing.T) {
 		tx := d.Txn(context.TODO())

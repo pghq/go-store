@@ -13,13 +13,10 @@ func (tx txn) Remove(table string, k interface{}, opts ...db.CommandOption) erro
 	}
 
 	cmd := db.CommandWith(opts)
-	if cmd.KeyName == "" {
-		return tea.NewError("missing key name")
-	}
-
+	keyName := cmd.KeyName(nil)
 	stmt, args, err := squirrel.StatementBuilder.
 		Delete(table).
-		Where(squirrel.Eq{cmd.KeyName: k}).
+		Where(squirrel.Eq{keyName: k}).
 		PlaceholderFormat(placeholder(cmd.SQLPlaceholder)).
 		ToSql()
 	if err != nil {
