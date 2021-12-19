@@ -11,7 +11,7 @@ require (
 	github.com/go-redis/redis/v8 v8.11.4
 	github.com/jmoiron/sqlx v1.3.4
 	github.com/luna-duclos/instrumentedsql v1.1.3
-	github.com/pghq/go-tea v0.0.35
+	github.com/pghq/go-tea v0.0.37
 	github.com/pressly/goose/v3 v3.4.1
 	github.com/proullon/ramsql v0.0.0-20211120092837-c8d0a408b939
 	github.com/stretchr/testify v1.7.0
