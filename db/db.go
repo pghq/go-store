@@ -394,18 +394,18 @@ func NotXEq(key string, value interface{}) QueryOption {
 }
 
 // Filter raw filter
-func Filter(format string, args ...interface{}) QueryOption {
+func Filter(filter string, args ...interface{}) QueryOption {
 	return func(query *Query) {
-		query.Filters = append(query.Filters, Expression{Format: format, Args: args})
-		query.CacheKey = append(query.CacheKey, "filter", fmt.Sprintf(format, args...))
+		query.Filters = append(query.Filters, Expression{Format: filter, Args: args})
+		query.CacheKey = append(query.CacheKey, "filter", fmt.Sprintf(filter, args...))
 	}
 }
 
 // Table raw filter
-func Table(format string, args ...interface{}) QueryOption {
+func Table(table string, args ...interface{}) QueryOption {
 	return func(query *Query) {
-		query.Tables = append(query.Tables, Expression{Format: format, Args: args})
-		query.CacheKey = append(query.CacheKey, "table", fmt.Sprintf(format, args...))
+		query.Tables = append(query.Tables, Expression{Format: table, Args: args})
+		query.CacheKey = append(query.CacheKey, "table", fmt.Sprintf(table, args...))
 	}
 }
 
