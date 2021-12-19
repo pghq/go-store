@@ -7,7 +7,7 @@ import (
 	"github.com/pghq/go-ark/db"
 )
 
-func (tx txn) Update(table string, k, v interface{}, opts ...db.CommandOption) error {
+func (tx txn) Update(table string, k db.Key, v interface{}, opts ...db.CommandOption) error {
 	if tx.reader == nil {
 		return tea.NewError("write only")
 	}

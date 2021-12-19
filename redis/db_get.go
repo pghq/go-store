@@ -8,7 +8,7 @@ import (
 	"github.com/pghq/go-ark/db"
 )
 
-func (tx txn) Get(table string, k, v interface{}, _ ...db.QueryOption) error {
+func (tx txn) Get(table string, k db.Key, v interface{}, _ ...db.QueryOption) error {
 	cmd := tx.unit.Get(tx.ctx, fmt.Sprintf("%s.%s", table, k))
 	select {
 	case tx.reads <- read{cmd: cmd, v: v, limit: 1}:

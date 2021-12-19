@@ -6,6 +6,8 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"io/fs"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -28,6 +30,11 @@ const (
 	DefaultViewTTL = 500 * time.Millisecond
 )
 
+var (
+	matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
+	matchAllCap   = regexp.MustCompile("([a-z0-9])([A-Z])")
+)
+
 // DB A database technology
 type DB interface {
 	Txn(ctx context.Context, opts ...TxnOption) Txn
@@ -36,10 +43,10 @@ type DB interface {
 
 // Txn A unit of work performed within a database
 type Txn interface {
-	Get(table string, k, v interface{}, opts ...QueryOption) error
-	Insert(table string, k, v interface{}, opts ...CommandOption) error
-	Update(table string, k, v interface{}, opts ...CommandOption) error
-	Remove(table string, k interface{}, opts ...CommandOption) error
+	Get(table string, k Key, v interface{}, opts ...QueryOption) error
+	Insert(table string, k Key, v interface{}, opts ...CommandOption) error
+	Update(table string, k Key, v interface{}, opts ...CommandOption) error
+	Remove(table string, k Key, opts ...CommandOption) error
 	List(table string, v interface{}, opts ...QueryOption) error
 	Commit() error
 	Rollback() error
@@ -222,7 +229,6 @@ func BatchReadSize(o int) TxnOption {
 type Command struct {
 	Expire         bool
 	TTL            time.Duration
-	KeyName        string
 	SQLPlaceholder string
 }
 
@@ -239,18 +245,11 @@ func CommandWith(opts []CommandOption) Command {
 // CommandOption A command option
 type CommandOption func(*Command)
 
-// TTL TTL for inserts
+// TTL time to live for inserts
 func TTL(o time.Duration) CommandOption {
 	return func(cmd *Command) {
 		cmd.TTL = o
 		cmd.Expire = true
-	}
-}
-
-// CommandKey Key name / column for primaries
-func CommandKey(o string) CommandOption {
-	return func(cmd *Command) {
-		cmd.KeyName = o
 	}
 }
 
@@ -266,7 +265,6 @@ type Query struct {
 	Page           int
 	Limit          int
 	OrderBy        []string
-	KeyName        string
 	Eq             []map[string]interface{}
 	NotEq          []map[string]interface{}
 	Lt             []map[string]interface{}
@@ -276,8 +274,8 @@ type Query struct {
 	Tables         []Expression
 	Filters        []Expression
 	Fields         []string
-	CacheKey       []interface{}
 	SQLPlaceholder string
+	CacheKey       []interface{}
 }
 
 // HasFilter checks if the query has any filter params
@@ -300,14 +298,6 @@ func QueryWith(opts []QueryOption) Query {
 
 // QueryOption A query option
 type QueryOption func(query *Query)
-
-// QueryKey Key name / column for primaries
-func QueryKey(o string) QueryOption {
-	return func(query *Query) {
-		query.KeyName = o
-		query.CacheKey = append(query.CacheKey, "key", o)
-	}
-}
 
 // QuerySQLPlaceholder Custom SQL placeholder prefix (e.g., "$")
 func QuerySQLPlaceholder(o string) QueryOption {
@@ -429,6 +419,10 @@ func Fields(args ...interface{}) QueryOption {
 		}
 	}
 
+	for i, field := range fields {
+		fields[i] = ToSnakeCase(field)
+	}
+
 	return func(query *Query) {
 		query.Fields = append(query.Fields, fields...)
 		query.CacheKey = append(query.CacheKey, "fields", fields)
@@ -439,4 +433,35 @@ func Fields(args ...interface{}) QueryOption {
 type Expression struct {
 	Format string
 	Args   []interface{}
+}
+
+// Key is a database key
+type Key struct {
+	Name  string
+	Value interface{}
+}
+
+func (k Key) String() string {
+	return fmt.Sprintf("%s%s", k.Name, k.Value)
+}
+
+// NamedKey creates a new named db ky
+func NamedKey(name, k interface{}) Key {
+	return Key{
+		Name:  KeyName(name),
+		Value: k,
+	}
+}
+
+// Id creates a new string key named id
+func Id(k string) Key {
+	return NamedKey("id", k)
+}
+
+// ToSnakeCase converts a string to snake_case
+// https://gist.github.com/stoewer/fbe273b711e6a06315d19552dd4d33e6
+func ToSnakeCase(str string) string {
+	snake := matchFirstCap.ReplaceAllString(str, "${1}_${2}")
+	snake = matchAllCap.ReplaceAllString(snake, "${1}_${2}")
+	return strings.ToLower(snake)
 }

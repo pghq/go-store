@@ -27,10 +27,10 @@ func TestNewDB(t *testing.T) {
 		assert.NotNil(t, d.Ping(context.TODO()))
 		assert.NotNil(t, d.Txn(context.TODO()).Commit())
 		assert.NotNil(t, d.Txn(context.TODO()).Rollback())
-		assert.NotNil(t, d.Txn(context.TODO()).Get("", "", nil))
-		assert.NotNil(t, d.Txn(context.TODO()).Insert("", "", nil))
-		assert.NotNil(t, d.Txn(context.TODO()).Remove("", ""))
-		assert.NotNil(t, d.Txn(context.TODO()).Update("", "", nil))
+		assert.NotNil(t, d.Txn(context.TODO()).Get("", db.Id(""), nil))
+		assert.NotNil(t, d.Txn(context.TODO()).Insert("", db.Id(""), nil))
+		assert.NotNil(t, d.Txn(context.TODO()).Remove("", db.Id("")))
+		assert.NotNil(t, d.Txn(context.TODO()).Update("", db.Id(""), nil))
 		assert.NotNil(t, d.Txn(context.TODO()).List("", ""))
 	})
 
@@ -173,24 +173,17 @@ func TestTxn_Insert(t *testing.T) {
 
 	d := NewDB(db.SQL(sdb))
 
-	t.Run("missing key name", func(t *testing.T) {
-		tx := d.Txn(context.TODO())
-		defer tx.Rollback()
-		err := tx.Insert("tests", "foo", map[string]interface{}{"id": "foo"})
-		assert.NotNil(t, err)
-	})
-
 	t.Run("bad value", func(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
-		err := tx.Insert("tests", "foo", func() {}, db.CommandKey("id"))
+		err := tx.Insert("tests", db.Id(""), func() {})
 		assert.NotNil(t, err)
 	})
 
 	t.Run("bad sql", func(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
-		err := tx.Insert("", "foo", map[string]interface{}{"id": "foo"}, db.CommandKey("id"))
+		err := tx.Insert("", db.NamedKey(true, "foo"), map[string]interface{}{"id": "foo"})
 		assert.NotNil(t, err)
 	})
 
@@ -201,15 +194,14 @@ func TestTxn_Insert(t *testing.T) {
 		d := NewDB(db.SQL(sdb))
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
-		err := tx.Insert("tests", "foo", map[string]interface{}{"id": "foo", "fn": func() {}}, db.CommandKey("id"))
+		err := tx.Insert("tests", db.NamedKey(true, "foo"), map[string]interface{}{"id": "foo", "fn": func() {}})
 		assert.NotNil(t, err)
 	})
 
 	t.Run("ok", func(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
-		err := tx.Insert("tests", "foo", map[string]interface{}{"id": "foo"},
-			db.CommandKey("id"),
+		err := tx.Insert("tests", db.NamedKey(true, "foo"), map[string]interface{}{"id": "foo"},
 			db.CommandSQLPlaceholder("?"),
 		)
 		assert.Nil(t, err)
@@ -226,24 +218,17 @@ func TestTxn_Update(t *testing.T) {
 
 	d := NewDB(db.SQL(sdb))
 
-	t.Run("missing key name", func(t *testing.T) {
-		tx := d.Txn(context.TODO())
-		defer tx.Rollback()
-		err := tx.Update("tests", "foo", map[string]interface{}{"id": "foo"})
-		assert.NotNil(t, err)
-	})
-
 	t.Run("bad value", func(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
-		err := tx.Update("tests", "foo", func() {}, db.CommandKey("id"))
+		err := tx.Update("tests", db.NamedKey(true, "foo"), func() {})
 		assert.NotNil(t, err)
 	})
 
 	t.Run("bad sql", func(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
-		err := tx.Update("", "foo", map[string]interface{}{"id": "foo"}, db.CommandKey("id"))
+		err := tx.Update("", db.NamedKey(true, "foo"), map[string]interface{}{"id": "foo"})
 		assert.NotNil(t, err)
 	})
 
@@ -254,15 +239,15 @@ func TestTxn_Update(t *testing.T) {
 		d := NewDB(db.SQL(sdb))
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
-		err := tx.Update("tests", "foo", map[string]interface{}{"id": "foo", "fn": func() {}}, db.CommandKey("id"))
+		err := tx.Update("tests", db.NamedKey(true, "foo"), map[string]interface{}{"id": "foo", "fn": func() {}})
 		assert.NotNil(t, err)
 	})
 
 	t.Run("ok", func(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
-		tx.Insert("tests", "id", map[string]interface{}{"id": "foo"}, db.CommandKey("id"))
-		err := tx.Update("tests", "foo", map[string]interface{}{"id": "foo"}, db.CommandKey("id"))
+		tx.Insert("tests", db.NamedKey(true, "foo"), map[string]interface{}{"id": "foo"})
+		err := tx.Update("tests", db.NamedKey(true, "foo"), map[string]interface{}{"id": "foo"})
 		assert.Nil(t, err)
 	})
 }
@@ -280,14 +265,14 @@ func TestTxn_Get(t *testing.T) {
 	t.Run("missing key name", func(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
-		err := tx.Get("tests", "foo", nil)
+		err := tx.Get("tests", db.NamedKey(true, "foo"), nil)
 		assert.NotNil(t, err)
 	})
 
 	t.Run("bad sql", func(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
-		err := tx.Get("", "foo", nil, db.QueryKey("id"))
+		err := tx.Get("", db.NamedKey(true, "foo"), nil)
 		assert.NotNil(t, err)
 	})
 
@@ -298,7 +283,7 @@ func TestTxn_Get(t *testing.T) {
 		d := NewDB(db.SQL(sdb))
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
-		err := tx.Get("tests", "foo", nil, db.QueryKey("id"), db.Fields("id"))
+		err := tx.Get("tests", db.NamedKey(true, "foo"), nil, db.Fields("id"))
 		assert.NotNil(t, err)
 	})
 
@@ -306,7 +291,7 @@ func TestTxn_Get(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
 		var id string
-		err := tx.Get("tests", "not found", &id, db.QueryKey("id"), db.Fields("id"))
+		err := tx.Get("tests", db.NamedKey(true, "not found"), &id, db.Fields("id"))
 		assert.NotNil(t, err)
 		assert.False(t, tea.IsFatal(err))
 	})
@@ -314,9 +299,9 @@ func TestTxn_Get(t *testing.T) {
 	t.Run("ok for single field", func(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
-		tx.Insert("tests", "foo1", map[string]interface{}{"id": "foo1"}, db.CommandKey("id"))
+		tx.Insert("tests", db.NamedKey(true, "foo1"), map[string]interface{}{"id": "foo1"})
 		var id string
-		err := tx.Get("tests", "foo1", &id, db.QueryKey("id"), db.Fields("id"))
+		err := tx.Get("tests", db.NamedKey(true, "foo1"), &id, db.Fields("id"))
 		assert.Nil(t, err)
 		assert.Equal(t, "foo1", id)
 	})
@@ -324,13 +309,13 @@ func TestTxn_Get(t *testing.T) {
 	t.Run("ok for multiple fields", func(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
-		tx.Insert("tests", "foo2", map[string]interface{}{"id": "foo2", "name": "bar"}, db.CommandKey("id"))
+		tx.Insert("tests", db.NamedKey(true, "foo2"), map[string]interface{}{"id": "foo2", "name": "bar"})
 		type data struct {
 			Id   *string `db:"id"`
 			Name *string `db:"name"`
 		}
 		var d data
-		err := tx.Get("tests", "foo2", &d, db.QueryKey("id"), db.Fields("id", "name"))
+		err := tx.Get("tests", db.NamedKey(true, "foo2"), &d, db.Fields("id", "name"))
 		assert.Nil(t, err)
 		assert.Equal(t, "foo2", *d.Id)
 		assert.Equal(t, "bar", *d.Name)
@@ -347,17 +332,10 @@ func TestTxn_Remove(t *testing.T) {
 
 	d := NewDB(db.SQL(sdb))
 
-	t.Run("missing key name", func(t *testing.T) {
-		tx := d.Txn(context.TODO())
-		defer tx.Rollback()
-		err := tx.Remove("tests", "foo")
-		assert.NotNil(t, err)
-	})
-
 	t.Run("bad sql", func(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
-		err := tx.Remove("", "foo", db.CommandKey("id"))
+		err := tx.Remove("", db.NamedKey(true, "foo"))
 		assert.NotNil(t, err)
 	})
 
@@ -368,15 +346,15 @@ func TestTxn_Remove(t *testing.T) {
 		d := NewDB(db.SQL(sdb))
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
-		err := tx.Remove("tests", "foo", db.CommandKey("id"))
+		err := tx.Remove("tests", db.NamedKey(true, "foo"))
 		assert.NotNil(t, err)
 	})
 
 	t.Run("ok", func(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
-		tx.Insert("tests", "foo", map[string]interface{}{"id": "foo"}, db.CommandKey("id"))
-		err := tx.Remove("tests", "foo", db.CommandKey("id"))
+		tx.Insert("tests", db.NamedKey(true, "foo"), map[string]interface{}{"id": "foo"})
+		err := tx.Remove("tests", db.NamedKey(true, "foo"))
 		assert.Nil(t, err)
 	})
 }
@@ -394,7 +372,7 @@ func TestTxn_List(t *testing.T) {
 	t.Run("bad sql", func(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
-		err := tx.List("", nil, db.QueryKey("id"))
+		err := tx.List("", nil)
 		assert.NotNil(t, err)
 	})
 
@@ -405,15 +383,15 @@ func TestTxn_List(t *testing.T) {
 		d := NewDB(db.SQL(sdb))
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
-		err := tx.List("tests", nil, db.QueryKey("id"), db.Fields("id"))
+		err := tx.List("tests", nil, db.Fields("id"))
 		assert.NotNil(t, err)
 	})
 
 	t.Run("ok for single field", func(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
-		tx.Insert("tests", "foo1", map[string]interface{}{"id": "foo1", "name": "bar1"}, db.CommandKey("id"))
-		tx.Insert("tests", "foo2", map[string]interface{}{"id": "foo2", "name": "bar2"}, db.CommandKey("id"))
+		tx.Insert("tests", db.NamedKey(true, "foo1"), map[string]interface{}{"id": "foo1", "name": "bar1"})
+		tx.Insert("tests", db.NamedKey(true, "foo2"), map[string]interface{}{"id": "foo2", "name": "bar2"})
 		var ids []string
 		err := tx.List("tests", &ids, db.Eq("name", "bar2"), db.Fields("id"))
 		assert.Nil(t, err)
@@ -423,8 +401,8 @@ func TestTxn_List(t *testing.T) {
 	t.Run("uses opts", func(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
-		tx.Insert("tests", "foo3", map[string]interface{}{"id": "foo3", "name": "bar3"}, db.CommandKey("id"))
-		tx.Insert("tests", "foo4", map[string]interface{}{"id": "foo4", "name": "bar4", "num": 1}, db.CommandKey("id"))
+		tx.Insert("tests", db.NamedKey(true, "foo3"), map[string]interface{}{"id": "foo3", "name": "bar3"})
+		tx.Insert("tests", db.NamedKey(true, "foo4"), map[string]interface{}{"id": "foo4", "name": "bar4", "num": 1})
 		type data struct {
 			Id   *string `db:"id"`
 			Name *string `db:"name"`

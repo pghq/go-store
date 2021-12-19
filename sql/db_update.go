@@ -7,26 +7,22 @@ import (
 	"github.com/pghq/go-ark/db"
 )
 
-func (tx txn) Update(table string, k, v interface{}, opts ...db.CommandOption) error {
+func (tx txn) Update(table string, k db.Key, v interface{}, opts ...db.CommandOption) error {
 	if tx.err != nil {
 		return tea.Error(tx.err)
 	}
 
 	cmd := db.CommandWith(opts)
-	if cmd.KeyName == "" {
-		return tea.NewError("missing key name")
-	}
-
 	m, err := db.Map(v)
 	if err != nil {
 		return tea.Error(err)
 	}
 
-	m[cmd.KeyName] = k
+	m[k.Name] = k.Value
 	stmt, args, err := squirrel.StatementBuilder.
 		Update(table).
 		SetMap(m).
-		Where(squirrel.Eq{cmd.KeyName: k}).
+		Where(squirrel.Eq{k.Name: k.Value}).
 		PlaceholderFormat(placeholder(cmd.SQLPlaceholder)).
 		ToSql()
 	if err != nil {

@@ -12,5 +12,5 @@ func (tx Txn) Update(table string, k, v interface{}, opts ...db.CommandOption) e
 		return tea.Error(tx.err)
 	}
 
-	return tx.backend.Update(table, k, v, opts...)
+	return tx.backend.Update(table, db.NamedKey(v, k), v, opts...)
 }

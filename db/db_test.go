@@ -45,7 +45,6 @@ func TestCommandOption(t *testing.T) {
 
 	opts := []CommandOption{
 		TTL(0),
-		CommandKey(""),
 		CommandSQLPlaceholder(""),
 	}
 	cmd := CommandWith(opts)
@@ -56,7 +55,6 @@ func TestQueryOption(t *testing.T) {
 	t.Parallel()
 
 	opts := []QueryOption{
-		QueryKey(""),
 		QuerySQLPlaceholder(""),
 		Eq("", "bar4"),
 		NotEq("", ""),
@@ -100,12 +98,22 @@ func TestFields(t *testing.T) {
 		query := QueryWith([]QueryOption{Fields(&v)})
 		assert.Len(t, query.Fields, 2)
 		assert.Contains(t, query.Fields, "field1")
-		assert.Contains(t, query.Fields, "Field2")
+		assert.Contains(t, query.Fields, "field2")
 	})
 
 	t.Run("unknown type", func(t *testing.T) {
 		var v int
 		query := QueryWith([]QueryOption{Fields(&v)})
 		assert.Len(t, query.Fields, 0)
+	})
+}
+
+func TestKey_String(t *testing.T) {
+	t.Run("named key", func(t *testing.T) {
+		assert.Equal(t, "test", NamedKey("foo", "test").String())
+	})
+
+	t.Run("id key", func(t *testing.T) {
+		assert.Equal(t, "foo", Id("foo").String())
 	})
 }

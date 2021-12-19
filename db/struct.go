@@ -65,3 +65,27 @@ func Copy(src, dst interface{}) error {
 	dv.Set(sv)
 	return nil
 }
+
+// KeyName is a helper to determine a good default for struct persistence keys
+func KeyName(v interface{}) string {
+	if v == nil {
+		return ""
+	}
+
+	rv := reflect.Indirect(reflect.ValueOf(v))
+	for {
+		if rv.Kind() != reflect.Ptr {
+			break
+		}
+		rv = reflect.Indirect(rv)
+	}
+
+	switch rv.Kind() {
+	case reflect.String:
+		return ""
+	case reflect.Struct:
+		return ToSnakeCase(rv.Type().Name()) + "_id"
+	default:
+		return "id"
+	}
+}

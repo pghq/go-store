@@ -7,7 +7,7 @@ import (
 	"github.com/pghq/go-ark/db"
 )
 
-func (tx txn) Get(table string, k, v interface{}, _ ...db.QueryOption) error {
+func (tx txn) Get(table string, k db.Key, v interface{}, _ ...db.QueryOption) error {
 	if tx.reader == nil {
 		return tea.NewError("write only")
 	}

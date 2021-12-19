@@ -12,5 +12,5 @@ func (tx Txn) Insert(table string, k, v interface{}, opts ...db.CommandOption) e
 		return tea.Error(tx.err)
 	}
 
-	return tx.backend.Insert(table, k, v, opts...)
+	return tx.backend.Insert(table, db.NamedKey(v, k), v, opts...)
 }
