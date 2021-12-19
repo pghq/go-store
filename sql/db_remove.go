@@ -7,16 +7,15 @@ import (
 	"github.com/pghq/go-ark/db"
 )
 
-func (tx txn) Remove(table string, k interface{}, opts ...db.CommandOption) error {
+func (tx txn) Remove(table string, k db.Key, opts ...db.CommandOption) error {
 	if tx.err != nil {
 		return tea.Error(tx.err)
 	}
 
 	cmd := db.CommandWith(opts)
-	keyName := cmd.KeyName(nil)
 	stmt, args, err := squirrel.StatementBuilder.
 		Delete(table).
-		Where(squirrel.Eq{keyName: k}).
+		Where(squirrel.Eq{k.Name: k.Value}).
 		PlaceholderFormat(placeholder(cmd.SQLPlaceholder)).
 		ToSql()
 	if err != nil {

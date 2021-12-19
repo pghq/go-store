@@ -9,20 +9,19 @@ import (
 	"github.com/pghq/go-ark/db"
 )
 
-func (tx txn) Get(table string, k, v interface{}, opts ...db.QueryOption) error {
+func (tx txn) Get(table string, k db.Key, v interface{}, opts ...db.QueryOption) error {
 	if tx.err != nil {
 		return tea.Error(tx.err)
 	}
 
 	query := db.QueryWith(opts)
-	keyName := query.KeyName(v)
 	stmt, args, err := squirrel.StatementBuilder.
 		Select().
 		From(table).
 		Limit(1).
 		Columns(query.Fields...).
 		PlaceholderFormat(placeholder(query.SQLPlaceholder)).
-		Where(squirrel.Eq{keyName: k}).
+		Where(squirrel.Eq{k.Name: k.Value}).
 		ToSql()
 	if err != nil {
 		return tea.NewError(err)

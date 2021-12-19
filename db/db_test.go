@@ -45,7 +45,6 @@ func TestCommandOption(t *testing.T) {
 
 	opts := []CommandOption{
 		TTL(0),
-		CommandKey(""),
 		CommandSQLPlaceholder(""),
 	}
 	cmd := CommandWith(opts)
@@ -56,7 +55,6 @@ func TestQueryOption(t *testing.T) {
 	t.Parallel()
 
 	opts := []QueryOption{
-		QueryKey(""),
 		QuerySQLPlaceholder(""),
 		Eq("", "bar4"),
 		NotEq("", ""),
@@ -110,14 +108,12 @@ func TestFields(t *testing.T) {
 	})
 }
 
-func TestCommand_KeyName(t *testing.T) {
-	t.Run("nil", func(t *testing.T) {
-		assert.Equal(t, "id", Command{}.KeyName(nil))
+func TestKey_String(t *testing.T) {
+	t.Run("named key", func(t *testing.T) {
+		assert.Equal(t, "test", NamedKey("foo", "test").String())
 	})
-}
 
-func TestQueryKey(t *testing.T) {
-	t.Run("nil", func(t *testing.T) {
-		assert.Equal(t, "id", Query{}.KeyName(nil))
+	t.Run("id key", func(t *testing.T) {
+		assert.Equal(t, "foo", Id("foo").String())
 	})
 }

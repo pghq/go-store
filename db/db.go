@@ -43,10 +43,10 @@ type DB interface {
 
 // Txn A unit of work performed within a database
 type Txn interface {
-	Get(table string, k, v interface{}, opts ...QueryOption) error
-	Insert(table string, k, v interface{}, opts ...CommandOption) error
-	Update(table string, k, v interface{}, opts ...CommandOption) error
-	Remove(table string, k interface{}, opts ...CommandOption) error
+	Get(table string, k Key, v interface{}, opts ...QueryOption) error
+	Insert(table string, k Key, v interface{}, opts ...CommandOption) error
+	Update(table string, k Key, v interface{}, opts ...CommandOption) error
+	Remove(table string, k Key, opts ...CommandOption) error
 	List(table string, v interface{}, opts ...QueryOption) error
 	Commit() error
 	Rollback() error
@@ -230,16 +230,6 @@ type Command struct {
 	Expire         bool
 	TTL            time.Duration
 	SQLPlaceholder string
-	keyName        string
-}
-
-func (c Command) KeyName(v interface{}) string {
-	keyName := c.keyName
-	if keyName == "" {
-		keyName = KeyName(v)
-	}
-
-	return keyName
 }
 
 // CommandWith Configure command with custom ops
@@ -260,13 +250,6 @@ func TTL(o time.Duration) CommandOption {
 	return func(cmd *Command) {
 		cmd.TTL = o
 		cmd.Expire = true
-	}
-}
-
-// CommandKey Key name / column for primaries
-func CommandKey(o string) CommandOption {
-	return func(cmd *Command) {
-		cmd.keyName = o
 	}
 }
 
@@ -293,21 +276,11 @@ type Query struct {
 	Fields         []string
 	SQLPlaceholder string
 	CacheKey       []interface{}
-	keyName        string
 }
 
 // HasFilter checks if the query has any filter params
 func (q Query) HasFilter() bool {
 	return q.Eq != nil || q.NotEq != nil || q.Lt != nil || q.Gt != nil || q.XEq != nil || q.NotXEq != nil
-}
-
-func (q Query) KeyName(v interface{}) string {
-	keyName := q.keyName
-	if keyName == "" {
-		keyName = KeyName(v)
-	}
-
-	return keyName
 }
 
 // QueryWith Configure query with custom ops
@@ -325,14 +298,6 @@ func QueryWith(opts []QueryOption) Query {
 
 // QueryOption A query option
 type QueryOption func(query *Query)
-
-// QueryKey Key name / column for primaries
-func QueryKey(o string) QueryOption {
-	return func(query *Query) {
-		query.keyName = o
-		query.CacheKey = append(query.CacheKey, "key", o)
-	}
-}
 
 // QuerySQLPlaceholder Custom SQL placeholder prefix (e.g., "$")
 func QuerySQLPlaceholder(o string) QueryOption {
@@ -468,6 +433,29 @@ func Fields(args ...interface{}) QueryOption {
 type Expression struct {
 	Format string
 	Args   []interface{}
+}
+
+// Key is a database key
+type Key struct {
+	Name  string
+	Value interface{}
+}
+
+func (k Key) String() string {
+	return fmt.Sprintf("%s%s", k.Name, k.Value)
+}
+
+// NamedKey creates a new named db ky
+func NamedKey(name, k interface{}) Key {
+	return Key{
+		Name:  KeyName(name),
+		Value: k,
+	}
+}
+
+// Id creates a new string key named id
+func Id(k string) Key {
+	return NamedKey("id", k)
 }
 
 // ToSnakeCase converts a string to snake_case

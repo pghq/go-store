@@ -73,8 +73,20 @@ func TestCopy(t *testing.T) {
 func TestKeyName(t *testing.T) {
 	t.Parallel()
 
+	t.Run("nil", func(t *testing.T) {
+		assert.Equal(t, "", KeyName(nil))
+	})
+
+	t.Run("empty string", func(t *testing.T) {
+		assert.Equal(t, "", KeyName(""))
+	})
+
 	t.Run("string", func(t *testing.T) {
-		assert.Equal(t, "id", KeyName("hi"))
+		assert.Equal(t, "", KeyName("hi"))
+	})
+
+	t.Run("unknown type", func(t *testing.T) {
+		assert.Equal(t, "id", KeyName(func() {}))
 	})
 
 	t.Run("struct pointer", func(t *testing.T) {

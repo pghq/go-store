@@ -19,7 +19,7 @@ func (tx Txn) Get(table string, k, v interface{}, opts ...db.QueryOption) error 
 		return db.Copy(cv, v)
 	}
 
-	if err := tx.backend.Get(table, k, v, opts...); err != nil {
+	if err := tx.backend.Get(table, db.NamedKey(v, k), v, opts...); err != nil {
 		return tea.Error(err)
 	}
 
