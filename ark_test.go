@@ -27,6 +27,12 @@ func TestNew(t *testing.T) {
 		assert.NotNil(t, m.View(context.TODO(), func(tx db.Txn) error { return nil }))
 	})
 
+	t.Run("with error", func(t *testing.T) {
+		m := New()
+		m.SetError(tea.NewError("error"))
+		assert.NotNil(t, m.Error())
+	})
+
 	t.Run("with default db", func(t *testing.T) {
 		m := New()
 		assert.NotNil(t, m)

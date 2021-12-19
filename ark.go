@@ -31,6 +31,11 @@ type Mapper struct {
 	cache  *ristretto.Cache
 }
 
+// SetError sets a mapper error
+func (m *Mapper) SetError(err error) {
+	m.err = err
+}
+
 // Error exposes any underlying mapper errors
 func (m Mapper) Error() error {
 	return m.err

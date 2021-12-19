@@ -30,10 +30,6 @@ func (m *Mapper) Txn(ctx context.Context, opts ...db.TxnOption) Txn {
 
 // Do Write and or read using a callback
 func (m *Mapper) Do(ctx context.Context, fn func(tx db.Txn) error, opts ...db.TxnOption) error {
-	if err := m.Error(); err != nil {
-		return tea.Error(err)
-	}
-
 	if err := ctx.Err(); err != nil {
 		return tea.Error(err)
 	}
@@ -50,10 +46,6 @@ func (m *Mapper) Do(ctx context.Context, fn func(tx db.Txn) error, opts ...db.Tx
 
 // View Read using a callback
 func (m *Mapper) View(ctx context.Context, fn func(tx db.Txn) error, opts ...db.TxnOption) error {
-	if err := m.Error(); err != nil {
-		return tea.Error(err)
-	}
-
 	if err := ctx.Err(); err != nil {
 		return tea.Error(err)
 	}
