@@ -45,7 +45,7 @@ func NewDB(opts ...db.Option) *DB {
 	if config.SQL == nil {
 		sdb, err := config.SQLOpenFunc(config.DriverName, config.DSN)
 		if err != nil {
-			d.err = err
+			d.err = tea.Error(err)
 			return &d
 		}
 		config.SQL = sdb
@@ -57,7 +57,7 @@ func NewDB(opts ...db.Option) *DB {
 		goose.SetTableName(config.MigrationTable)
 		if err := goose.Up(config.SQL, config.MigrationDirectory); err != nil {
 			_ = goose.Down(config.SQL, config.MigrationDirectory)
-			d.err = err
+			d.err = tea.Error(err)
 			return &d
 		}
 	}
