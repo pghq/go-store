@@ -1,16 +1,27 @@
 package ark
 
 import (
+	"time"
+
 	"github.com/pghq/go-tea"
 
-	"github.com/pghq/go-ark/db"
+	"github.com/pghq/go-ark/database"
 )
 
-// Insert Create a value with a key
-func (tx Txn) Insert(table string, k, v interface{}, opts ...db.CommandOption) error {
+// Insert insert a value
+func (tx Txn) Insert(table string, k, v interface{}) error {
 	if tx.err != nil {
-		return tea.Error(tx.err)
+		return tea.Stack(tx.err)
 	}
 
-	return tx.backend.Insert(table, db.NamedKey(v, k), v, opts...)
+	return tx.backend.Insert(table, database.NamedKey(v, k), v)
+}
+
+// InsertTTL insert a value with a ttl
+func (tx Txn) InsertTTL(table string, k, v interface{}, expire time.Duration) error {
+	if tx.err != nil {
+		return tea.Stack(tx.err)
+	}
+
+	return tx.backend.Insert(table, database.NamedKey(v, k), v, database.Expire(expire))
 }

@@ -4,15 +4,15 @@ import (
 	"github.com/Masterminds/squirrel"
 	"github.com/pghq/go-tea"
 
-	"github.com/pghq/go-ark/db"
+	"github.com/pghq/go-ark/database"
 )
 
-func (tx txn) List(table string, v interface{}, opts ...db.QueryOption) error {
+func (tx txn) List(table string, v interface{}, opts ...database.QueryOption) error {
 	if tx.err != nil {
-		return tea.Error(tx.err)
+		return tea.Stack(tx.err)
 	}
 
-	query := db.QueryWith(opts)
+	query := database.QueryWith(opts)
 	builder := squirrel.StatementBuilder.
 		Select().
 		From(table).
@@ -20,10 +20,10 @@ func (tx txn) List(table string, v interface{}, opts ...db.QueryOption) error {
 		Offset(uint64(query.Page)).
 		Columns(query.Fields...).
 		OrderBy(query.OrderBy...).
-		PlaceholderFormat(placeholder(query.SQLPlaceholder))
+		PlaceholderFormat(tx.ph)
 
 	for _, expr := range query.Tables {
-		builder = builder.JoinClause(squirrel.Expr(expr.Format, expr.Args...))
+		builder = builder.JoinClause(expr.Format, expr.Args...)
 	}
 
 	for _, eq := range query.Eq {
@@ -43,11 +43,11 @@ func (tx txn) List(table string, v interface{}, opts ...db.QueryOption) error {
 	}
 
 	for _, xeq := range query.XEq {
-		builder = builder.Where(squirrel.ILike(xeq))
+		builder = builder.Where(squirrel.Like(xeq))
 	}
 
 	for _, nxeq := range query.XEq {
-		builder = builder.Where(squirrel.NotILike(nxeq))
+		builder = builder.Where(squirrel.NotLike(nxeq))
 	}
 
 	for _, expr := range query.Filters {
@@ -57,11 +57,15 @@ func (tx txn) List(table string, v interface{}, opts ...db.QueryOption) error {
 	stmt, args, err := builder.
 		ToSql()
 	if err != nil {
-		return tea.NewError(err)
+		return tea.Err(err)
 	}
 
-	if err := tx.unit.SelectContext(tx.ctx, v, stmt, args...); err != nil {
-		return tea.Error(err)
+	span := tea.Nest(tx.ctx, "sql")
+	defer span.End()
+	span.Tag("statement", stmt)
+	span.Tag("arguments", args...)
+	if err := tx.unit.SelectContext(span, v, stmt, args...); err != nil {
+		return tea.Stack(err)
 	}
 
 	return nil

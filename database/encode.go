@@ -1,4 +1,4 @@
-package db
+package database
 
 import (
 	"bytes"
@@ -23,7 +23,7 @@ func GobEncode(v interface{}) ([]byte, error) {
 	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)
 	if err := enc.Encode(v); err != nil {
-		return nil, tea.Error(err)
+		return nil, tea.Stack(err)
 	}
 	return buf.Bytes(), nil
 }

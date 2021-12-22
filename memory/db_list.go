@@ -1,4 +1,4 @@
-package inmem
+package memory
 
 import (
 	"bytes"
@@ -7,23 +7,28 @@ import (
 	"github.com/dgraph-io/badger/v3"
 	"github.com/pghq/go-tea"
 
-	"github.com/pghq/go-ark/db"
+	"github.com/pghq/go-ark/database"
 )
 
-func (tx txn) List(table string, v interface{}, opts ...db.QueryOption) error {
+func (tx txn) List(table string, v interface{}, opts ...database.QueryOption) error {
 	if tx.reader == nil {
-		return tea.NewError("write only")
+		return tea.Err("write only")
 	}
 
-	query := db.QueryWith(opts)
+	query := database.QueryWith(opts)
+	span := tea.Nest(tx.ctx, "memory")
+	defer span.End()
+	span.Tag("operation", "list")
+	span.Tag("query", query)
+
 	rv := reflect.ValueOf(v)
 	if rv.Kind() != reflect.Ptr || rv.IsNil() || !rv.IsValid() {
-		return tea.NewError("dst must be a pointer")
+		return tea.Err("dst must be a pointer")
 	}
 
 	rv = rv.Elem()
 	if rv.Kind() != reflect.Slice {
-		return tea.NewError("dst must be a pointer to slice")
+		return tea.Err("dst must be a pointer to slice")
 	}
 
 	tbl := tx.Table(table)
@@ -50,15 +55,15 @@ func (tx txn) List(table string, v interface{}, opts ...db.QueryOption) error {
 			pk := bytes.TrimPrefix(key, io.badger.Prefix)
 			if item, err = tx.reader.Get(pk); err != nil {
 				if err == badger.ErrKeyNotFound {
-					err = tea.NotFound(err)
+					err = tea.AsErrNotFound(err)
 				}
-				return tea.Error(err)
+				return tea.Stack(err)
 			}
 		}
 
 		doc := tbl.NewDocument(item.Key())
 		if err := item.Value(func(b []byte) error { return doc.Decode(b) }); err != nil {
-			return tea.Error(err)
+			return tea.Stack(err)
 		}
 
 		rv := reflect.New(reflect.TypeOf(v).Elem().Elem())
@@ -68,7 +73,7 @@ func (tx txn) List(table string, v interface{}, opts ...db.QueryOption) error {
 		}
 
 		if err := doc.Copy(v); err != nil {
-			return tea.Error(err)
+			return tea.Stack(err)
 		}
 
 		values = append(values, rv.Elem())
@@ -77,10 +82,10 @@ func (tx txn) List(table string, v interface{}, opts ...db.QueryOption) error {
 
 	if len(values) == 0 {
 		if query.Limit == 1 {
-			return tea.NewNotFound("not found")
+			return tea.ErrNotFound("not found")
 		}
 
-		return tea.NewNoContent("not found")
+		return tea.ErrNoContent("not found")
 	}
 
 	rv.Set(reflect.Append(rv, values...))

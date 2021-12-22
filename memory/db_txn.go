@@ -1,15 +1,15 @@
-package inmem
+package memory
 
 import (
 	"context"
 
 	"github.com/dgraph-io/badger/v3"
 
-	"github.com/pghq/go-ark/db"
+	"github.com/pghq/go-ark/database"
 )
 
-func (d DB) Txn(ctx context.Context, opts ...db.TxnOption) db.Txn {
-	config := db.TxnConfigWith(opts)
+func (d DB) Txn(ctx context.Context, opts ...database.TxnOption) database.Txn {
+	config := database.TxnConfigWith(opts)
 
 	tx := txn{
 		DB:  d,

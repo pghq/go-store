@@ -3,10 +3,15 @@ package redis
 import (
 	"fmt"
 
-	"github.com/pghq/go-ark/db"
+	"github.com/pghq/go-tea"
+
+	"github.com/pghq/go-ark/database"
 )
 
-func (tx txn) Remove(table string, k db.Key, _ ...db.CommandOption) error {
-	tx.unit.Del(tx.ctx, fmt.Sprintf("%s.%s", table, k))
+func (tx txn) Remove(table string, k database.Key, _ ...database.CommandOption) error {
+	cmd := tx.unit.Del(tx.ctx, fmt.Sprintf("%s.%s", table, k))
+	span := tea.Nest(tx.ctx, "redis")
+	defer span.End()
+	span.Tag("statement", cmd.String())
 	return nil
 }

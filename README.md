@@ -20,10 +20,10 @@ import (
 )
 
 // Open an in-memory data mapper
-m := ark.New()
+db := ark.New("memory://")
 
 // Create a transaction
-tx := m.Txn(context.Background())
+tx := db.Txn(context.Background())
 defer tx.Rollback()
 
 // Commit some data
@@ -32,7 +32,7 @@ if err != nil{
     panic(err)
 }
 
-err := tx.Insert("", []byte("cat"), "meow", db.TTL(0))
+err := tx.InsertTTL("", []byte("cat"), "meow", 0)
 if err != nil{
     panic(err)
 }

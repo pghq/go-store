@@ -3,14 +3,14 @@ package ark
 import (
 	"github.com/pghq/go-tea"
 
-	"github.com/pghq/go-ark/db"
+	"github.com/pghq/go-ark/database"
 )
 
 // Update Replace an existing value
-func (tx Txn) Update(table string, k, v interface{}, opts ...db.CommandOption) error {
+func (tx Txn) Update(table string, k, v interface{}, opts ...database.CommandOption) error {
 	if tx.err != nil {
-		return tea.Error(tx.err)
+		return tea.Stack(tx.err)
 	}
 
-	return tx.backend.Update(table, db.NamedKey(v, k), v, opts...)
+	return tx.backend.Update(table, database.NamedKey(v, k), v, opts...)
 }

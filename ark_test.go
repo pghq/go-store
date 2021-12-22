@@ -2,24 +2,31 @@ package ark
 
 import (
 	"context"
+	"os"
 	"testing"
 
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/pghq/go-tea"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/pghq/go-ark/db"
-	"github.com/pghq/go-ark/inmem"
+	"github.com/pghq/go-ark/database"
 )
+
+func TestMain(m *testing.M) {
+	tea.Testing()
+	os.Exit(m.Run())
+}
 
 func TestNew(t *testing.T) {
 	t.Parallel()
 
-	t.Run("bad open", func(t *testing.T) {
-		m := NewSQL()
+	t.Run("unrecognized technology", func(t *testing.T) {
+		m := New("mongodb://")
 		assert.NotNil(t, m.Txn(context.TODO()).Commit())
 		assert.NotNil(t, m.Txn(context.TODO()).Rollback())
 		assert.NotNil(t, m.Txn(context.TODO()).Get("", "", nil))
 		assert.NotNil(t, m.Txn(context.TODO()).Insert("", "", nil))
+		assert.NotNil(t, m.Txn(context.TODO()).InsertTTL("", "", nil, 0))
 		assert.NotNil(t, m.Txn(context.TODO()).Remove("", "", nil))
 		assert.NotNil(t, m.Txn(context.TODO()).Update("", "", nil))
 		assert.NotNil(t, m.Txn(context.TODO()).List("", ""))
@@ -28,42 +35,36 @@ func TestNew(t *testing.T) {
 	})
 
 	t.Run("with error", func(t *testing.T) {
-		m := New()
-		m.SetError(tea.NewError("error"))
+		m := New("memory://")
+		m.SetError(tea.Err("error"))
 		assert.NotNil(t, m.Error())
 	})
 
 	t.Run("with default db", func(t *testing.T) {
-		m := New()
-		assert.NotNil(t, m)
-		assert.Nil(t, m.err)
-	})
-
-	t.Run("with custom db", func(t *testing.T) {
-		m := New(DB(inmem.NewDB()))
+		m := New("memory://")
 		assert.NotNil(t, m)
 		assert.Nil(t, m.err)
 	})
 
 	t.Run("redis", func(t *testing.T) {
-		m := NewRedis()
+		m := New("redis://user:pass@example.com/db")
 		assert.NotNil(t, m)
 		assert.NotNil(t, m.err)
 	})
 
-	t.Run("rdb", func(t *testing.T) {
-		m := NewRDB(db.Schema{})
+	t.Run("postgres", func(t *testing.T) {
+		m := New("postgres://user:pass@example.com/db")
 		assert.NotNil(t, m)
-		assert.Nil(t, m.err)
+		assert.NotNil(t, m.err)
 	})
 }
 
 func TestMapper_View(t *testing.T) {
 	t.Parallel()
 
-	m := New()
+	m := New("memory://")
 	t.Run("with fn error", func(t *testing.T) {
-		err := m.View(context.TODO(), func(tx Txn) error { return tea.NewError("with fn error") })
+		err := m.View(context.TODO(), func(tx Txn) error { return tea.Err("with fn error") })
 		assert.NotNil(t, err)
 	})
 
@@ -83,9 +84,9 @@ func TestMapper_View(t *testing.T) {
 func TestMapper_Do(t *testing.T) {
 	t.Parallel()
 
-	m := New()
+	m := New("memory://")
 	t.Run("with fn error", func(t *testing.T) {
-		err := m.Do(context.TODO(), func(tx Txn) error { return tea.NewError("with fn error") })
+		err := m.Do(context.TODO(), func(tx Txn) error { return tea.Err("with fn error") })
 		assert.NotNil(t, err)
 	})
 
@@ -105,7 +106,7 @@ func TestMapper_Do(t *testing.T) {
 func TestMapper_Txn(t *testing.T) {
 	t.Parallel()
 
-	m := New()
+	m := New("memory://")
 
 	t.Run("bad commit", func(t *testing.T) {
 		tx := m.Txn(context.TODO())
@@ -125,19 +126,31 @@ func TestMapper_Txn(t *testing.T) {
 func TestTxn_Insert(t *testing.T) {
 	t.Parallel()
 
-	m := New()
+	m := New("memory://")
 
-	t.Run("can insert", func(t *testing.T) {
+	t.Run("ok", func(t *testing.T) {
 		tx := m.Txn(context.TODO())
 		defer tx.Rollback()
 		assert.Nil(t, tx.Insert("", "foo", "bar"))
 	})
 }
 
+func TestTxn_InsertTTL(t *testing.T) {
+	t.Parallel()
+
+	m := New("memory://")
+
+	t.Run("ok", func(t *testing.T) {
+		tx := m.Txn(context.TODO())
+		defer tx.Rollback()
+		assert.Nil(t, tx.InsertTTL("", "foo", "bar", 0))
+	})
+}
+
 func TestTxn_Update(t *testing.T) {
 	t.Parallel()
 
-	m := New()
+	m := New("memory://")
 	tx := m.Txn(context.TODO())
 	tx.Insert("", "foo", "bar")
 	tx.Commit()
@@ -152,7 +165,7 @@ func TestTxn_Update(t *testing.T) {
 func TestTxn_Remove(t *testing.T) {
 	t.Parallel()
 
-	m := New()
+	m := New("memory://")
 	tx := m.Txn(context.TODO())
 	tx.Insert("", "foo", "bar")
 	tx.Commit()
@@ -167,7 +180,7 @@ func TestTxn_Remove(t *testing.T) {
 func TestTxn_Get(t *testing.T) {
 	t.Parallel()
 
-	m := New()
+	m := New("memory://")
 	tx := m.Txn(context.TODO())
 	tx.Insert("", "foo", "bar")
 	tx.Commit()
@@ -214,7 +227,7 @@ func TestTxn_Get(t *testing.T) {
 func TestTxn_List(t *testing.T) {
 	t.Parallel()
 
-	m := New()
+	m := New("memory://")
 	tx := m.Txn(context.TODO())
 	tx.Insert("", "foo", "bar")
 	tx.Commit()
@@ -223,7 +236,7 @@ func TestTxn_List(t *testing.T) {
 		tx := m.Txn(context.TODO())
 		defer tx.Rollback()
 		var v []string
-		assert.NotNil(t, tx.List("", &v, db.Limit(0)))
+		assert.NotNil(t, tx.List("", &v, database.Limit(0)))
 	})
 
 	t.Run("read batch size exhausted", func(t *testing.T) {

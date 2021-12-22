@@ -1,16 +1,13 @@
-package db
+package database
 
 import (
 	"context"
 	"database/sql"
-	"database/sql/driver"
 	"fmt"
 	"io/fs"
 	"regexp"
 	"strings"
 	"time"
-
-	"github.com/go-redis/redis/v8"
 )
 
 const (
@@ -52,17 +49,10 @@ type Txn interface {
 	Rollback() error
 }
 
-// Schema Schema for in-memory database
-type Schema map[string]map[string][]string
-
 // Config Database configuration
 type Config struct {
 	Schema             map[string]map[string][]string
-	DSN                string
-	SQL                *sql.DB
 	SQLOpenFunc        func(driverName, dataSourceName string) (*sql.DB, error)
-	SQLTraceDriver     driver.Driver
-	DriverName         string
 	MaxConns           int
 	MaxConnLifetime    time.Duration
 	MaxIdleLifetime    time.Duration
@@ -70,7 +60,6 @@ type Config struct {
 	MigrationDirectory string
 	MigrationTable     string
 	PlaceholderPrefix  string
-	RedisOptions       redis.Options
 }
 
 // ConfigWith Configure the database with custom ops
@@ -91,31 +80,10 @@ func ConfigWith(opts []Option) Config {
 // Option A database option
 type Option func(*Config)
 
-// RDB In-memory database schema option
-func RDB(o Schema) Option {
+// Storage defines the logical schema for the in-memory database
+func Storage(o Schema) Option {
 	return func(config *Config) {
 		config.Schema = o
-	}
-}
-
-// DSN Database DSN option
-func DSN(o string) Option {
-	return func(config *Config) {
-		config.DSN = o
-	}
-}
-
-// SQL Custom SQL database backend
-func SQL(o *sql.DB) Option {
-	return func(config *Config) {
-		config.SQL = o
-	}
-}
-
-// SQLTrace Enable logging db statements
-func SQLTrace(o driver.Driver) Option {
-	return func(config *Config) {
-		config.SQLTraceDriver = o
 	}
 }
 
@@ -123,13 +91,6 @@ func SQLTrace(o driver.Driver) Option {
 func SQLOpen(o func(driverName, dataSourceName string) (*sql.DB, error)) Option {
 	return func(config *Config) {
 		config.SQLOpenFunc = o
-	}
-}
-
-// DriverName Configure database driver name
-func DriverName(o string) Option {
-	return func(config *Config) {
-		config.DriverName = o
 	}
 }
 
@@ -154,19 +115,12 @@ func MaxConnLifetime(o time.Duration) Option {
 	}
 }
 
-// Migration Configure a database migration
-func Migration(fs fs.FS, directory, table string) Option {
+// Migrate Configure a database migration
+func Migrate(fs fs.FS, directory, table string) Option {
 	return func(config *Config) {
 		config.MigrationFS = fs
 		config.MigrationDirectory = directory
 		config.MigrationTable = table
-	}
-}
-
-// Redis Configure redis
-func Redis(o redis.Options) Option {
-	return func(config *Config) {
-		config.RedisOptions = o
 	}
 }
 
@@ -227,9 +181,8 @@ func BatchReadSize(o int) TxnOption {
 
 // Command A database command
 type Command struct {
-	Expire         bool
-	TTL            time.Duration
-	SQLPlaceholder string
+	Expire bool
+	TTL    time.Duration
 }
 
 // CommandWith Configure command with custom ops
@@ -245,37 +198,29 @@ func CommandWith(opts []CommandOption) Command {
 // CommandOption A command option
 type CommandOption func(*Command)
 
-// TTL time to live for inserts
-func TTL(o time.Duration) CommandOption {
+// Expire time to live for inserts
+func Expire(o time.Duration) CommandOption {
 	return func(cmd *Command) {
 		cmd.TTL = o
 		cmd.Expire = true
 	}
 }
 
-// CommandSQLPlaceholder Custom SQL placeholder prefix (e.g., "$")
-func CommandSQLPlaceholder(o string) CommandOption {
-	return func(cmd *Command) {
-		cmd.SQLPlaceholder = o
-	}
-}
-
 // Query Database query
 type Query struct {
-	Page           int
-	Limit          int
-	OrderBy        []string
-	Eq             []map[string]interface{}
-	NotEq          []map[string]interface{}
-	Lt             []map[string]interface{}
-	Gt             []map[string]interface{}
-	XEq            []map[string]interface{}
-	NotXEq         []map[string]interface{}
-	Tables         []Expression
-	Filters        []Expression
-	Fields         []string
-	SQLPlaceholder string
-	CacheKey       []interface{}
+	Page     int
+	Limit    int
+	OrderBy  []string
+	Eq       []map[string]interface{}
+	NotEq    []map[string]interface{}
+	Lt       []map[string]interface{}
+	Gt       []map[string]interface{}
+	XEq      []map[string]interface{}
+	NotXEq   []map[string]interface{}
+	Tables   []Expression
+	Filters  []Expression
+	Fields   []string
+	CacheKey []interface{}
 }
 
 // HasFilter checks if the query has any filter params
@@ -298,13 +243,6 @@ func QueryWith(opts []QueryOption) Query {
 
 // QueryOption A query option
 type QueryOption func(query *Query)
-
-// QuerySQLPlaceholder Custom SQL placeholder prefix (e.g., "$")
-func QuerySQLPlaceholder(o string) QueryOption {
-	return func(query *Query) {
-		query.SQLPlaceholder = o
-	}
-}
 
 // Page Set a page offset
 func Page(o int) QueryOption {

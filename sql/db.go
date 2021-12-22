@@ -3,70 +3,70 @@ package sql
 import (
 	"bytes"
 	"context"
-	"database/sql"
-	"database/sql/driver"
 	"fmt"
+	"net/url"
 	"strings"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/luna-duclos/instrumentedsql"
 	"github.com/pghq/go-tea"
 	"github.com/pressly/goose/v3"
 
-	"github.com/pghq/go-ark/db"
+	"github.com/pghq/go-ark/database"
 )
 
 // DB SQL database
 type DB struct {
 	backend *sqlx.DB
 	err     error
+	ph      placeholder
 }
 
 func (d DB) Ping(ctx context.Context) error {
 	if d.err != nil {
-		return tea.Error(d.err)
+		return tea.Stack(d.err)
 	}
 
 	return d.backend.PingContext(ctx)
 }
 
 // NewDB Create a new SQL database
-func NewDB(opts ...db.Option) *DB {
-	config := db.ConfigWith(opts)
+func NewDB(driverName string, databaseURL *url.URL, opts ...database.Option) *DB {
+	config := database.ConfigWith(opts)
 	d := DB{}
-
-	if config.SQLTraceDriver != nil {
-		trace(config.DriverName, config.SQLTraceDriver)
-		config.SQLOpenFunc = func(driverName, dataSourceName string) (*sql.DB, error) {
-			return sql.Open(fmt.Sprintf("!ark!%s", driverName), dataSourceName)
-		}
+	sdb, err := config.SQLOpenFunc(driverName, databaseURL.String())
+	if err != nil {
+		d.err = tea.Stack(err)
+		return &d
 	}
 
-	if config.SQL == nil {
-		sdb, err := config.SQLOpenFunc(config.DriverName, config.DSN)
-		if err != nil {
-			d.err = tea.Error(err)
-			return &d
+	if config.PlaceholderPrefix == "" {
+		config.PlaceholderPrefix = "$"
+		if driverName != "postgres" && driverName != "redshift" {
+			config.PlaceholderPrefix = "?"
 		}
-		config.SQL = sdb
 	}
 
 	if config.MigrationFS != nil && config.MigrationDirectory != "" {
 		goose.SetLogger(gooseLogger{})
 		goose.SetBaseFS(config.MigrationFS)
-		goose.SetTableName(config.MigrationTable)
-		if err := goose.Up(config.SQL, config.MigrationDirectory); err != nil {
-			_ = goose.Down(config.SQL, config.MigrationDirectory)
-			d.err = tea.Error(err)
+		err := goose.SetDialect(driverName)
+		if err == nil {
+			goose.SetTableName(config.MigrationTable)
+			err = goose.Up(sdb, config.MigrationDirectory)
+		}
+
+		if err != nil {
+			_ = goose.Down(sdb, config.MigrationDirectory)
+			d.err = tea.Stack(err)
 			return &d
 		}
 	}
 
-	d.backend = sqlx.NewDb(config.SQL, config.DriverName)
+	d.backend = sqlx.NewDb(sdb, driverName)
 	d.backend.SetConnMaxLifetime(config.MaxConnLifetime)
 	d.backend.SetConnMaxIdleTime(config.MaxIdleLifetime)
 	d.backend.SetMaxOpenConns(config.MaxConns)
-
+	d.ph = placeholder(config.PlaceholderPrefix)
 	return &d
 }
 
@@ -74,23 +74,23 @@ func NewDB(opts ...db.Option) *DB {
 type gooseLogger struct{}
 
 func (g gooseLogger) Fatal(v ...interface{}) {
-	tea.SendError(tea.NewError(v...))
+	tea.Log(context.Background(), "error", tea.Err(v...))
 }
 
 func (g gooseLogger) Fatalf(format string, v ...interface{}) {
-	tea.SendError(tea.NewErrorf(format, v...))
+	tea.Log(context.Background(), "error", tea.Errf(format, v...))
 }
 
 func (g gooseLogger) Print(v ...interface{}) {
-	tea.Log("info", v...)
+	tea.Log(context.Background(), "info", v...)
 }
 
 func (g gooseLogger) Println(v ...interface{}) {
-	tea.Log("info", v...)
+	tea.Log(context.Background(), "info", v...)
 }
 
 func (g gooseLogger) Printf(format string, v ...interface{}) {
-	tea.Logf("info", format, v...)
+	tea.Logf(context.Background(), "info", format, v...)
 }
 
 // placeholder placeholder prefix for replacing ?s
@@ -123,24 +123,4 @@ func (ph placeholder) ReplacePlaceholders(sql string) (string, error) {
 
 	buf.WriteString(sql)
 	return buf.String(), nil
-}
-
-// trace register a new logging hook for the driver
-func trace(driverName string, driver driver.Driver) {
-	drivers := sql.Drivers()
-	present := false
-	name := fmt.Sprintf("!ark!%s", driverName)
-	for _, d := range drivers {
-		if d == name {
-			present = true
-		}
-	}
-
-	logger := instrumentedsql.LoggerFunc(func(ctx context.Context, msg string, args ...interface{}) {
-		tea.Logf("info", "%s: %+v", msg, args)
-	})
-
-	if !present {
-		sql.Register(name, instrumentedsql.WrapDriver(driver, instrumentedsql.WithLogger(logger)))
-	}
 }
