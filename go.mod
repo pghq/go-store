@@ -8,7 +8,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.1.2
 	github.com/dgraph-io/badger/v3 v3.2103.2
 	github.com/dgraph-io/ristretto v0.1.0
-	github.com/dolthub/go-mysql-server v0.11.0
+	github.com/dolthub/go-mysql-server v0.10.0
 	github.com/go-redis/redis/v8 v8.11.4
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/jmoiron/sqlx v1.3.4
@@ -52,6 +52,7 @@ require (
 	github.com/rs/zerolog v1.25.0 // indirect
 	github.com/shopspring/decimal v0.0.0-20191130220710-360f2bc03045 // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
+	github.com/spf13/cast v1.3.0 // indirect
 	github.com/src-d/go-oniguruma v1.1.0 // indirect
 	github.com/yuin/gopher-lua v0.0.0-20200816102855-ee81675732da // indirect
 	go.opencensus.io v0.22.5 // indirect
@@ -60,7 +61,6 @@ require (
 	go.opentelemetry.io/otel/sdk v1.3.0 // indirect
 	go.opentelemetry.io/otel/trace v1.3.0 // indirect
 	golang.org/x/net v0.0.0-20211015210444-4f30a5c0130f // indirect
-	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
 	golang.org/x/sys v0.0.0-20211007075335-d3039528d8ac // indirect
 	google.golang.org/genproto v0.0.0-20190926190326-7ee9db18f195 // indirect
 	google.golang.org/grpc v1.27.0 // indirect

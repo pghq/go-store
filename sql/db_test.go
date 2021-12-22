@@ -1,3 +1,6 @@
+//go:build !race
+// +build !race
+
 package sql
 
 import (
@@ -9,14 +12,11 @@ import (
 	"os"
 	"testing"
 	"testing/fstest"
-	"time"
 
 	sqle "github.com/dolthub/go-mysql-server"
 	"github.com/dolthub/go-mysql-server/auth"
 	"github.com/dolthub/go-mysql-server/memory"
 	"github.com/dolthub/go-mysql-server/server"
-	mysql "github.com/dolthub/go-mysql-server/sql"
-	"github.com/dolthub/go-mysql-server/sql/information_schema"
 	driver "github.com/go-sql-driver/mysql"
 	"github.com/pghq/go-tea"
 	"github.com/stretchr/testify/assert"
@@ -28,8 +28,8 @@ var d *DB
 
 func TestMain(m *testing.M) {
 	tea.Testing()
-	sql.Register("tidb", driver.MySQLDriver{})
 	var teardown func()
+	sql.Register("tidb", driver.MySQLDriver{})
 	d, teardown, _ = NewTestDB()
 	defer teardown()
 	os.Exit(m.Run())
@@ -58,30 +58,12 @@ func TestNewDB(t *testing.T) {
 		assert.NotNil(t, err)
 	})
 
-	t.Run("successful migration", func(t *testing.T) {
-		fs := fstest.MapFS{
-			"migrations/00001_test.sql": &fstest.MapFile{
-				Data: []byte("-- +goose Up\nCREATE TABLE IF NOT EXISTS tests (id text);"),
-			},
-		}
-
-		_, teardown, err := NewTestDB(database.Migrate(fs, "migrations", "migrations"))
-		defer teardown()
-		assert.Nil(t, err)
-	})
-
 	t.Run("with custom SQL open", func(t *testing.T) {
 		d := NewDB("", &url.URL{}, database.SQLOpen(func(driverName, dataSourceName string) (*sql.DB, error) {
 			return &sql.DB{}, nil
 		}))
 		assert.NotNil(t, d)
 		assert.Nil(t, d.err)
-	})
-
-	t.Run("with custom options", func(t *testing.T) {
-		_, teardown, err := NewTestDB(database.MaxConns(100), database.MaxConnLifetime(time.Minute), database.MaxIdleLifetime(time.Minute))
-		defer teardown()
-		assert.Nil(t, err)
 	})
 }
 
@@ -359,13 +341,16 @@ func TestTxn_List(t *testing.T) {
 }
 
 // NewTestDB creates a new test database
+// data races when spinning up mysql servers
+// https://github.com/dolthub/go-mysql-server/issues/562
 func NewTestDB(opts ...database.Option) (*DB, func(), error) {
 	config := server.Config{
 		Protocol: "tcp",
 		Address:  ":0",
 		Auth:     auth.NewNativeSingle("user", "pass", auth.AllPermissions),
 	}
-	engine := sqle.NewDefault(mysql.NewDatabaseProvider(memory.NewDatabase("db"), information_schema.NewInformationSchemaDatabase()))
+	engine := sqle.NewDefault()
+	engine.AddDatabase(memory.NewDatabase("db"))
 	s, err := server.NewDefaultServer(config, engine)
 	must(err)
 	go s.Start()

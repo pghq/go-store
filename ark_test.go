@@ -20,6 +20,11 @@ func TestMain(m *testing.M) {
 func TestNew(t *testing.T) {
 	t.Parallel()
 
+	t.Run("bad dsn", func(t *testing.T) {
+		// https://stackoverflow.com/questions/48671938/go-url-parsestring-fails-with-certain-user-names-or-passwords
+		assert.NotNil(t, New("postgres://user:abc{DEf1=ghi@example.com:5432/db?sslmode=require"))
+	})
+
 	t.Run("unrecognized technology", func(t *testing.T) {
 		m := New("mongodb://")
 		assert.NotNil(t, m.Txn(context.TODO()).Commit())
