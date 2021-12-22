@@ -1,9 +1,8 @@
-package db
+package database
 
 import (
 	"testing"
 
-	"github.com/go-redis/redis/v8"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -11,17 +10,12 @@ func TestOption(t *testing.T) {
 	t.Parallel()
 
 	opts := []Option{
-		RDB(Schema{}),
-		DSN(""),
-		SQL(nil),
-		SQLTrace(nil),
+		Storage(Schema{}),
 		SQLOpen(nil),
-		DriverName(""),
 		MaxConns(0),
 		MaxIdleLifetime(0),
 		MaxConnLifetime(0),
-		Migration(nil, "", ""),
-		Redis(redis.Options{}),
+		Migrate(nil, "", ""),
 	}
 	config := ConfigWith(opts)
 	assert.NotEqual(t, Config{}, config)
@@ -43,10 +37,7 @@ func TestTxnOption(t *testing.T) {
 func TestCommandOption(t *testing.T) {
 	t.Parallel()
 
-	opts := []CommandOption{
-		TTL(0),
-		CommandSQLPlaceholder(""),
-	}
+	opts := []CommandOption{Expire(0)}
 	cmd := CommandWith(opts)
 	assert.NotEqual(t, Command{}, cmd)
 }
@@ -55,7 +46,6 @@ func TestQueryOption(t *testing.T) {
 	t.Parallel()
 
 	opts := []QueryOption{
-		QuerySQLPlaceholder(""),
 		Eq("", "bar4"),
 		NotEq("", ""),
 		Fields("", ""),

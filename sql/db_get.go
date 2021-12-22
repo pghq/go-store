@@ -6,30 +6,34 @@ import (
 	"github.com/Masterminds/squirrel"
 	"github.com/pghq/go-tea"
 
-	"github.com/pghq/go-ark/db"
+	"github.com/pghq/go-ark/database"
 )
 
-func (tx txn) Get(table string, k db.Key, v interface{}, opts ...db.QueryOption) error {
+func (tx txn) Get(table string, k database.Key, v interface{}, opts ...database.QueryOption) error {
 	if tx.err != nil {
-		return tea.Error(tx.err)
+		return tea.Stack(tx.err)
 	}
 
-	query := db.QueryWith(opts)
+	query := database.QueryWith(opts)
 	stmt, args, err := squirrel.StatementBuilder.
 		Select().
 		From(table).
 		Limit(1).
 		Columns(query.Fields...).
-		PlaceholderFormat(placeholder(query.SQLPlaceholder)).
+		PlaceholderFormat(tx.ph).
 		Where(squirrel.Eq{k.Name: k.Value}).
 		ToSql()
 	if err != nil {
-		return tea.NewError(err)
+		return tea.Err(err)
 	}
 
-	if err := tx.unit.GetContext(tx.ctx, v, stmt, args...); err != nil {
+	span := tea.Nest(tx.ctx, "sql")
+	defer span.End()
+	span.Tag("statement", stmt)
+	span.Tag("arguments", args...)
+	if err := tx.unit.GetContext(span, v, stmt, args...); err != nil {
 		if err == sql.ErrNoRows {
-			return tea.NotFound(err)
+			return tea.AsErrNotFound(err)
 		}
 		return err
 	}

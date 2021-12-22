@@ -1,70 +1,69 @@
+//go:build !race
+// +build !race
+
 package sql
 
 import (
-	"bytes"
 	"context"
 	"database/sql"
 	"embed"
-	"strings"
+	"fmt"
+	"net/url"
+	"os"
 	"testing"
-	"time"
+	"testing/fstest"
 
+	sqle "github.com/dolthub/go-mysql-server"
+	"github.com/dolthub/go-mysql-server/auth"
+	"github.com/dolthub/go-mysql-server/memory"
+	"github.com/dolthub/go-mysql-server/server"
+	driver "github.com/go-sql-driver/mysql"
 	"github.com/pghq/go-tea"
-	_ "github.com/proullon/ramsql/driver"
-	ramsql "github.com/proullon/ramsql/driver"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/pghq/go-ark/db"
+	"github.com/pghq/go-ark/database"
 )
+
+var d *DB
+
+func TestMain(m *testing.M) {
+	tea.Testing()
+	var teardown func()
+	sql.Register("tidb", driver.MySQLDriver{})
+	d, teardown, _ = NewTestDB()
+	defer teardown()
+	os.Exit(m.Run())
+}
 
 func TestNewDB(t *testing.T) {
 	t.Parallel()
 
 	t.Run("bad open", func(t *testing.T) {
-		d := NewDB(db.SQLOpen(func(driverName, dataSourceName string) (*sql.DB, error) {
-			return nil, tea.NewError("bad open")
+		d := NewDB("", &url.URL{}, database.SQLOpen(func(driverName, dataSourceName string) (*sql.DB, error) {
+			return nil, tea.Err("bad open")
 		}))
 		assert.NotNil(t, d.Ping(context.TODO()))
 		assert.NotNil(t, d.Txn(context.TODO()).Commit())
 		assert.NotNil(t, d.Txn(context.TODO()).Rollback())
-		assert.NotNil(t, d.Txn(context.TODO()).Get("", db.Id(""), nil))
-		assert.NotNil(t, d.Txn(context.TODO()).Insert("", db.Id(""), nil))
-		assert.NotNil(t, d.Txn(context.TODO()).Remove("", db.Id("")))
-		assert.NotNil(t, d.Txn(context.TODO()).Update("", db.Id(""), nil))
+		assert.NotNil(t, d.Txn(context.TODO()).Get("", database.Id(""), nil))
+		assert.NotNil(t, d.Txn(context.TODO()).Insert("", database.Id(""), nil))
+		assert.NotNil(t, d.Txn(context.TODO()).Remove("", database.Id("")))
+		assert.NotNil(t, d.Txn(context.TODO()).Update("", database.Id(""), nil))
 		assert.NotNil(t, d.Txn(context.TODO()).List("", ""))
 	})
 
-	sdb, _ := sql.Open("ramsql", ":inmemory1:")
-	defer sdb.Close()
-
 	t.Run("bad migration", func(t *testing.T) {
-		d := NewDB(db.SQL(sdb), db.Migration(embed.FS{}, "migrations", "migrations"))
-		assert.NotNil(t, d.err)
-	})
-
-	t.Run("trace", func(t *testing.T) {
-		d := NewDB(db.DriverName("ramsql"), db.DSN("trace"), db.SQLTrace(ramsql.NewDriver()))
-		assert.Nil(t, d.err)
-	})
-
-	t.Run("trace again", func(t *testing.T) {
-		d := NewDB(db.DriverName("ramsql"), db.DSN("trace"), db.SQLTrace(ramsql.NewDriver()))
-		assert.Nil(t, d.err)
-		d.Ping(context.TODO())
+		_, teardown, err := NewTestDB(database.Migrate(embed.FS{}, "migrations", "migrations"))
+		defer teardown()
+		assert.NotNil(t, err)
 	})
 
 	t.Run("with custom SQL open", func(t *testing.T) {
-		d := NewDB(db.SQLOpen(func(driverName, dataSourceName string) (*sql.DB, error) {
+		d := NewDB("", &url.URL{}, database.SQLOpen(func(driverName, dataSourceName string) (*sql.DB, error) {
 			return &sql.DB{}, nil
 		}))
 		assert.NotNil(t, d)
 		assert.Nil(t, d.err)
-	})
-
-	t.Run("with custom SQL db", func(t *testing.T) {
-		d := NewDB(db.SQL(sdb), db.MaxConns(100), db.MaxConnLifetime(time.Minute), db.MaxIdleLifetime(time.Minute))
-		assert.NotNil(t, d)
-		assert.Nil(t, d.Ping(context.TODO()))
 	})
 }
 
@@ -72,39 +71,24 @@ func TestGooseLogger(t *testing.T) {
 	t.Parallel()
 
 	l := gooseLogger{}
-	var buf bytes.Buffer
-	tea.SetGlobalLogWriter(&buf)
-	defer tea.ResetGlobalLogger()
-	tea.SetGlobalLogLevel("info")
-
 	t.Run("print", func(t *testing.T) {
-		buf.Reset()
 		l.Print("an error has occurred")
-		assert.True(t, strings.Contains(buf.String(), "an error has occurred"))
 	})
 
 	t.Run("printf", func(t *testing.T) {
-		buf.Reset()
 		l.Printf("an %s has occurred", "error")
-		assert.True(t, strings.Contains(buf.String(), "an error has occurred"))
 	})
 
 	t.Run("println", func(t *testing.T) {
-		buf.Reset()
 		l.Println("an error has occurred")
-		assert.True(t, strings.Contains(buf.String(), "an error has occurred"))
 	})
 
 	t.Run("fatal", func(t *testing.T) {
-		buf.Reset()
 		l.Fatal("an error has occurred")
-		assert.True(t, strings.Contains(buf.String(), "an error has occurred"))
 	})
 
 	t.Run("fatalf", func(t *testing.T) {
-		buf.Reset()
 		l.Fatalf("an %s has occurred", "error")
-		assert.True(t, strings.Contains(buf.String(), "an error has occurred"))
 	})
 }
 
@@ -134,25 +118,20 @@ func TestPlaceholder(t *testing.T) {
 func TestDB_Txn(t *testing.T) {
 	t.Parallel()
 
-	sdb, _ := sql.Open("ramsql", ":inmemory2:")
-	defer sdb.Close()
-
-	d := NewDB(db.SQL(sdb))
-
 	t.Run("write", func(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		assert.NotNil(t, tx)
 	})
 
 	t.Run("read only", func(t *testing.T) {
-		tx := d.Txn(context.TODO(), db.ReadOnly())
+		tx := d.Txn(context.TODO(), database.ReadOnly())
 		assert.NotNil(t, tx)
 	})
 
 	t.Run("can rollback", func(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		err := tx.Rollback()
-		assert.NotNil(t, err)
+		assert.Nil(t, err)
 	})
 
 	t.Run("can commit", func(t *testing.T) {
@@ -166,44 +145,31 @@ func TestDB_Txn(t *testing.T) {
 func TestTxn_Insert(t *testing.T) {
 	t.Parallel()
 
-	sdb, _ := sql.Open("ramsql", ":inmemory3:")
-	defer sdb.Close()
-
-	sdb.Exec("CREATE TABLE tests (id TEXT)")
-
-	d := NewDB(db.SQL(sdb))
-
 	t.Run("bad value", func(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
-		err := tx.Insert("tests", db.Id(""), func() {})
+		err := tx.Insert("tests", database.Id(""), func() {})
 		assert.NotNil(t, err)
 	})
 
 	t.Run("bad sql", func(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
-		err := tx.Insert("", db.NamedKey(true, "foo"), map[string]interface{}{"id": "foo"})
+		err := tx.Insert("", database.NamedKey(true, "foo"), map[string]interface{}{"id": "foo"})
 		assert.NotNil(t, err)
 	})
 
 	t.Run("bad exec", func(t *testing.T) {
-		// XXX: https://github.com/proullon/ramsql/issues/55
-		sdb, _ := sql.Open("ramsql", ":inmemory4:")
-		defer sdb.Close()
-		d := NewDB(db.SQL(sdb))
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
-		err := tx.Insert("tests", db.NamedKey(true, "foo"), map[string]interface{}{"id": "foo", "fn": func() {}})
+		err := tx.Insert("tests", database.NamedKey(true, "foo"), map[string]interface{}{"id": "foo", "fn": func() {}})
 		assert.NotNil(t, err)
 	})
 
 	t.Run("ok", func(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
-		err := tx.Insert("tests", db.NamedKey(true, "foo"), map[string]interface{}{"id": "foo"},
-			db.CommandSQLPlaceholder("?"),
-		)
+		err := tx.Insert("tests", database.NamedKey(true, "foo"), map[string]interface{}{"id": "foo"})
 		assert.Nil(t, err)
 	})
 }
@@ -211,43 +177,32 @@ func TestTxn_Insert(t *testing.T) {
 func TestTxn_Update(t *testing.T) {
 	t.Parallel()
 
-	sdb, _ := sql.Open("ramsql", ":inmemory5:")
-	defer sdb.Close()
-
-	sdb.Exec("CREATE TABLE tests (id TEXT)")
-
-	d := NewDB(db.SQL(sdb))
-
 	t.Run("bad value", func(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
-		err := tx.Update("tests", db.NamedKey(true, "foo"), func() {})
+		err := tx.Update("tests", database.NamedKey(true, "foo"), func() {})
 		assert.NotNil(t, err)
 	})
 
 	t.Run("bad sql", func(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
-		err := tx.Update("", db.NamedKey(true, "foo"), map[string]interface{}{"id": "foo"})
+		err := tx.Update("", database.NamedKey(true, "foo"), map[string]interface{}{"id": "foo"})
 		assert.NotNil(t, err)
 	})
 
 	t.Run("bad exec", func(t *testing.T) {
-		// XXX: https://github.com/proullon/ramsql/issues/55
-		sdb, _ := sql.Open("ramsql", ":inmemory6:")
-		defer sdb.Close()
-		d := NewDB(db.SQL(sdb))
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
-		err := tx.Update("tests", db.NamedKey(true, "foo"), map[string]interface{}{"id": "foo", "fn": func() {}})
+		err := tx.Update("tests", database.NamedKey(true, "foo"), map[string]interface{}{"id": "foo", "fn": func() {}})
 		assert.NotNil(t, err)
 	})
 
 	t.Run("ok", func(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
-		tx.Insert("tests", db.NamedKey(true, "foo"), map[string]interface{}{"id": "foo"})
-		err := tx.Update("tests", db.NamedKey(true, "foo"), map[string]interface{}{"id": "foo"})
+		tx.Insert("tests", database.NamedKey(true, "foo"), map[string]interface{}{"id": "foo"})
+		err := tx.Update("tests", database.NamedKey(true, "foo"), map[string]interface{}{"id": "foo"})
 		assert.Nil(t, err)
 	})
 }
@@ -255,35 +210,24 @@ func TestTxn_Update(t *testing.T) {
 func TestTxn_Get(t *testing.T) {
 	t.Parallel()
 
-	sdb, _ := sql.Open("ramsql", ":inmemory7:")
-	defer sdb.Close()
-
-	sdb.Exec("CREATE TABLE tests (id TEXT, name TEXT)")
-
-	d := NewDB(db.SQL(sdb))
-
 	t.Run("missing key name", func(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
-		err := tx.Get("tests", db.NamedKey(true, "foo"), nil)
+		err := tx.Get("tests", database.NamedKey(true, "foo"), nil)
 		assert.NotNil(t, err)
 	})
 
 	t.Run("bad sql", func(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
-		err := tx.Get("", db.NamedKey(true, "foo"), nil)
+		err := tx.Get("", database.NamedKey(true, "foo"), nil)
 		assert.NotNil(t, err)
 	})
 
 	t.Run("bad exec", func(t *testing.T) {
-		// XXX: https://github.com/proullon/ramsql/issues/55
-		sdb, _ := sql.Open("ramsql", ":inmemory8:")
-		defer sdb.Close()
-		d := NewDB(db.SQL(sdb))
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
-		err := tx.Get("tests", db.NamedKey(true, "foo"), nil, db.Fields("id"))
+		err := tx.Get("tests", database.NamedKey(true, "foo"), nil, database.Fields("id"))
 		assert.NotNil(t, err)
 	})
 
@@ -291,7 +235,7 @@ func TestTxn_Get(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
 		var id string
-		err := tx.Get("tests", db.NamedKey(true, "not found"), &id, db.Fields("id"))
+		err := tx.Get("tests", database.NamedKey(true, "not found"), &id, database.Fields("id"))
 		assert.NotNil(t, err)
 		assert.False(t, tea.IsFatal(err))
 	})
@@ -299,9 +243,9 @@ func TestTxn_Get(t *testing.T) {
 	t.Run("ok for single field", func(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
-		tx.Insert("tests", db.NamedKey(true, "foo1"), map[string]interface{}{"id": "foo1"})
+		tx.Insert("tests", database.NamedKey(true, "foo1"), map[string]interface{}{"id": "foo1"})
 		var id string
-		err := tx.Get("tests", db.NamedKey(true, "foo1"), &id, db.Fields("id"))
+		err := tx.Get("tests", database.NamedKey(true, "foo1"), &id, database.Fields("id"))
 		assert.Nil(t, err)
 		assert.Equal(t, "foo1", id)
 	})
@@ -309,65 +253,40 @@ func TestTxn_Get(t *testing.T) {
 	t.Run("ok for multiple fields", func(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
-		tx.Insert("tests", db.NamedKey(true, "foo2"), map[string]interface{}{"id": "foo2", "name": "bar"})
+		tx.Insert("tests", database.NamedKey(true, "foo2"), map[string]interface{}{"id": "foo2", "name": "bar"})
 		type data struct {
 			Id   *string `db:"id"`
 			Name *string `db:"name"`
 		}
 		var d data
-		err := tx.Get("tests", db.NamedKey(true, "foo2"), &d, db.Fields("id", "name"))
+		err := tx.Get("tests", database.NamedKey(true, "foo2"), &d, database.Fields("id", "name"))
 		assert.Nil(t, err)
 		assert.Equal(t, "foo2", *d.Id)
-		assert.Equal(t, "bar", *d.Name)
+		assert.Equal(t, "bar2", *d.Name)
 	})
 }
 
 func TestTxn_Remove(t *testing.T) {
 	t.Parallel()
 
-	sdb, _ := sql.Open("ramsql", ":inmemory9:")
-	defer sdb.Close()
-
-	sdb.Exec("CREATE TABLE tests (id TEXT)")
-
-	d := NewDB(db.SQL(sdb))
-
 	t.Run("bad sql", func(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
-		err := tx.Remove("", db.NamedKey(true, "foo"))
-		assert.NotNil(t, err)
-	})
-
-	t.Run("bad exec", func(t *testing.T) {
-		// XXX: https://github.com/proullon/ramsql/issues/55
-		sdb, _ := sql.Open("ramsql", ":inmemory10:")
-		defer sdb.Close()
-		d := NewDB(db.SQL(sdb))
-		tx := d.Txn(context.TODO())
-		defer tx.Rollback()
-		err := tx.Remove("tests", db.NamedKey(true, "foo"))
+		err := tx.Remove("", database.NamedKey(true, "foo"))
 		assert.NotNil(t, err)
 	})
 
 	t.Run("ok", func(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
-		tx.Insert("tests", db.NamedKey(true, "foo"), map[string]interface{}{"id": "foo"})
-		err := tx.Remove("tests", db.NamedKey(true, "foo"))
+		tx.Insert("tests", database.NamedKey(true, "foo"), map[string]interface{}{"id": "foo"})
+		err := tx.Remove("tests", database.NamedKey(true, "foo"))
 		assert.Nil(t, err)
 	})
 }
 
 func TestTxn_List(t *testing.T) {
 	t.Parallel()
-
-	sdb, _ := sql.Open("ramsql", ":inmemory11:")
-	defer sdb.Close()
-
-	sdb.Exec("CREATE TABLE tests (id TEXT, name TEXT, num INT)")
-
-	d := NewDB(db.SQL(sdb))
 
 	t.Run("bad sql", func(t *testing.T) {
 		tx := d.Txn(context.TODO())
@@ -377,23 +296,19 @@ func TestTxn_List(t *testing.T) {
 	})
 
 	t.Run("bad exec", func(t *testing.T) {
-		// XXX: https://github.com/proullon/ramsql/issues/55
-		sdb, _ := sql.Open("ramsql", ":inmemory12:")
-		defer sdb.Close()
-		d := NewDB(db.SQL(sdb))
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
-		err := tx.List("tests", nil, db.Fields("id"))
+		err := tx.List("tests", nil, database.Fields("id"))
 		assert.NotNil(t, err)
 	})
 
 	t.Run("ok for single field", func(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
-		tx.Insert("tests", db.NamedKey(true, "foo1"), map[string]interface{}{"id": "foo1", "name": "bar1"})
-		tx.Insert("tests", db.NamedKey(true, "foo2"), map[string]interface{}{"id": "foo2", "name": "bar2"})
+		tx.Insert("tests", database.NamedKey(true, "foo1"), map[string]interface{}{"id": "foo1", "name": "bar1"})
+		tx.Insert("tests", database.NamedKey(true, "foo2"), map[string]interface{}{"id": "foo2", "name": "bar2"})
 		var ids []string
-		err := tx.List("tests", &ids, db.Eq("name", "bar2"), db.Fields("id"))
+		err := tx.List("tests", &ids, database.Eq("tests.name", "bar2"), database.Fields("id"))
 		assert.Nil(t, err)
 		assert.Equal(t, []string{"foo2"}, ids)
 	})
@@ -401,30 +316,61 @@ func TestTxn_List(t *testing.T) {
 	t.Run("uses opts", func(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
-		tx.Insert("tests", db.NamedKey(true, "foo3"), map[string]interface{}{"id": "foo3", "name": "bar3"})
-		tx.Insert("tests", db.NamedKey(true, "foo4"), map[string]interface{}{"id": "foo4", "name": "bar4", "num": 1})
+		tx.Insert("tests", database.NamedKey(true, "foo3"), map[string]interface{}{"id": "foo3", "name": "bar3"})
+		tx.Insert("tests", database.NamedKey(true, "foo4"), map[string]interface{}{"id": "foo4", "name": "bar4", "num": 1})
 		type data struct {
 			Id   *string `db:"id"`
 			Name *string `db:"name"`
 		}
 		var d []data
-		opts := []db.QueryOption{
-			db.Eq("name", "bar4"),
-			db.NotEq("name", "bar4"),
-			db.Fields("id", "name"),
-			db.XEq("name", "%bar%"),
-			db.NotXEq("id", "foo3"),
-			db.Limit(1),
-			db.OrderBy("name"),
-			db.Gt("num", 0),
-			db.Lt("num", 2),
-			db.Table("units ON units.id = tests.id"),
-			db.Filter("name = 'bar4'"),
-			db.QuerySQLPlaceholder("?"),
+		opts := []database.QueryOption{
+			database.Eq("name", "bar4"),
+			database.NotEq("name", "bar4"),
+			database.Fields("tests.id", "tests.name"),
+			database.XEq("name", "%bar%"),
+			database.Limit(1),
+			database.OrderBy("name"),
+			database.Gt("num", 0),
+			database.Lt("num", 2),
+			database.Table("LEFT JOIN units ON units.id = tests.id"),
+			database.Filter("name = 'bar4'"),
 		}
 		err := tx.List("tests", &d, opts...)
-
-		// XXX: ramsql driver does not support LIKE operator
-		assert.NotNil(t, err)
+		assert.Nil(t, err)
 	})
+}
+
+// NewTestDB creates a new test database
+// data races when spinning up mysql servers
+// https://github.com/dolthub/go-mysql-server/issues/562
+func NewTestDB(opts ...database.Option) (*DB, func(), error) {
+	config := server.Config{
+		Protocol: "tcp",
+		Address:  ":0",
+		Auth:     auth.NewNativeSingle("user", "pass", auth.AllPermissions),
+	}
+	engine := sqle.NewDefault()
+	engine.AddDatabase(memory.NewDatabase("db"))
+	s, err := server.NewDefaultServer(config, engine)
+	must(err)
+	go s.Start()
+
+	dsn := fmt.Sprintf("user:pass@tcp(%s)/db", s.Listener.Addr())
+	fs := fstest.MapFS{
+		"migrations/00001_test.sql": &fstest.MapFile{
+			Data: []byte("-- +goose Up\nCREATE TABLE IF NOT EXISTS tests (id text, name text, num int);\nCREATE TABLE IF NOT EXISTS units (id text);"),
+		},
+	}
+
+	databaseURL, _ := url.Parse(dsn)
+	opts = append([]database.Option{database.Migrate(fs, "migrations", "migrations")}, opts...)
+	d := NewDB("tidb", databaseURL, opts...)
+	return d, func() { must(s.Close()) }, d.Ping(context.TODO())
+}
+
+// must be nil error or panic
+func must(err error) {
+	if err != nil {
+		panic(err)
+	}
 }

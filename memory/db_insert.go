@@ -1,20 +1,26 @@
-package inmem
+package memory
 
 import (
 	"github.com/dgraph-io/badger/v3"
 	"github.com/pghq/go-tea"
 
-	"github.com/pghq/go-ark/db"
+	"github.com/pghq/go-ark/database"
 )
 
-func (tx txn) Insert(table string, k db.Key, v interface{}, opts ...db.CommandOption) error {
+func (tx txn) Insert(table string, k database.Key, v interface{}, opts ...database.CommandOption) error {
 	doc := tx.Table(table).NewDocument(k)
 	if err := doc.SetValue(v); err != nil {
-		return tea.Error(err)
+		return tea.Stack(err)
 	}
 
+	span := tea.Nest(tx.ctx, "memory")
+	defer span.End()
+	span.Tag("operation", "insert")
+	span.Tag("key", k.String())
+	span.Tag("value", v)
+
 	var indexes [][]byte
-	cmd := db.CommandWith(opts)
+	cmd := database.CommandWith(opts)
 	for _, index := range doc.Matcher {
 		key := index.Key(doc.PrimaryKey)
 		entry := badger.NewEntry(key, nil)
@@ -23,21 +29,21 @@ func (tx txn) Insert(table string, k db.Key, v interface{}, opts ...db.CommandOp
 		}
 
 		if err := tx.writer.SetEntry(entry); err != nil {
-			return tea.Error(err)
+			return tea.Stack(err)
 		}
 
 		indexes = append(indexes, key)
 	}
 
 	if len(indexes) > 0 {
-		b, _ := db.Encode(indexes)
+		b, _ := database.Encode(indexes)
 		entry := badger.NewEntry(doc.AttributeKey, b)
 		if cmd.Expire {
 			entry = entry.WithTTL(cmd.TTL)
 		}
 
 		if err := tx.writer.SetEntry(entry); err != nil {
-			return tea.Error(err)
+			return tea.Stack(err)
 		}
 	}
 

@@ -7,11 +7,11 @@ import (
 	"github.com/go-redis/redis/v8"
 	"github.com/pghq/go-tea"
 
-	"github.com/pghq/go-ark/db"
+	"github.com/pghq/go-ark/database"
 )
 
-func (d DB) Txn(ctx context.Context, opts ...db.TxnOption) db.Txn {
-	config := db.TxnConfigWith(opts)
+func (d DB) Txn(ctx context.Context, opts ...database.TxnOption) database.Txn {
+	config := database.TxnConfigWith(opts)
 	unit := d.backend.TxPipeline()
 	if config.ReadOnly {
 		unit.ReadOnly(ctx)
@@ -37,9 +37,9 @@ func (tx txn) Commit() error {
 	defer tx.unit.Close()
 	if _, err := tx.unit.Exec(tx.ctx); err != nil {
 		if err == redis.Nil {
-			return tea.NotFound(err)
+			return tea.AsErrNotFound(err)
 		}
-		return tea.Error(err)
+		return tea.Stack(err)
 	}
 
 	for {
@@ -48,8 +48,8 @@ func (tx txn) Commit() error {
 			switch cmd := read.cmd.(type) {
 			case *redis.StringCmd:
 				b, _ := cmd.Bytes()
-				if err := db.Decode(b, read.v); err != nil {
-					return tea.Error(err)
+				if err := database.Decode(b, read.v); err != nil {
+					return tea.Stack(err)
 				}
 			case *redis.ScanCmd:
 				keys, _, _ := cmd.Result()
@@ -58,18 +58,18 @@ func (tx txn) Commit() error {
 				for _, v := range tx.backend.MGet(tx.ctx, keys...).Val() {
 					b := []byte(v.(string))
 					rv := reflect.New(reflect.TypeOf(read.v).Elem().Elem())
-					if err := db.Decode(b, &rv); err != nil {
-						return tea.Error(err)
+					if err := database.Decode(b, &rv); err != nil {
+						return tea.Stack(err)
 					}
 					values = append(values, rv.Elem())
 				}
 
 				if len(values) == 0 {
 					if read.limit == 1 {
-						return tea.NewNotFound("not found")
+						return tea.ErrNotFound("not found")
 					}
 
-					return tea.NewNoContent("not found")
+					return tea.ErrNoContent("not found")
 				}
 
 				rv := reflect.ValueOf(read.v).Elem()

@@ -2,24 +2,34 @@ package redis
 
 import (
 	"context"
+	"net/url"
 
 	"github.com/go-redis/redis/v8"
-
-	"github.com/pghq/go-ark/db"
+	"github.com/pghq/go-tea"
 )
 
 // DB Redis database
 type DB struct {
 	backend *redis.Client
+	err     error
 }
 
 func (d DB) Ping(ctx context.Context) error {
+	if d.err != nil {
+		return tea.Stack(d.err)
+	}
+
 	return d.backend.Ping(ctx).Err()
 }
 
 // NewDB Create a new Redis database
-func NewDB(opts ...db.Option) *DB {
-	config := db.ConfigWith(opts)
-	config.RedisOptions.Addr = config.DSN
-	return &DB{backend: redis.NewClient(&config.RedisOptions)}
+func NewDB(databaseURL *url.URL) *DB {
+	db := DB{}
+	opts, err := redis.ParseURL(databaseURL.String())
+	if err != nil {
+		db.err = tea.Stack(err)
+		return &db
+	}
+	db.backend = redis.NewClient(opts)
+	return &db
 }

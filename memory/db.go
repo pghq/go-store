@@ -1,4 +1,4 @@
-package inmem
+package memory
 
 import (
 	"bytes"
@@ -13,14 +13,13 @@ import (
 	"github.com/dgraph-io/badger/v3"
 	"github.com/pghq/go-tea"
 
-	"github.com/pghq/go-ark/db"
+	"github.com/pghq/go-ark/database"
 )
 
 // DB In-memory database
-// todo: auto detect primary (SQL?)
 type DB struct {
 	backend *badger.DB
-	schema  db.Schema
+	schema  database.Schema
 	tables  map[string]Table
 }
 
@@ -41,8 +40,8 @@ func (d DB) Table(name string) Table {
 }
 
 // NewDB Create a new in-memory database
-func NewDB(opts ...db.Option) *DB {
-	config := db.ConfigWith(opts)
+func NewDB(opts ...database.Option) *DB {
+	config := database.ConfigWith(opts)
 	d := DB{
 		tables: make(map[string]Table),
 		schema: config.Schema,
@@ -79,7 +78,7 @@ type Table struct {
 }
 
 // IteratorOptions gets the iterator options from the query
-func (tbl Table) IteratorOptions(query db.Query) IteratorOptions {
+func (tbl Table) IteratorOptions(query database.Query) IteratorOptions {
 	io := IteratorOptions{
 		badger: badger.DefaultIteratorOptions,
 	}
@@ -112,7 +111,7 @@ func (tbl Table) NewDocument(k interface{}) *Document {
 func (tbl Table) NewIndex(name string, v interface{}) (SubIndex, error) {
 	idx, present := tbl.subIndices[name]
 	if !present {
-		return SubIndex{}, tea.NewError("index not found")
+		return SubIndex{}, tea.Err("index not found")
 	}
 	return idx.Build(v), nil
 }
@@ -137,7 +136,7 @@ type Document struct {
 func (doc *Document) SetValue(v interface{}) error {
 	var buf bytes.Buffer
 	if err := gob.NewEncoder(&buf).Encode(v); err != nil {
-		return tea.Error(err)
+		return tea.Stack(err)
 	}
 	doc.Value = buf.Bytes()
 	doc.Matcher = NewAttributes(v, doc.table.subIndices)
@@ -146,14 +145,14 @@ func (doc *Document) SetValue(v interface{}) error {
 
 // Bytes encodes the document to bytes
 func (doc *Document) Bytes() []byte {
-	b, _ := db.Encode(doc)
+	b, _ := database.Encode(doc)
 	return b
 }
 
 // Decode bytes into document
 func (doc *Document) Decode(b []byte) error {
-	if err := db.Decode(b, doc); err != nil {
-		return tea.Error(err)
+	if err := database.Decode(b, doc); err != nil {
+		return tea.Stack(err)
 	}
 
 	return nil
@@ -165,9 +164,9 @@ func (doc *Document) Copy(v interface{}) error {
 }
 
 // Matches checks if query matches document
-func (doc *Document) Matches(query db.Query, v interface{}) bool {
+func (doc *Document) Matches(query database.Query, v interface{}) bool {
 	_ = doc.Copy(v)
-	m, _ := db.Map(v)
+	m, _ := database.Map(v)
 	return doc.Matcher.Contains(query, m)
 }
 
@@ -190,7 +189,7 @@ func NewDocument(table Table, k interface{}) *Document {
 type Attributes map[string]SubIndex
 
 // Contains checks if the query contains a value
-func (a Attributes) Contains(query db.Query, hash map[string]interface{}) bool {
+func (a Attributes) Contains(query database.Query, hash map[string]interface{}) bool {
 	if !query.HasFilter() {
 		return true
 	}
@@ -233,7 +232,7 @@ func (a Attributes) Contains(query db.Query, hash map[string]interface{}) bool {
 // NewAttributes creates a new index matcher
 func NewAttributes(v interface{}, attributes map[string]SubIndex) Attributes {
 	a := make(Attributes)
-	hash, _ := db.Map(v)
+	hash, _ := database.Map(v)
 	if len(hash) > 0 && len(attributes) > 0 {
 		for _, idx := range attributes {
 			a[idx.Name] = idx.Build(hash)

@@ -4,33 +4,36 @@ import (
 	"github.com/Masterminds/squirrel"
 	"github.com/pghq/go-tea"
 
-	"github.com/pghq/go-ark/db"
+	"github.com/pghq/go-ark/database"
 )
 
-func (tx txn) Insert(table string, k db.Key, v interface{}, opts ...db.CommandOption) error {
+func (tx txn) Insert(table string, k database.Key, v interface{}, _ ...database.CommandOption) error {
 	if tx.err != nil {
-		return tea.Error(tx.err)
+		return tea.Stack(tx.err)
 	}
 
-	cmd := db.CommandWith(opts)
-	m, err := db.Map(v)
+	m, err := database.Map(v)
 	if err != nil {
-		return tea.Error(err)
+		return tea.Stack(err)
 	}
 
 	m[k.Name] = k.Value
 	stmt, args, err := squirrel.StatementBuilder.
 		Insert(table).
 		SetMap(m).
-		PlaceholderFormat(placeholder(cmd.SQLPlaceholder)).
+		PlaceholderFormat(tx.ph).
 		ToSql()
 
 	if err != nil {
-		return tea.NewError(err)
+		return tea.Err(err)
 	}
 
-	if _, err := tx.unit.ExecContext(tx.ctx, stmt, args...); err != nil {
-		return tea.Error(err)
+	span := tea.Nest(tx.ctx, "sql")
+	defer span.End()
+	span.Tag("statement", stmt)
+	span.Tag("arguments", args...)
+	if _, err := tx.unit.ExecContext(span, stmt, args...); err != nil {
+		return tea.Stack(err)
 	}
 
 	return nil

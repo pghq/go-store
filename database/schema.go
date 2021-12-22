@@ -1,4 +1,4 @@
-package db
+package database
 
 import (
 	"reflect"
@@ -6,6 +6,10 @@ import (
 
 	"github.com/pghq/go-tea"
 )
+
+// Schema Schema for in-memory database
+// todo: rename
+type Schema map[string]map[string][]string
 
 // Map Convert a struct (w. optional tags) to a map using reflection
 // variation of: https://play.golang.org/p/2Qi3thFf--
@@ -28,7 +32,7 @@ func Map(v interface{}, transient ...interface{}) (map[string]interface{}, error
 	}
 
 	if rv.Kind() != reflect.Struct {
-		return nil, tea.NewErrorf("item of type %T is not a struct", v)
+		return nil, tea.Errf("item of type %T is not a struct", v)
 	}
 
 	item := make(map[string]interface{})
@@ -54,12 +58,12 @@ func Map(v interface{}, transient ...interface{}) (map[string]interface{}, error
 func Copy(src, dst interface{}) error {
 	dv := reflect.Indirect(reflect.ValueOf(dst))
 	if !dv.CanSet() {
-		return tea.NewError("bad destination")
+		return tea.Err("bad destination")
 	}
 
 	sv := reflect.Indirect(reflect.ValueOf(src))
 	if dv.Type() != sv.Type() {
-		return tea.NewError("type mismatch")
+		return tea.Err("type mismatch")
 	}
 
 	dv.Set(sv)

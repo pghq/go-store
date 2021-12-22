@@ -5,16 +5,18 @@ import (
 
 	"github.com/pghq/go-tea"
 
-	"github.com/pghq/go-ark/db"
+	"github.com/pghq/go-ark/database"
 )
 
-func (tx txn) Insert(table string, k db.Key, v interface{}, opts ...db.CommandOption) error {
-	b, err := db.Encode(v)
+func (tx txn) Insert(table string, k database.Key, v interface{}, opts ...database.CommandOption) error {
+	b, err := database.Encode(v)
 	if err != nil {
-		return tea.Error(err)
+		return tea.Stack(err)
 	}
 
-	cmd := db.CommandWith(opts)
-	tx.unit.Set(tx.ctx, fmt.Sprintf("%s.%s", table, k), b, cmd.TTL)
+	cmd := tx.unit.Set(tx.ctx, fmt.Sprintf("%s.%s", table, k), b, database.CommandWith(opts).TTL)
+	span := tea.Nest(tx.ctx, "redis")
+	defer span.End()
+	span.Tag("statement", cmd.String())
 	return nil
 }

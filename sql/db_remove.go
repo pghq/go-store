@@ -4,24 +4,27 @@ import (
 	"github.com/Masterminds/squirrel"
 	"github.com/pghq/go-tea"
 
-	"github.com/pghq/go-ark/db"
+	"github.com/pghq/go-ark/database"
 )
 
-func (tx txn) Remove(table string, k db.Key, opts ...db.CommandOption) error {
+func (tx txn) Remove(table string, k database.Key, _ ...database.CommandOption) error {
 	if tx.err != nil {
-		return tea.Error(tx.err)
+		return tea.Stack(tx.err)
 	}
 
-	cmd := db.CommandWith(opts)
 	stmt, args, err := squirrel.StatementBuilder.
 		Delete(table).
 		Where(squirrel.Eq{k.Name: k.Value}).
-		PlaceholderFormat(placeholder(cmd.SQLPlaceholder)).
+		PlaceholderFormat(tx.ph).
 		ToSql()
 	if err != nil {
-		return tea.NewError(err)
+		return tea.Err(err)
 	}
 
-	_, err = tx.unit.ExecContext(tx.ctx, stmt, args...)
+	span := tea.Nest(tx.ctx, "sql")
+	defer span.End()
+	span.Tag("statement", stmt)
+	span.Tag("arguments", args...)
+	_, err = tx.unit.ExecContext(span, stmt, args...)
 	return err
 }

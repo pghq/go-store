@@ -5,15 +5,18 @@ import (
 
 	"github.com/pghq/go-tea"
 
-	"github.com/pghq/go-ark/db"
+	"github.com/pghq/go-ark/database"
 )
 
-func (tx txn) Get(table string, k db.Key, v interface{}, _ ...db.QueryOption) error {
+func (tx txn) Get(table string, k database.Key, v interface{}, _ ...database.QueryOption) error {
 	cmd := tx.unit.Get(tx.ctx, fmt.Sprintf("%s.%s", table, k))
+	span := tea.Nest(tx.ctx, "redis")
+	defer span.End()
+	span.Tag("statement", cmd.String())
 	select {
 	case tx.reads <- read{cmd: cmd, v: v, limit: 1}:
 	default:
-		return tea.NewError("read batch size exhausted")
+		return tea.Err("read batch size exhausted")
 	}
 
 	return nil

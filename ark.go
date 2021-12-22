@@ -14,21 +14,23 @@ package ark
 
 import (
 	"context"
+	"net/url"
+	"strings"
 
 	"github.com/dgraph-io/ristretto"
+	"github.com/pghq/go-tea"
 
-	"github.com/pghq/go-ark/db"
-	"github.com/pghq/go-ark/inmem"
+	"github.com/pghq/go-ark/database"
+	"github.com/pghq/go-ark/memory"
 	"github.com/pghq/go-ark/redis"
 	"github.com/pghq/go-ark/sql"
 )
 
 // Mapper Data mapper for various backends
 type Mapper struct {
-	config []db.Option
-	db     db.DB
-	err    error
-	cache  *ristretto.Cache
+	db    database.DB
+	err   error
+	cache *ristretto.Cache
 }
 
 // SetError sets a mapper error
@@ -41,39 +43,30 @@ func (m Mapper) Error() error {
 	return m.err
 }
 
-// WithOpts Configure mapper with custom ops
-func (m Mapper) WithOpts(opts []Option) Mapper {
-	for _, opt := range opts {
-		opt(&m)
+// New Create a new mapper
+func New(dsn string, opts ...database.Option) *Mapper {
+	m := defaultMapper()
+	databaseURL, err := url.Parse(dsn)
+	if err != nil {
+		m.err = tea.Stack(err)
+		return &m
 	}
 
-	return m
-}
-
-// New Create a new mapper
-func New(opts ...Option) *Mapper {
-	m := defaultMapper().WithOpts(opts)
-	if m.db == nil {
-		m.db = inmem.NewDB(m.config...)
+	technology := strings.TrimSuffix(databaseURL.Scheme, ":")
+	switch technology {
+	case "mysql", "sqlite", "postgres", "redshift":
+		m.db = sql.NewDB(technology, databaseURL, opts...)
+	case "redis":
+		m.db = redis.NewDB(databaseURL)
+	case "memory":
+		m.db = memory.NewDB(opts...)
+	default:
+		m.err = tea.Err("unrecognized technology: '", technology, "'")
+		return &m
 	}
 
 	m.err = m.db.Ping(context.Background())
 	return &m
-}
-
-// NewSQL Creates a new SQL mapper
-func NewSQL(opts ...db.Option) *Mapper {
-	return New(DB(sql.NewDB(opts...)))
-}
-
-// NewRedis Creates a new Redis mapper
-func NewRedis(opts ...db.Option) *Mapper {
-	return New(DB(redis.NewDB(opts...)))
-}
-
-// NewRDB Creates a new in-memory RDB mapper
-func NewRDB(schema db.Schema, opts ...db.Option) *Mapper {
-	return New(DB(inmem.NewDB(append(opts, db.RDB(schema))...)))
 }
 
 // defaultMapper create a new default mapper
@@ -86,15 +79,5 @@ func defaultMapper() Mapper {
 
 	return Mapper{
 		cache: cache,
-	}
-}
-
-// Option for Mapper
-type Option func(m *Mapper)
-
-// DB mapper option
-func DB(o db.DB) Option {
-	return func(m *Mapper) {
-		m.db = o
 	}
 }
