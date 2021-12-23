@@ -83,14 +83,14 @@ func TestPostgresTxn_Insert(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
 		defer tx.Commit()
-		err := tx.Insert("tests", database.NamedKey(true, "foo"), map[string]interface{}{"id": "foo"})
+		err := tx.Insert("tests", database.NamedKey(true, "insert:foo"), map[string]interface{}{"id": "foo"})
 		assert.Nil(t, err)
 	})
 
 	t.Run("integrity violation", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
 		defer tx.Rollback()
-		err := tx.Insert("tests", database.NamedKey(true, "foo"), map[string]interface{}{"id": "foo"})
+		err := tx.Insert("tests", database.NamedKey(true, "insert:foo"), map[string]interface{}{"id": "foo"})
 		assert.NotNil(t, err)
 	})
 }
@@ -164,25 +164,25 @@ func TestPostgresTxn_Get(t *testing.T) {
 	t.Run("ok for single field", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
 		defer tx.Rollback()
-		tx.Insert("tests", database.NamedKey(true, "foo1"), map[string]interface{}{"id": "foo1"})
+		tx.Insert("tests", database.NamedKey(true, "get:foo1"), map[string]interface{}{"id": "foo1"})
 		var id string
-		err := tx.Get("tests", database.NamedKey(true, "foo1"), &id, database.Fields("id"))
+		err := tx.Get("tests", database.NamedKey(true, "get:foo1"), &id, database.Fields("id"))
 		assert.Nil(t, err)
-		assert.Equal(t, "foo1", id)
+		assert.Equal(t, "get:foo1", id)
 	})
 
 	t.Run("ok for multiple fields", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
 		defer tx.Rollback()
-		tx.Insert("tests", database.NamedKey(true, "foo2"), map[string]interface{}{"id": "foo2", "name": "bar2"})
+		tx.Insert("tests", database.NamedKey(true, "get:foo2"), map[string]interface{}{"id": "foo2", "name": "bar2"})
 		type data struct {
 			Id   *string `db:"id"`
 			Name *string `db:"name"`
 		}
 		var doc data
-		err := tx.Get("tests", database.NamedKey(true, "foo2"), &doc, database.Fields("id", "name"))
+		err := tx.Get("tests", database.NamedKey(true, "get:foo2"), &doc, database.Fields("id", "name"))
 		assert.Nil(t, err)
-		assert.Equal(t, "foo2", *doc.Id)
+		assert.Equal(t, "get:foo2", *doc.Id)
 		assert.Equal(t, "bar2", *doc.Name)
 	})
 }
@@ -200,8 +200,8 @@ func TestPostgresTxn_Remove(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
 		defer tx.Rollback()
-		tx.Insert("tests", database.NamedKey(true, "foo"), map[string]interface{}{"id": "foo"})
-		err := tx.Remove("tests", database.NamedKey(true, "foo"))
+		tx.Insert("tests", database.NamedKey(true, "remove:foo"), map[string]interface{}{"id": "foo"})
+		err := tx.Remove("tests", database.NamedKey(true, "remove:foo"))
 		assert.Nil(t, err)
 	})
 }
@@ -226,19 +226,19 @@ func TestPostgresTxn_List(t *testing.T) {
 	t.Run("ok for single field", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
 		defer tx.Rollback()
-		tx.Insert("tests", database.NamedKey(true, "foo1"), map[string]interface{}{"id": "foo1", "name": "bar1"})
-		tx.Insert("tests", database.NamedKey(true, "foo2"), map[string]interface{}{"id": "foo2", "name": "bar2"})
+		tx.Insert("tests", database.NamedKey(true, "list:foo1"), map[string]interface{}{"id": "foo1", "name": "bar1"})
+		tx.Insert("tests", database.NamedKey(true, "list:foo2"), map[string]interface{}{"id": "foo2", "name": "bar2"})
 		var ids []string
 		err := tx.List("tests", &ids, database.Eq("tests.name", "bar2"), database.Fields("id"))
 		assert.Nil(t, err)
-		assert.Equal(t, []string{"foo2"}, ids)
+		assert.Equal(t, []string{"list:foo2"}, ids)
 	})
 
 	t.Run("uses opts", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
 		defer tx.Rollback()
-		tx.Insert("tests", database.NamedKey(true, "foo3"), map[string]interface{}{"id": "foo3", "name": "bar3"})
-		tx.Insert("tests", database.NamedKey(true, "foo4"), map[string]interface{}{"id": "foo4", "name": "bar4", "num": 1})
+		tx.Insert("tests", database.NamedKey(true, "list:foo3"), map[string]interface{}{"id": "foo3", "name": "bar3"})
+		tx.Insert("tests", database.NamedKey(true, "list:foo4"), map[string]interface{}{"id": "foo4", "name": "bar4", "num": 1})
 		type data struct {
 			Id   *string `db:"id"`
 			Name *string `db:"name"`
