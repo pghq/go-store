@@ -249,6 +249,15 @@ func TestPostgresTxn_List(t *testing.T) {
 		assert.Nil(t, err)
 	})
 
+	t.Run("no content", func(t *testing.T) {
+		tx := postgres.Txn(context.TODO())
+		defer tx.Rollback()
+
+		var dst []map[string]interface{}
+		err := tx.List("tests", &dst, database.Field("id"), database.Eq("id", "not found"))
+		assert.NotNil(t, err)
+	})
+
 	t.Run("uses opts", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
 		defer tx.Rollback()
@@ -272,7 +281,7 @@ func TestPostgresTxn_List(t *testing.T) {
 			database.Filter("name = 'bar4'"),
 		}
 		err := tx.List("tests", &d, opts...)
-		assert.Nil(t, err)
+		assert.NotNil(t, err)
 	})
 }
 
