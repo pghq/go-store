@@ -180,7 +180,7 @@ func TestPostgresTxn_Get(t *testing.T) {
 			Name *string `db:"name"`
 		}
 		var doc data
-		err := tx.Get("tests", database.NamedKey(true, "get:foo2"), &doc, database.Fields("id", "name"))
+		err := tx.Get("tests", database.NamedKey(true, "get:foo2"), &doc, database.Fields("id"), database.Fields("name"))
 		assert.Nil(t, err)
 		assert.Equal(t, "get:foo2", *doc.Id)
 		assert.Equal(t, "bar2", *doc.Name)
@@ -247,7 +247,7 @@ func TestPostgresTxn_List(t *testing.T) {
 		opts := []database.QueryOption{
 			database.Eq("name", "bar4"),
 			database.NotEq("name", "bar4"),
-			database.Fields("tests.id", "tests.name"),
+			database.Fields("tests.id"), database.Fields("tests.name"),
 			database.XEq("name", "%bar%"),
 			database.Limit(1),
 			database.OrderBy("name"),
