@@ -21,8 +21,12 @@ func (tx txn) List(table string, v interface{}, opts ...database.QueryOption) er
 		OrderBy(query.OrderBy...).
 		PlaceholderFormat(tx.ph)
 
-	for _, field := range query.Fields {
-		builder = builder.Column(field())
+	for key, value := range query.Fields {
+		column := interface{}(squirrel.Alias(squirrel.Expr(key), value))
+		if key == value {
+			column = key
+		}
+		builder = builder.Column(column)
 	}
 
 	for _, expr := range query.Tables {
