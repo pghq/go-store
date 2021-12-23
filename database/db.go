@@ -307,8 +307,10 @@ func Table(table string, args ...interface{}) QueryOption {
 // As specifies a field alias
 func As(key, value string) QueryOption {
 	return func(query *Query) {
-		query.Fields[key] = value
-		query.CacheKey = append(query.CacheKey, "alias", key, value)
+		if _, present := query.Fields[key]; present {
+			query.Fields[key] = value
+			query.CacheKey = append(query.CacheKey, "alias", key, value)
+		}
 	}
 }
 
@@ -337,12 +339,8 @@ func Field(field interface{}) QueryOption {
 
 		newFields := make(map[string]string)
 		for _, field := range fields {
-			key := ToSnakeCase(field)
-			value, _ := query.Fields[key]
-			if value == "" {
-				value = key
-			}
-			newFields[key] = value
+			field := ToSnakeCase(field)
+			newFields[field] = field
 		}
 
 		query.Fields = newFields

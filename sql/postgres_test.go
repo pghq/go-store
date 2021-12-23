@@ -234,6 +234,21 @@ func TestPostgresTxn_List(t *testing.T) {
 		assert.Equal(t, []string{"list:foo2"}, ids)
 	})
 
+	t.Run("alias", func(t *testing.T) {
+		tx := postgres.Txn(context.TODO())
+		defer tx.Rollback()
+
+		tx.Insert("tests", database.NamedKey(true, "alias:foo3"), map[string]interface{}{"id": "foo3", "name": "bar3"})
+		tx.Insert("tests", database.NamedKey(true, "alias:foo4"), map[string]interface{}{"id": "foo4", "name": "bar4", "num": 1})
+
+		var dst []map[string]interface{}
+		err := tx.List("tests", &dst,
+			database.Field("count"),
+			database.As("count", "SELECT count(id) FROM units WHERE tests.id = units.id"),
+		)
+		assert.Nil(t, err)
+	})
+
 	t.Run("uses opts", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
 		defer tx.Rollback()
