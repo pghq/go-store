@@ -20,8 +20,12 @@ func (tx txn) Get(table string, k database.Key, v interface{}, opts ...database.
 		PlaceholderFormat(tx.ph).
 		Where(squirrel.Eq{k.Name: k.Value})
 
-	for _, field := range query.Fields {
-		builder = builder.Column(field())
+	for key, value := range query.Fields {
+		column := interface{}(squirrel.Alias(squirrel.Expr(key), value))
+		if key == value {
+			column = key
+		}
+		builder = builder.Column(column)
 	}
 
 	stmt, args, err := builder.ToSql()

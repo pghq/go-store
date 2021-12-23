@@ -45,7 +45,8 @@ func TestQueryOption(t *testing.T) {
 	opts := []QueryOption{
 		Eq("", "bar4"),
 		NotEq("", ""),
-		Fields(""),
+		As("", ""),
+		Field(""),
 		XEq("", ""),
 		NotXEq("", ""),
 		Page(0),
@@ -65,21 +66,24 @@ func TestFields(t *testing.T) {
 	t.Parallel()
 
 	t.Run("field func", func(t *testing.T) {
-		query := QueryWith([]QueryOption{Fields("field2", func() string { return "field1" }), Fields([]string{"field2"})})
+		query := QueryWith([]QueryOption{
+			As("field2", "field1"),
+			Field([]string{"field2"})},
+		)
 		assert.Len(t, query.Fields, 1)
 		assert.NotNil(t, query.Fields["field2"])
-		assert.Equal(t, "field1", query.Fields["field2"]())
+		assert.Equal(t, "field1", query.Fields["field2"])
 	})
 
 	t.Run("slice present", func(t *testing.T) {
-		query := QueryWith([]QueryOption{Fields("field1"), Fields([]string{"field2"})})
+		query := QueryWith([]QueryOption{Field("field1"), Field([]string{"field2"})})
 		assert.Len(t, query.Fields, 1)
 		assert.NotNil(t, query.Fields["field2"])
-		assert.Equal(t, "field2", query.Fields["field2"]())
+		assert.Equal(t, "field2", query.Fields["field2"])
 	})
 
 	t.Run("mixed args", func(t *testing.T) {
-		query := QueryWith([]QueryOption{Fields("field1"), Fields(map[string]interface{}{"field3": ""})})
+		query := QueryWith([]QueryOption{Field("field1"), Field(map[string]interface{}{"field3": ""})})
 		assert.Len(t, query.Fields, 2)
 		assert.Contains(t, query.Fields, "field1")
 		assert.Contains(t, query.Fields, "field3")
@@ -90,7 +94,7 @@ func TestFields(t *testing.T) {
 			Field1 int `db:"field1"`
 			Field2 int
 		}
-		query := QueryWith([]QueryOption{Fields(&v)})
+		query := QueryWith([]QueryOption{Field(&v)})
 		assert.Len(t, query.Fields, 2)
 		assert.Contains(t, query.Fields, "field1")
 		assert.Contains(t, query.Fields, "field2")
@@ -98,7 +102,7 @@ func TestFields(t *testing.T) {
 
 	t.Run("unknown type", func(t *testing.T) {
 		var v int
-		query := QueryWith([]QueryOption{Fields(&v)})
+		query := QueryWith([]QueryOption{Field(&v)})
 		assert.Len(t, query.Fields, 0)
 	})
 }

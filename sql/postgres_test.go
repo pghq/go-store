@@ -148,7 +148,7 @@ func TestPostgresTxn_Get(t *testing.T) {
 	t.Run("bad exec", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
 		defer tx.Rollback()
-		err := tx.Get("tests", database.NamedKey(true, "foo"), nil, database.Fields("id"))
+		err := tx.Get("tests", database.NamedKey(true, "foo"), nil, database.Field("id"))
 		assert.NotNil(t, err)
 	})
 
@@ -156,7 +156,7 @@ func TestPostgresTxn_Get(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
 		defer tx.Rollback()
 		var id string
-		err := tx.Get("tests", database.NamedKey(true, "not found"), &id, database.Fields("id"))
+		err := tx.Get("tests", database.NamedKey(true, "not found"), &id, database.Field("id"))
 		assert.NotNil(t, err)
 		assert.False(t, tea.IsFatal(err))
 	})
@@ -166,7 +166,7 @@ func TestPostgresTxn_Get(t *testing.T) {
 		defer tx.Rollback()
 		tx.Insert("tests", database.NamedKey(true, "get:foo1"), map[string]interface{}{"id": "foo1"})
 		var id string
-		err := tx.Get("tests", database.NamedKey(true, "get:foo1"), &id, database.Fields("id"))
+		err := tx.Get("tests", database.NamedKey(true, "get:foo1"), &id, database.Field("id"))
 		assert.Nil(t, err)
 		assert.Equal(t, "get:foo1", id)
 	})
@@ -180,7 +180,7 @@ func TestPostgresTxn_Get(t *testing.T) {
 			Name *string `db:"name"`
 		}
 		var doc data
-		err := tx.Get("tests", database.NamedKey(true, "get:foo2"), &doc, database.Fields("id"), database.Fields("name"))
+		err := tx.Get("tests", database.NamedKey(true, "get:foo2"), &doc, database.Field("id"), database.Field("name"))
 		assert.Nil(t, err)
 		assert.Equal(t, "get:foo2", *doc.Id)
 		assert.Equal(t, "bar2", *doc.Name)
@@ -219,7 +219,7 @@ func TestPostgresTxn_List(t *testing.T) {
 	t.Run("bad exec", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
 		defer tx.Rollback()
-		err := tx.List("tests", nil, database.Fields("id"))
+		err := tx.List("tests", nil, database.Field("id"))
 		assert.NotNil(t, err)
 	})
 
@@ -229,7 +229,7 @@ func TestPostgresTxn_List(t *testing.T) {
 		tx.Insert("tests", database.NamedKey(true, "list:foo1"), map[string]interface{}{"id": "foo1", "name": "bar1"})
 		tx.Insert("tests", database.NamedKey(true, "list:foo2"), map[string]interface{}{"id": "foo2", "name": "bar2"})
 		var ids []string
-		err := tx.List("tests", &ids, database.Eq("tests.name", "bar2"), database.Fields("id"))
+		err := tx.List("tests", &ids, database.Eq("tests.name", "bar2"), database.Field("id"))
 		assert.Nil(t, err)
 		assert.Equal(t, []string{"list:foo2"}, ids)
 	})
@@ -247,7 +247,7 @@ func TestPostgresTxn_List(t *testing.T) {
 		opts := []database.QueryOption{
 			database.Eq("name", "bar4"),
 			database.NotEq("name", "bar4"),
-			database.Fields("tests.id"), database.Fields("tests.name"),
+			database.Field("tests.id"), database.Field("tests.name"),
 			database.XEq("name", "%bar%"),
 			database.Limit(1),
 			database.OrderBy("name"),

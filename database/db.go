@@ -185,7 +185,7 @@ type Query struct {
 	NotXEq   []map[string]interface{}
 	Tables   []Expression
 	Filters  []Expression
-	Fields   map[string]func() string
+	Fields   map[string]string
 	CacheKey []interface{}
 }
 
@@ -197,7 +197,8 @@ func (q Query) HasFilter() bool {
 // QueryWith Configure query with custom ops
 func QueryWith(opts []QueryOption) Query {
 	query := Query{
-		Limit: DefaultLimit,
+		Limit:  DefaultLimit,
+		Fields: make(map[string]string),
 	}
 
 	for _, opt := range opts {
@@ -303,8 +304,16 @@ func Table(table string, args ...interface{}) QueryOption {
 	}
 }
 
-// Fields gets the fields to return
-func Fields(field interface{}, fieldFunc ...func() string) QueryOption {
+// As specifies a field alias
+func As(key, value string) QueryOption {
+	return func(query *Query) {
+		query.Fields[key] = value
+		query.CacheKey = append(query.CacheKey, "alias", key, value)
+	}
+}
+
+// Field gets the fields to return
+func Field(field interface{}) QueryOption {
 	return func(query *Query) {
 		var fields []string
 		for field, _ := range query.Fields {
@@ -326,18 +335,14 @@ func Fields(field interface{}, fieldFunc ...func() string) QueryOption {
 			}
 		}
 
-		newFields := make(map[string]func() string)
-		for i, field := range fields {
-			field = ToSnakeCase(field)
-			fields[i] = ToSnakeCase(field)
-			fn, _ := query.Fields[field]
-			if fn == nil {
-				fn = func() string { return field }
+		newFields := make(map[string]string)
+		for _, field := range fields {
+			key := ToSnakeCase(field)
+			value, _ := query.Fields[key]
+			if value == "" {
+				value = key
 			}
-			if len(fieldFunc) > 0 {
-				fn = fieldFunc[0]
-			}
-			newFields[field] = fn
+			newFields[key] = value
 		}
 
 		query.Fields = newFields
