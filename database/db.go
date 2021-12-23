@@ -185,7 +185,7 @@ type Query struct {
 	NotXEq   []map[string]interface{}
 	Tables   []Expression
 	Filters  []Expression
-	Fields   []string
+	Fields   map[string]func() string
 	CacheKey []interface{}
 }
 
@@ -304,10 +304,14 @@ func Table(table string, args ...interface{}) QueryOption {
 }
 
 // Fields gets the fields to return
-func Fields(args ...interface{}) QueryOption {
-	var fields []string
-	for _, arg := range args {
-		switch v := arg.(type) {
+func Fields(field interface{}, fieldFunc ...func() string) QueryOption {
+	return func(query *Query) {
+		var fields []string
+		for field, _ := range query.Fields {
+			fields = append(fields, field)
+		}
+
+		switch v := field.(type) {
 		case []string:
 			if len(v) > 0 {
 				fields = v
@@ -321,14 +325,22 @@ func Fields(args ...interface{}) QueryOption {
 				}
 			}
 		}
-	}
 
-	for i, field := range fields {
-		fields[i] = ToSnakeCase(field)
-	}
+		newFields := make(map[string]func() string)
+		for i, field := range fields {
+			field = ToSnakeCase(field)
+			fields[i] = ToSnakeCase(field)
+			fn, _ := query.Fields[field]
+			if fn == nil {
+				fn = func() string { return field }
+			}
+			if len(fieldFunc) > 0 {
+				fn = fieldFunc[0]
+			}
+			newFields[field] = fn
+		}
 
-	return func(query *Query) {
-		query.Fields = append(query.Fields, fields...)
+		query.Fields = newFields
 		query.CacheKey = append(query.CacheKey, "fields", fields)
 	}
 }

@@ -18,9 +18,12 @@ func (tx txn) List(table string, v interface{}, opts ...database.QueryOption) er
 		From(table).
 		Limit(uint64(query.Limit)).
 		Offset(uint64(query.Page)).
-		Columns(query.Fields...).
 		OrderBy(query.OrderBy...).
 		PlaceholderFormat(tx.ph)
+
+	for _, field := range query.Fields {
+		builder = builder.Column(field())
+	}
 
 	for _, expr := range query.Tables {
 		builder = builder.JoinClause(expr.Format, expr.Args...)

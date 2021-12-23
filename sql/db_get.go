@@ -13,14 +13,18 @@ func (tx txn) Get(table string, k database.Key, v interface{}, opts ...database.
 	}
 
 	query := database.QueryWith(opts)
-	stmt, args, err := squirrel.StatementBuilder.
+	builder := squirrel.StatementBuilder.
 		Select().
 		From(table).
 		Limit(1).
-		Columns(query.Fields...).
 		PlaceholderFormat(tx.ph).
-		Where(squirrel.Eq{k.Name: k.Value}).
-		ToSql()
+		Where(squirrel.Eq{k.Name: k.Value})
+
+	for _, field := range query.Fields {
+		builder = builder.Column(field())
+	}
+
+	stmt, args, err := builder.ToSql()
 	if err != nil {
 		return tea.Err(err)
 	}
