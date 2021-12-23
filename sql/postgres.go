@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"net/url"
+	"reflect"
 
 	"github.com/georgysavva/scany/pgxscan"
 	"github.com/jackc/pgconn"
@@ -84,7 +85,20 @@ func (p pgTxn) Get(ctx context.Context, dest interface{}, query string, args ...
 }
 
 func (p pgTxn) List(ctx context.Context, dest interface{}, query string, args ...interface{}) error {
-	return pgxscan.Select(ctx, p.txx, dest, query, args...)
+	err := pgxscan.Select(ctx, p.txx, dest, query, args...)
+	rv := reflect.ValueOf(dest)
+	for {
+		if rv.Kind() == reflect.Ptr {
+			rv = reflect.Indirect(rv)
+			continue
+		}
+		break
+	}
+
+	if err == nil && rv.IsNil() {
+		err = tea.ErrNoContent("no content")
+	}
+	return err
 }
 
 func (p pgTxn) Exec(ctx context.Context, query string, args ...interface{}) error {
