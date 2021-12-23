@@ -45,4 +45,5 @@ if err := tx.Commit(); err != nil{
 ## Supported Providers
 - In-Memory
 - Redis
-- SQL
+- Postgres
+- Redshift

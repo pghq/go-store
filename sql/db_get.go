@@ -1,8 +1,6 @@
 package sql
 
 import (
-	"database/sql"
-
 	"github.com/Masterminds/squirrel"
 	"github.com/pghq/go-tea"
 
@@ -31,12 +29,5 @@ func (tx txn) Get(table string, k database.Key, v interface{}, opts ...database.
 	defer span.End()
 	span.Tag("statement", stmt)
 	span.Tag("arguments", args...)
-	if err := tx.unit.GetContext(span, v, stmt, args...); err != nil {
-		if err == sql.ErrNoRows {
-			return tea.AsErrNotFound(err)
-		}
-		return err
-	}
-
-	return nil
+	return tx.uow.Get(span, v, stmt, args...)
 }

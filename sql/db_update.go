@@ -31,6 +31,5 @@ func (tx txn) Update(table string, k database.Key, v interface{}, _ ...database.
 	defer span.End()
 	span.Tag("statement", stmt)
 	span.Tag("arguments", args...)
-	_, err = tx.unit.ExecContext(span, stmt, args...)
-	return err
+	return tx.uow.Exec(span, stmt, args...)
 }

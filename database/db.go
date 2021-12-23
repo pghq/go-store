@@ -14,12 +14,6 @@ const (
 	// DefaultLimit Default limit for paginated queries
 	DefaultLimit = 50
 
-	// DefaultMaxConns Default max connections
-	DefaultMaxConns = 100
-
-	// DefaultMaxIdleLifetime Default maximum idle time
-	DefaultMaxIdleLifetime = 5 * time.Minute
-
 	// DefaultBatchReadSize Default batch read size
 	DefaultBatchReadSize = 1
 
@@ -53,9 +47,6 @@ type Txn interface {
 type Config struct {
 	Schema             map[string]map[string][]string
 	SQLOpenFunc        func(driverName, dataSourceName string) (*sql.DB, error)
-	MaxConns           int
-	MaxConnLifetime    time.Duration
-	MaxIdleLifetime    time.Duration
 	MigrationFS        fs.FS
 	MigrationDirectory string
 	MigrationTable     string
@@ -64,11 +55,7 @@ type Config struct {
 
 // ConfigWith Configure the database with custom ops
 func ConfigWith(opts []Option) Config {
-	config := Config{
-		MaxConns:        DefaultMaxConns,
-		MaxIdleLifetime: DefaultMaxIdleLifetime,
-		SQLOpenFunc:     sql.Open,
-	}
+	config := Config{SQLOpenFunc: sql.Open}
 
 	for _, opt := range opts {
 		opt(&config)
@@ -91,27 +78,6 @@ func Storage(o Schema) Option {
 func SQLOpen(o func(driverName, dataSourceName string) (*sql.DB, error)) Option {
 	return func(config *Config) {
 		config.SQLOpenFunc = o
-	}
-}
-
-// MaxConns Set maximum conns
-func MaxConns(o int) Option {
-	return func(config *Config) {
-		config.MaxConns = o
-	}
-}
-
-// MaxIdleLifetime Set max idle lifetime
-func MaxIdleLifetime(o time.Duration) Option {
-	return func(config *Config) {
-		config.MaxIdleLifetime = o
-	}
-}
-
-// MaxConnLifetime Set max conn lifetime
-func MaxConnLifetime(o time.Duration) Option {
-	return func(config *Config) {
-		config.MaxConnLifetime = o
 	}
 }
 

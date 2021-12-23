@@ -32,9 +32,5 @@ func (tx txn) Insert(table string, k database.Key, v interface{}, _ ...database.
 	defer span.End()
 	span.Tag("statement", stmt)
 	span.Tag("arguments", args...)
-	if _, err := tx.unit.ExecContext(span, stmt, args...); err != nil {
-		return tea.Stack(err)
-	}
-
-	return nil
+	return tx.uow.Exec(span, stmt, args...)
 }
