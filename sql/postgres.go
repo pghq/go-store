@@ -98,6 +98,7 @@ func (p pgTxn) List(ctx context.Context, dest interface{}, query string, args ..
 	if err == nil && rv.IsNil() {
 		err = tea.ErrNoContent("no content")
 	}
+
 	return err
 }
 

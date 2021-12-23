@@ -1,6 +1,8 @@
 package sql
 
 import (
+	"strings"
+
 	"github.com/Masterminds/squirrel"
 	"github.com/pghq/go-tea"
 
@@ -24,6 +26,9 @@ func (tx txn) List(table string, v interface{}, opts ...database.QueryOption) er
 	for key, value := range query.Fields {
 		column := interface{}(squirrel.Alias(squirrel.Expr(value), key))
 		if key == value {
+			if !strings.Contains(key, ".") {
+				key = table + "." + key
+			}
 			column = key
 		}
 		builder = builder.Column(column)
