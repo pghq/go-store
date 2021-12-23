@@ -65,7 +65,7 @@ func TestFields(t *testing.T) {
 	t.Parallel()
 
 	t.Run("field func", func(t *testing.T) {
-		query := QueryWith([]QueryOption{Fields("field2", func() string { return "field1" }), Fields([]string{"field2"})})
+		query := QueryWith([]QueryOption{Fields("field2", func(string) string { return "field1" }), Fields([]string{"field2"})})
 		assert.Len(t, query.Fields, 1)
 		assert.NotNil(t, query.Fields["field2"])
 		assert.Equal(t, "field1", query.Fields["field2"]())

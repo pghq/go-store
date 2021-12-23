@@ -304,7 +304,7 @@ func Table(table string, args ...interface{}) QueryOption {
 }
 
 // Fields gets the fields to return
-func Fields(field interface{}, fieldFunc ...func() string) QueryOption {
+func Fields(field interface{}, fieldFunc ...func(string) string) QueryOption {
 	return func(query *Query) {
 		var fields []string
 		for field, _ := range query.Fields {
@@ -335,7 +335,7 @@ func Fields(field interface{}, fieldFunc ...func() string) QueryOption {
 				fn = func() string { return field }
 			}
 			if len(fieldFunc) > 0 {
-				fn = fieldFunc[0]
+				fn = func() string { return fieldFunc[0](field) }
 			}
 			newFields[field] = fn
 		}
