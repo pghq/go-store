@@ -3,11 +3,11 @@ package sql
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"fmt"
 	"net/url"
 	"strings"
 
-	"github.com/jmoiron/sqlx"
 	"github.com/pghq/go-tea"
 	"github.com/pressly/goose/v3"
 
@@ -16,9 +16,8 @@ import (
 
 // DB SQL database
 type DB struct {
-	backend *sqlx.DB
+	backend db
 	err     error
-	ph      placeholder
 }
 
 func (d DB) Ping(ctx context.Context) error {
@@ -26,48 +25,43 @@ func (d DB) Ping(ctx context.Context) error {
 		return tea.Stack(d.err)
 	}
 
-	return d.backend.PingContext(ctx)
+	return d.backend.Ping(ctx)
 }
 
 // NewDB Create a new SQL database
-func NewDB(driverName string, databaseURL *url.URL, opts ...database.Option) *DB {
+func NewDB(dialect string, databaseURL *url.URL, opts ...database.Option) *DB {
 	config := database.ConfigWith(opts)
-	d := DB{}
-	sdb, err := config.SQLOpenFunc(driverName, databaseURL.String())
-	if err != nil {
-		d.err = tea.Stack(err)
-		return &d
+	db := DB{}
+	var err error
+	switch dialect {
+	case "postgres", "redshift":
+		db.backend, err = newPostgres(dialect, databaseURL, config)
+	default:
+		err = tea.Err("unrecognized dialect")
 	}
 
-	if config.PlaceholderPrefix == "" {
-		config.PlaceholderPrefix = "$"
-		if driverName != "postgres" && driverName != "redshift" {
-			config.PlaceholderPrefix = "?"
-		}
+	if err != nil {
+		db.err = tea.Stack(err)
+		return &db
 	}
 
 	if config.MigrationFS != nil && config.MigrationDirectory != "" {
 		goose.SetLogger(gooseLogger{})
 		goose.SetBaseFS(config.MigrationFS)
-		err := goose.SetDialect(driverName)
+		err := goose.SetDialect(dialect)
 		if err == nil {
 			goose.SetTableName(config.MigrationTable)
-			err = goose.Up(sdb, config.MigrationDirectory)
+			err = goose.Up(db.backend.SQL(), config.MigrationDirectory)
 		}
 
 		if err != nil {
-			_ = goose.Down(sdb, config.MigrationDirectory)
-			d.err = tea.Stack(err)
-			return &d
+			_ = goose.Down(db.backend.SQL(), config.MigrationDirectory)
+			db.err = tea.Stack(err)
+			return &db
 		}
 	}
 
-	d.backend = sqlx.NewDb(sdb, driverName)
-	d.backend.SetConnMaxLifetime(config.MaxConnLifetime)
-	d.backend.SetConnMaxIdleTime(config.MaxIdleLifetime)
-	d.backend.SetMaxOpenConns(config.MaxConns)
-	d.ph = placeholder(config.PlaceholderPrefix)
-	return &d
+	return &db
 }
 
 // gooseLogger Custom goose logger implementation
@@ -123,4 +117,12 @@ func (ph placeholder) ReplacePlaceholders(sql string) (string, error) {
 
 	buf.WriteString(sql)
 	return buf.String(), nil
+}
+
+type db interface {
+	Ping(ctx context.Context) error
+	Txn(ctx context.Context, opts *sql.TxOptions) (uow, error)
+	SQL() *sql.DB
+	URL() *url.URL
+	placeholder() placeholder
 }

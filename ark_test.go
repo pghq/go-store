@@ -5,7 +5,6 @@ import (
 	"os"
 	"testing"
 
-	_ "github.com/go-sql-driver/mysql"
 	"github.com/pghq/go-tea"
 	"github.com/stretchr/testify/assert"
 
@@ -25,7 +24,7 @@ func TestNew(t *testing.T) {
 		assert.NotNil(t, New("postgres://user:abc{DEf1=ghi@example.com:5432/db?sslmode=require"))
 	})
 
-	t.Run("unrecognized technology", func(t *testing.T) {
+	t.Run("unrecognized dialect", func(t *testing.T) {
 		m := New("mongodb://")
 		assert.NotNil(t, m.Txn(context.TODO()).Commit())
 		assert.NotNil(t, m.Txn(context.TODO()).Rollback())
@@ -52,15 +51,13 @@ func TestNew(t *testing.T) {
 	})
 
 	t.Run("redis", func(t *testing.T) {
-		m := New("redis://user:pass@example.com/db")
+		m := New("redis://user:pass@localhost/db")
 		assert.NotNil(t, m)
-		assert.NotNil(t, m.err)
 	})
 
 	t.Run("postgres", func(t *testing.T) {
-		m := New("postgres://user:pass@example.com/db")
+		m := New("postgres://user:pass@localhost/db")
 		assert.NotNil(t, m)
-		assert.NotNil(t, m.err)
 	})
 }
 

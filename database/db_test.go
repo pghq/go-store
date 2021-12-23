@@ -12,9 +12,6 @@ func TestOption(t *testing.T) {
 	opts := []Option{
 		Storage(Schema{}),
 		SQLOpen(nil),
-		MaxConns(0),
-		MaxIdleLifetime(0),
-		MaxConnLifetime(0),
 		Migrate(nil, "", ""),
 	}
 	config := ConfigWith(opts)

@@ -25,6 +25,5 @@ func (tx txn) Remove(table string, k database.Key, _ ...database.CommandOption) 
 	defer span.End()
 	span.Tag("statement", stmt)
 	span.Tag("arguments", args...)
-	_, err = tx.unit.ExecContext(span, stmt, args...)
-	return err
+	return tx.uow.Exec(span, stmt, args...)
 }

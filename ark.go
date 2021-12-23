@@ -52,16 +52,16 @@ func New(dsn string, opts ...database.Option) *Mapper {
 		return &m
 	}
 
-	technology := strings.TrimSuffix(databaseURL.Scheme, ":")
-	switch technology {
-	case "mysql", "sqlite", "postgres", "redshift":
-		m.db = sql.NewDB(technology, databaseURL, opts...)
+	dialect := strings.TrimSuffix(databaseURL.Scheme, ":")
+	switch dialect {
+	case "postgres", "redshift":
+		m.db = sql.NewDB(dialect, databaseURL, opts...)
 	case "redis":
 		m.db = redis.NewDB(databaseURL)
 	case "memory":
 		m.db = memory.NewDB(opts...)
 	default:
-		m.err = tea.Err("unrecognized technology: '", technology, "'")
+		m.err = tea.Err("unrecognized dialect: '", dialect, "'")
 		return &m
 	}
 
