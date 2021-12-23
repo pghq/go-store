@@ -21,7 +21,7 @@ func (tx txn) Get(table string, k database.Key, v interface{}, opts ...database.
 		Where(squirrel.Eq{k.Name: k.Value})
 
 	for key, value := range query.Fields {
-		column := interface{}(squirrel.Alias(squirrel.Expr(key), value))
+		column := interface{}(squirrel.Alias(squirrel.Expr(value), key))
 		if key == value {
 			column = key
 		}
