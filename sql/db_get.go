@@ -42,6 +42,6 @@ func (tx txn) Get(table string, k database.Key, v interface{}, opts ...database.
 	span := tea.Nest(tx.ctx, "sql")
 	defer span.End()
 	span.Tag("statement", stmt)
-	span.Tag("arguments", args...)
+	span.Tag("arguments", args)
 	return tx.uow.Get(span, v, stmt, args...)
 }
