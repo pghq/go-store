@@ -31,6 +31,6 @@ func (tx txn) Insert(table string, k database.Key, v interface{}, _ ...database.
 	span := tea.Nest(tx.ctx, "sql")
 	defer span.End()
 	span.Tag("statement", stmt)
-	span.Tag("arguments", args...)
+	span.Tag("arguments", args)
 	return tx.uow.Exec(span, stmt, args...)
 }

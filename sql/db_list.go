@@ -75,7 +75,7 @@ func (tx txn) List(table string, v interface{}, opts ...database.QueryOption) er
 	span := tea.Nest(tx.ctx, "sql")
 	defer span.End()
 	span.Tag("statement", stmt)
-	span.Tag("arguments", args...)
+	span.Tag("arguments", args)
 	if err := tx.uow.List(span, v, stmt, args...); err != nil {
 		return tea.Stack(err)
 	}
