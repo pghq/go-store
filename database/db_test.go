@@ -52,6 +52,7 @@ func TestQueryOption(t *testing.T) {
 		Page(0),
 		Limit(0),
 		OrderBy(""),
+		GroupBy(""),
 		Gt("", 0),
 		Lt("", 0),
 		Table(""),

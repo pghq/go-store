@@ -21,6 +21,7 @@ func (tx txn) List(table string, v interface{}, opts ...database.QueryOption) er
 		Limit(uint64(query.Limit)).
 		Offset(uint64(query.Page)).
 		OrderBy(query.OrderBy...).
+		GroupBy(query.GroupBy...).
 		PlaceholderFormat(tx.ph)
 
 	for key, value := range query.Fields {
