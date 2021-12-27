@@ -177,6 +177,7 @@ type Query struct {
 	Page     int
 	Limit    int
 	OrderBy  []string
+	GroupBy  []string
 	Eq       []map[string]interface{}
 	NotEq    []map[string]interface{}
 	Lt       []map[string]interface{}
@@ -232,6 +233,14 @@ func OrderBy(o string) QueryOption {
 	return func(query *Query) {
 		query.OrderBy = append(query.OrderBy, o)
 		query.CacheKey = append(query.CacheKey, "orderBy", o)
+	}
+}
+
+// GroupBy Group results
+func GroupBy(o string) QueryOption {
+	return func(query *Query) {
+		query.GroupBy = append(query.GroupBy, o)
+		query.CacheKey = append(query.CacheKey, "groupBy", o)
 	}
 }
 
