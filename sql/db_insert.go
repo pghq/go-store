@@ -17,7 +17,10 @@ func (tx txn) Insert(table string, k database.Key, v interface{}, _ ...database.
 		return tea.Stack(err)
 	}
 
-	m[k.Name] = k.Value
+	if k.Name != "" && k.Value != nil {
+		m[k.Name] = k.Value
+	}
+
 	stmt, args, err := squirrel.StatementBuilder.
 		Insert(table).
 		SetMap(m).

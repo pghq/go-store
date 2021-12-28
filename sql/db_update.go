@@ -16,7 +16,11 @@ func (tx txn) Update(table string, k database.Key, v interface{}, _ ...database.
 	if err != nil {
 		return tea.Stack(err)
 	}
-	m[k.Name] = k.Value
+
+	if k.Name != "" && k.Value != nil {
+		m[k.Name] = k.Value
+	}
+
 	stmt, args, err := squirrel.StatementBuilder.
 		Update(table).
 		SetMap(m).

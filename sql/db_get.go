@@ -19,6 +19,8 @@ func (tx txn) Get(table string, k database.Key, v interface{}, opts ...database.
 		Select().
 		From(table).
 		Limit(1).
+		OrderBy(query.OrderBy...).
+		GroupBy(query.GroupBy...).
 		PlaceholderFormat(tx.ph).
 		Where(squirrel.Eq{k.Name: k.Value})
 
