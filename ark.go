@@ -26,6 +26,11 @@ import (
 	"github.com/pghq/go-ark/sql"
 )
 
+const (
+	// Version of the mapper
+	Version = "0.0.63"
+)
+
 // Mapper Data mapper for various backends
 type Mapper struct {
 	db    database.DB

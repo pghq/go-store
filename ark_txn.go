@@ -21,6 +21,7 @@ func (m *Mapper) Txn(ctx context.Context, opts ...database.TxnOption) Txn {
 	}
 
 	span := tea.Nest(ctx, "transaction")
+	span.Tag("mapper", "v"+Version)
 	config := database.TxnConfigWith(opts)
 	return Txn{
 		Context: span,
