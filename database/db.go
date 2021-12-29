@@ -186,7 +186,7 @@ type Query struct {
 	NotXEq   []map[string]interface{}
 	Tables   []Expression
 	Filters  []Expression
-	Fields   map[string]string
+	Fields   map[string]Expression
 	CacheKey []interface{}
 }
 
@@ -199,7 +199,7 @@ func (q Query) HasFilter() bool {
 func QueryWith(opts []QueryOption) Query {
 	query := Query{
 		Limit:  DefaultLimit,
-		Fields: make(map[string]string),
+		Fields: make(map[string]Expression),
 	}
 
 	for _, opt := range opts {
@@ -314,10 +314,10 @@ func Table(table string, args ...interface{}) QueryOption {
 }
 
 // As specifies a field alias
-func As(key, value string) QueryOption {
+func As(key, value string, args ...interface{}) QueryOption {
 	return func(query *Query) {
 		if _, present := query.Fields[key]; present {
-			query.Fields[key] = value
+			query.Fields[key] = Expression{Format: value, Args: args}
 			query.CacheKey = append(query.CacheKey, "alias", key, value)
 		}
 	}
@@ -346,10 +346,10 @@ func Field(field interface{}) QueryOption {
 			}
 		}
 
-		newFields := make(map[string]string)
+		newFields := make(map[string]Expression)
 		for _, field := range fields {
 			field := ToSnakeCase(field)
-			newFields[field] = field
+			newFields[field] = Expression{Format: field}
 		}
 
 		query.Fields = newFields
