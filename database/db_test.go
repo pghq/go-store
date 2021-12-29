@@ -73,14 +73,14 @@ func TestFields(t *testing.T) {
 		})
 		assert.Len(t, query.Fields, 1)
 		assert.NotNil(t, query.Fields["field2"])
-		assert.Equal(t, "field1", query.Fields["field2"])
+		assert.Equal(t, "field1", query.Fields["field2"].Format)
 	})
 
 	t.Run("slice present", func(t *testing.T) {
 		query := QueryWith([]QueryOption{Field("field1"), Field([]string{"field2"})})
 		assert.Len(t, query.Fields, 1)
 		assert.NotNil(t, query.Fields["field2"])
-		assert.Equal(t, "field2", query.Fields["field2"])
+		assert.Equal(t, "field2", query.Fields["field2"].Format)
 	})
 
 	t.Run("mixed args", func(t *testing.T) {
