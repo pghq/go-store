@@ -31,18 +31,10 @@ func TestTxnOption(t *testing.T) {
 	assert.NotEqual(t, TxnConfig{}, config)
 }
 
-func TestCommandOption(t *testing.T) {
+func TestRequestOption(t *testing.T) {
 	t.Parallel()
 
-	opts := []CommandOption{Expire(0)}
-	cmd := CommandWith(opts)
-	assert.NotEqual(t, Command{}, cmd)
-}
-
-func TestQueryOption(t *testing.T) {
-	t.Parallel()
-
-	opts := []QueryOption{
+	opts := []RequestOption{
 		Eq("", "bar4"),
 		NotEq("", ""),
 		As("", ""),
@@ -57,37 +49,39 @@ func TestQueryOption(t *testing.T) {
 		Lt("", 0),
 		Table(""),
 		Filter(""),
+		Suffix(""),
+		Expire(0),
 	}
-	query := QueryWith(opts)
-	assert.NotEqual(t, Query{}, query)
-	assert.True(t, query.HasFilter())
+	req := NewRequest(opts)
+	assert.NotEqual(t, Request{}, req)
+	assert.True(t, req.HasFilter())
 }
 
 func TestFields(t *testing.T) {
 	t.Parallel()
 
 	t.Run("field func", func(t *testing.T) {
-		query := QueryWith([]QueryOption{
+		req := NewRequest([]RequestOption{
 			Field([]string{"field2"}),
 			As("field2", "field1"),
 		})
-		assert.Len(t, query.Fields, 1)
-		assert.NotNil(t, query.Fields["field2"])
-		assert.Equal(t, "field1", query.Fields["field2"].Format)
+		assert.Len(t, req.Fields, 1)
+		assert.NotNil(t, req.Fields["field2"])
+		assert.Equal(t, "field1", req.Fields["field2"].Format)
 	})
 
 	t.Run("slice present", func(t *testing.T) {
-		query := QueryWith([]QueryOption{Field("field1"), Field([]string{"field2"})})
-		assert.Len(t, query.Fields, 1)
-		assert.NotNil(t, query.Fields["field2"])
-		assert.Equal(t, "field2", query.Fields["field2"].Format)
+		req := NewRequest(Field("field1"), Field([]string{"field2"}))
+		assert.Len(t, req.Fields, 1)
+		assert.NotNil(t, req.Fields["field2"])
+		assert.Equal(t, "field2", req.Fields["field2"].Format)
 	})
 
 	t.Run("mixed args", func(t *testing.T) {
-		query := QueryWith([]QueryOption{Field("field1"), Field(map[string]interface{}{"field3": ""})})
-		assert.Len(t, query.Fields, 2)
-		assert.Contains(t, query.Fields, "field1")
-		assert.Contains(t, query.Fields, "field3")
+		req := NewRequest([]RequestOption{Field("field1"), Field(map[string]interface{}{"field3": ""})})
+		assert.Len(t, req.Fields, 2)
+		assert.Contains(t, req.Fields, "field1")
+		assert.Contains(t, req.Fields, "field3")
 	})
 
 	t.Run("struct", func(t *testing.T) {
@@ -95,25 +89,15 @@ func TestFields(t *testing.T) {
 			Field1 int `db:"field1"`
 			Field2 int
 		}
-		query := QueryWith([]QueryOption{Field(&v)})
-		assert.Len(t, query.Fields, 2)
-		assert.Contains(t, query.Fields, "field1")
-		assert.Contains(t, query.Fields, "field2")
+		req := NewRequest([]RequestOption{Field(&v)})
+		assert.Len(t, req.Fields, 2)
+		assert.Contains(t, req.Fields, "field1")
+		assert.Contains(t, req.Fields, "field2")
 	})
 
 	t.Run("unknown type", func(t *testing.T) {
 		var v int
-		query := QueryWith([]QueryOption{Field(&v)})
-		assert.Len(t, query.Fields, 0)
-	})
-}
-
-func TestKey_String(t *testing.T) {
-	t.Run("named key", func(t *testing.T) {
-		assert.Equal(t, "test", NamedKey("foo", "test").String())
-	})
-
-	t.Run("id key", func(t *testing.T) {
-		assert.Equal(t, "foo", Id("foo").String())
+		req := NewRequest([]RequestOption{Field(&v)})
+		assert.Len(t, req.Fields, 0)
 	})
 }

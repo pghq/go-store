@@ -1,13 +1,15 @@
 package memory
 
 import (
+	"fmt"
+
 	"github.com/dgraph-io/badger/v3"
 	"github.com/pghq/go-tea"
 
 	"github.com/pghq/go-ark/database"
 )
 
-func (tx txn) Remove(table string, k database.Key, _ ...database.CommandOption) error {
+func (tx txn) Remove(table string, k interface{}, _ ...interface{}) error {
 	if tx.reader == nil {
 		return tea.Err("write only")
 	}
@@ -15,7 +17,7 @@ func (tx txn) Remove(table string, k database.Key, _ ...database.CommandOption) 
 	span := tea.Nest(tx.ctx, "memory")
 	defer span.End()
 	span.Tag("operation", "remove")
-	span.Tag("key", k.String())
+	span.Tag("key", fmt.Sprintf("%s", k))
 	doc := tx.Table(table).NewDocument(k)
 	if table != "" {
 		if doc.AttributeKey != nil {

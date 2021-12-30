@@ -14,7 +14,7 @@ func (tx Txn) Insert(table string, k, v interface{}) error {
 		return tea.Stack(tx.err)
 	}
 
-	return tx.backend.Insert(table, database.NamedKey(v, k), v)
+	return tx.backend.Insert(table, k, v)
 }
 
 // InsertTTL insert a value with a ttl
@@ -23,5 +23,5 @@ func (tx Txn) InsertTTL(table string, k, v interface{}, expire time.Duration) er
 		return tea.Stack(tx.err)
 	}
 
-	return tx.backend.Insert(table, database.NamedKey(v, k), v, database.Expire(expire))
+	return tx.backend.Insert(table, k, v, database.Expire(expire))
 }

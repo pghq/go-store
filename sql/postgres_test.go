@@ -62,35 +62,42 @@ func TestPostgresTxn_Insert(t *testing.T) {
 	t.Run("bad value", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
 		defer tx.Rollback()
-		err := tx.Insert("tests", database.Id(""), func() {})
+		err := tx.Insert("tests", nil, func() {})
 		assert.NotNil(t, err)
 	})
 
 	t.Run("bad sql", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
 		defer tx.Rollback()
-		err := tx.Insert("", database.NamedKey(true, "foo"), map[string]interface{}{"id": "foo"})
+		err := tx.Insert("", nil, map[string]interface{}{"id": "foo"})
 		assert.NotNil(t, err)
 	})
 
 	t.Run("bad exec", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
 		defer tx.Rollback()
-		err := tx.Insert("tests", database.NamedKey(true, "foo"), map[string]interface{}{"id": "foo", "fn": func() {}})
+		err := tx.Insert("tests", nil, map[string]interface{}{"id": "foo", "fn": func() {}})
 		assert.NotNil(t, err)
 	})
 
 	t.Run("ok", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
 		defer tx.Commit()
-		err := tx.Insert("tests", database.NamedKey(true, "insert:foo"), map[string]interface{}{"id": "foo"})
+		err := tx.Insert("tests", nil, map[string]interface{}{"id": "insert:foo"})
 		assert.Nil(t, err)
 	})
 
 	t.Run("integrity violation", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
 		defer tx.Rollback()
-		err := tx.Insert("tests", database.NamedKey(true, "insert:foo"), map[string]interface{}{"id": "foo"})
+		err := tx.Insert("tests", nil, map[string]interface{}{"id": "insert:foo"})
+		assert.NotNil(t, err)
+	})
+
+	t.Run("suffix", func(t *testing.T) {
+		tx := postgres.Txn(context.TODO())
+		defer tx.Rollback()
+		err := tx.Insert("tests", nil, map[string]interface{}{"id": "insert:foo"}, database.Suffix("ON CONFLICT DO UPDATE SET id=?", "insert:foo"))
 		assert.NotNil(t, err)
 	})
 }
@@ -101,54 +108,68 @@ func TestPostgresTxn_Update(t *testing.T) {
 	t.Run("bad value", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
 		defer tx.Rollback()
-		err := tx.Update("tests", database.NamedKey(true, "foo"), func() {})
+		err := tx.Update("tests", nil, func() {})
 		assert.NotNil(t, err)
 	})
 
 	t.Run("bad sql", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
 		defer tx.Rollback()
-		err := tx.Update("", database.NamedKey(true, "foo"), map[string]interface{}{"id": "foo"})
+		err := tx.Update("", nil, map[string]interface{}{"id": "foo"})
 		assert.NotNil(t, err)
 	})
 
 	t.Run("bad exec", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
 		defer tx.Rollback()
-		err := tx.Update("tests", database.NamedKey(true, "foo"), map[string]interface{}{"id": "foo", "fn": func() {}})
+		err := tx.Update("tests", nil, map[string]interface{}{"id": "foo", "fn": func() {}})
 		assert.NotNil(t, err)
 	})
 
 	t.Run("ok", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
 		defer tx.Rollback()
-		assert.Nil(t, tx.Insert("tests", database.NamedKey(true, "ok"), map[string]interface{}{"id": "foo"}))
-		err := tx.Update("tests", database.NamedKey(true, "ok"), map[string]interface{}{"id": "foo"})
+		assert.Nil(t, tx.Insert("tests", nil, map[string]interface{}{"id": "ok"}))
+		err := tx.Update("tests", database.Eq("id", "ok"), map[string]interface{}{"id": "ok"})
 		assert.Nil(t, err)
+	})
+
+	t.Run("use opts", func(t *testing.T) {
+		tx := postgres.Txn(context.TODO())
+		defer tx.Rollback()
+
+		assert.Nil(t, tx.Insert("tests", nil, map[string]interface{}{"id": "opts:ok"}))
+		opts := []interface{}{
+			database.NotEq("name", "bar4"),
+			database.Field("tests.id"), database.Field("tests.name"),
+			database.XEq("name", "%bar%"),
+			database.Limit(1),
+			database.OrderBy("name"),
+			database.Gt("num", 0),
+			database.Lt("num", 2),
+			database.Table("LEFT JOIN units ON units.id = tests.id"),
+			database.Filter("name = 'bar4'"),
+		}
+		var doc map[string]interface{}
+		err := tx.Update("tests", database.Eq("name", "bar4"), &doc, opts...)
+		assert.NotNil(t, err)
 	})
 }
 
 func TestPostgresTxn_Get(t *testing.T) {
 	t.Parallel()
 
-	t.Run("missing key name", func(t *testing.T) {
-		tx := postgres.Txn(context.TODO())
-		defer tx.Rollback()
-		err := tx.Get("tests", database.NamedKey(true, "foo"), nil)
-		assert.NotNil(t, err)
-	})
-
 	t.Run("bad sql", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
 		defer tx.Rollback()
-		err := tx.Get("", database.NamedKey(true, "foo"), nil)
+		err := tx.Get("", nil, nil)
 		assert.NotNil(t, err)
 	})
 
 	t.Run("bad exec", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
 		defer tx.Rollback()
-		err := tx.Get("tests", database.NamedKey(true, "foo"), nil, database.Field("id"))
+		err := tx.Get("tests", nil, nil, database.Field("id"))
 		assert.NotNil(t, err)
 	})
 
@@ -156,7 +177,7 @@ func TestPostgresTxn_Get(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
 		defer tx.Rollback()
 		var id string
-		err := tx.Get("tests", database.NamedKey(true, "not found"), &id, database.Field("id"))
+		err := tx.Get("tests", database.Eq("id", "not found"), &id, database.Field("id"))
 		assert.NotNil(t, err)
 		assert.False(t, tea.IsFatal(err))
 	})
@@ -164,9 +185,9 @@ func TestPostgresTxn_Get(t *testing.T) {
 	t.Run("ok for single field", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
 		defer tx.Rollback()
-		tx.Insert("tests", database.NamedKey(true, "get:foo1"), map[string]interface{}{"id": "foo1"})
+		tx.Insert("tests", nil, map[string]interface{}{"id": "get:foo1"})
 		var id string
-		err := tx.Get("tests", database.NamedKey(true, "get:foo1"), &id, database.Field("id"))
+		err := tx.Get("tests", database.Eq("id", "get:foo1"), &id, database.Field("id"))
 		assert.Nil(t, err)
 		assert.Equal(t, "get:foo1", id)
 	})
@@ -174,16 +195,35 @@ func TestPostgresTxn_Get(t *testing.T) {
 	t.Run("ok for multiple fields", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
 		defer tx.Rollback()
-		tx.Insert("tests", database.NamedKey(true, "get:foo2"), map[string]interface{}{"id": "foo2", "name": "bar2"})
+		tx.Insert("tests", nil, map[string]interface{}{"id": "get:foo2", "name": "bar2"})
 		type data struct {
 			Id   *string `db:"id"`
 			Name *string `db:"name"`
 		}
 		var doc data
-		err := tx.Get("tests", database.NamedKey(true, "get:foo2"), &doc, database.Field("id"), database.Field("name"))
+		err := tx.Get("tests", database.Eq("id", "get:foo2"), &doc, database.Field("id"), database.Field("name"))
 		assert.Nil(t, err)
 		assert.Equal(t, "get:foo2", *doc.Id)
 		assert.Equal(t, "bar2", *doc.Name)
+	})
+
+	t.Run("use opts", func(t *testing.T) {
+		tx := postgres.Txn(context.TODO())
+		defer tx.Rollback()
+		opts := []interface{}{
+			database.NotEq("name", "bar4"),
+			database.Field("tests.id"), database.Field("tests.name"),
+			database.XEq("name", "%bar%"),
+			database.Limit(1),
+			database.OrderBy("name"),
+			database.Gt("num", 0),
+			database.Lt("num", 2),
+			database.Table("LEFT JOIN units ON units.id = tests.id"),
+			database.Filter("name = 'bar4'"),
+		}
+		var doc map[string]interface{}
+		err := tx.Get("tests", database.Eq("name", "bar4"), &doc, opts...)
+		assert.NotNil(t, err)
 	})
 }
 
@@ -193,15 +233,33 @@ func TestPostgresTxn_Remove(t *testing.T) {
 	t.Run("bad sql", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
 		defer tx.Rollback()
-		err := tx.Remove("", database.NamedKey(true, "foo"))
+		err := tx.Remove("", database.Eq("id", "foo"))
 		assert.NotNil(t, err)
 	})
 
 	t.Run("ok", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
 		defer tx.Rollback()
-		tx.Insert("tests", database.NamedKey(true, "remove:foo"), map[string]interface{}{"id": "foo"})
-		err := tx.Remove("tests", database.NamedKey(true, "remove:foo"))
+		tx.Insert("tests", nil, map[string]interface{}{"id": "remove:foo"})
+		err := tx.Remove("tests", database.Eq("id", "remove:foo"))
+		assert.Nil(t, err)
+	})
+
+	t.Run("use opts", func(t *testing.T) {
+		tx := postgres.Txn(context.TODO())
+		defer tx.Rollback()
+		opts := []interface{}{
+			database.NotEq("name", "bar4"),
+			database.Field("tests.id"), database.Field("tests.name"),
+			database.XEq("name", "%bar%"),
+			database.Limit(1),
+			database.OrderBy("name"),
+			database.Gt("num", 0),
+			database.Lt("num", 2),
+			database.Table("LEFT JOIN units ON units.id = tests.id"),
+			database.Filter("name = 'bar4'"),
+		}
+		err := tx.Remove("tests", database.Eq("id", "remove:foo"), opts...)
 		assert.Nil(t, err)
 	})
 }
@@ -226,8 +284,8 @@ func TestPostgresTxn_List(t *testing.T) {
 	t.Run("ok for single field", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
 		defer tx.Rollback()
-		tx.Insert("tests", database.NamedKey(true, "list:foo1"), map[string]interface{}{"id": "foo1", "name": "bar1"})
-		tx.Insert("tests", database.NamedKey(true, "list:foo2"), map[string]interface{}{"id": "foo2", "name": "bar2"})
+		tx.Insert("tests", nil, map[string]interface{}{"id": "foo1", "name": "bar1"})
+		tx.Insert("tests", nil, map[string]interface{}{"id": "list:foo2", "name": "bar2"})
 		var ids []string
 		err := tx.List("tests", &ids, database.Eq("tests.name", "bar2"), database.Field("id"))
 		assert.Nil(t, err)
@@ -238,8 +296,8 @@ func TestPostgresTxn_List(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
 		defer tx.Rollback()
 
-		tx.Insert("tests", database.NamedKey(true, "alias:foo3"), map[string]interface{}{"id": "foo3", "name": "bar3"})
-		tx.Insert("tests", database.NamedKey(true, "alias:foo4"), map[string]interface{}{"id": "foo4", "name": "bar4", "num": 1})
+		tx.Insert("tests", nil, map[string]interface{}{"id": "alias:foo3", "name": "bar3"})
+		tx.Insert("tests", nil, map[string]interface{}{"id": "alias:foo4", "name": "bar4", "num": 1})
 
 		var dst []map[string]interface{}
 		err := tx.List("tests", &dst,
@@ -261,14 +319,14 @@ func TestPostgresTxn_List(t *testing.T) {
 	t.Run("uses opts", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
 		defer tx.Rollback()
-		tx.Insert("tests", database.NamedKey(true, "list:foo3"), map[string]interface{}{"id": "foo3", "name": "bar3"})
-		tx.Insert("tests", database.NamedKey(true, "list:foo4"), map[string]interface{}{"id": "foo4", "name": "bar4", "num": 1})
+		tx.Insert("tests", nil, map[string]interface{}{"id": "list:foo3", "name": "bar3"})
+		tx.Insert("tests", nil, map[string]interface{}{"id": "list:foo4", "name": "bar4", "num": 1})
 		type data struct {
 			Id   *string `db:"id"`
 			Name *string `db:"name"`
 		}
 		var d []data
-		opts := []database.QueryOption{
+		opts := []interface{}{
 			database.Eq("name", "bar4"),
 			database.NotEq("name", "bar4"),
 			database.Field("tests.id"), database.Field("tests.name"),

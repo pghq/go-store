@@ -4,11 +4,9 @@ import (
 	"fmt"
 
 	"github.com/pghq/go-tea"
-
-	"github.com/pghq/go-ark/database"
 )
 
-func (tx txn) Update(table string, k database.Key, v interface{}, opts ...database.CommandOption) error {
+func (tx txn) Update(table string, k, v interface{}, args ...interface{}) error {
 	cmd := tx.backend.Exists(tx.ctx, fmt.Sprintf("%s.%s", table, k))
 	span := tea.Nest(tx.ctx, "redis")
 	defer span.End()
@@ -17,5 +15,5 @@ func (tx txn) Update(table string, k database.Key, v interface{}, opts ...databa
 		return tea.ErrNotFound("key not found")
 	}
 
-	return tx.Insert(table, k, v, opts...)
+	return tx.Insert(table, k, v, args...)
 }

@@ -28,7 +28,7 @@ import (
 
 const (
 	// Version of the mapper
-	Version = "0.0.64"
+	Version = "0.0.65"
 )
 
 // Mapper Data mapper for various backends
