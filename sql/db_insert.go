@@ -7,7 +7,7 @@ import (
 	"github.com/pghq/go-ark/database"
 )
 
-func (tx txn) Insert(table string, k database.Key, v interface{}, _ ...database.CommandOption) error {
+func (tx txn) Insert(table string, _, v interface{}, args ...interface{}) error {
 	if tx.err != nil {
 		return tea.Stack(tx.err)
 	}
@@ -17,16 +17,17 @@ func (tx txn) Insert(table string, k database.Key, v interface{}, _ ...database.
 		return tea.Stack(err)
 	}
 
-	if k.Name != "" && k.Value != nil {
-		m[k.Name] = k.Value
-	}
-
-	stmt, args, err := squirrel.StatementBuilder.
+	req := database.NewRequest(args...)
+	builder := squirrel.StatementBuilder.
 		Insert(table).
 		SetMap(m).
-		PlaceholderFormat(tx.ph).
-		ToSql()
+		PlaceholderFormat(tx.ph)
 
+	for _, suffix := range req.Suffix {
+		builder = builder.Suffix(suffix.Format, suffix.Args...)
+	}
+
+	stmt, args, err := builder.ToSql()
 	if err != nil {
 		return tea.Err(err)
 	}

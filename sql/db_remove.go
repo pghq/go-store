@@ -7,16 +7,46 @@ import (
 	"github.com/pghq/go-ark/database"
 )
 
-func (tx txn) Remove(table string, k database.Key, _ ...database.CommandOption) error {
+func (tx txn) Remove(table string, k interface{}, args ...interface{}) error {
 	if tx.err != nil {
 		return tea.Stack(tx.err)
 	}
 
-	stmt, args, err := squirrel.StatementBuilder.
+	args = append(args, k)
+	req := database.NewRequest(args...)
+	builder := squirrel.StatementBuilder.
 		Delete(table).
-		Where(squirrel.Eq{k.Name: k.Value}).
-		PlaceholderFormat(tx.ph).
-		ToSql()
+		PlaceholderFormat(tx.ph)
+
+	for _, eq := range req.Eq {
+		builder = builder.Where(squirrel.Eq(eq))
+	}
+
+	for _, neq := range req.NotEq {
+		builder = builder.Where(squirrel.NotEq(neq))
+	}
+
+	for _, lt := range req.Lt {
+		builder = builder.Where(squirrel.Lt(lt))
+	}
+
+	for _, gt := range req.Gt {
+		builder = builder.Where(squirrel.Gt(gt))
+	}
+
+	for _, xeq := range req.XEq {
+		builder = builder.Where(squirrel.Like(xeq))
+	}
+
+	for _, nxeq := range req.XEq {
+		builder = builder.Where(squirrel.NotLike(nxeq))
+	}
+
+	for _, expr := range req.Filters {
+		builder = builder.Where(squirrel.Expr(expr.Format, expr.Args...))
+	}
+
+	stmt, args, err := builder.ToSql()
 	if err != nil {
 		return tea.Err(err)
 	}

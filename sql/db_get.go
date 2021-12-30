@@ -9,22 +9,22 @@ import (
 	"github.com/pghq/go-ark/database"
 )
 
-func (tx txn) Get(table string, k database.Key, v interface{}, opts ...database.QueryOption) error {
+func (tx txn) Get(table string, k, v interface{}, args ...interface{}) error {
 	if tx.err != nil {
 		return tea.Stack(tx.err)
 	}
 
-	query := database.QueryWith(opts)
+	args = append(args, k)
+	req := database.NewRequest(args...)
 	builder := squirrel.StatementBuilder.
 		Select().
 		From(table).
 		Limit(1).
-		OrderBy(query.OrderBy...).
-		GroupBy(query.GroupBy...).
-		PlaceholderFormat(tx.ph).
-		Where(squirrel.Eq{k.Name: k.Value})
+		OrderBy(req.OrderBy...).
+		GroupBy(req.GroupBy...).
+		PlaceholderFormat(tx.ph)
 
-	for key, value := range query.Fields {
+	for key, value := range req.Fields {
 		column := interface{}(squirrel.Alias(squirrel.Expr(value.Format, value.Args...), key))
 		if key == value.Format {
 			if !strings.Contains(key, ".") {
@@ -34,6 +34,34 @@ func (tx txn) Get(table string, k database.Key, v interface{}, opts ...database.
 			column = key
 		}
 		builder = builder.Column(column)
+	}
+
+	for _, eq := range req.Eq {
+		builder = builder.Where(squirrel.Eq(eq))
+	}
+
+	for _, neq := range req.NotEq {
+		builder = builder.Where(squirrel.NotEq(neq))
+	}
+
+	for _, lt := range req.Lt {
+		builder = builder.Where(squirrel.Lt(lt))
+	}
+
+	for _, gt := range req.Gt {
+		builder = builder.Where(squirrel.Gt(gt))
+	}
+
+	for _, xeq := range req.XEq {
+		builder = builder.Where(squirrel.Like(xeq))
+	}
+
+	for _, nxeq := range req.XEq {
+		builder = builder.Where(squirrel.NotLike(nxeq))
+	}
+
+	for _, expr := range req.Filters {
+		builder = builder.Where(squirrel.Expr(expr.Format, expr.Args...))
 	}
 
 	stmt, args, err := builder.ToSql()

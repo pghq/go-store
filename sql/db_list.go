@@ -9,22 +9,22 @@ import (
 	"github.com/pghq/go-ark/database"
 )
 
-func (tx txn) List(table string, v interface{}, opts ...database.QueryOption) error {
+func (tx txn) List(table string, v interface{}, args ...interface{}) error {
 	if tx.err != nil {
 		return tea.Stack(tx.err)
 	}
 
-	query := database.QueryWith(opts)
+	req := database.NewRequest(args...)
 	builder := squirrel.StatementBuilder.
 		Select().
 		From(table).
-		Limit(uint64(query.Limit)).
-		Offset(uint64(query.Page)).
-		OrderBy(query.OrderBy...).
-		GroupBy(query.GroupBy...).
+		Limit(uint64(req.Limit)).
+		Offset(uint64(req.Page)).
+		OrderBy(req.OrderBy...).
+		GroupBy(req.GroupBy...).
 		PlaceholderFormat(tx.ph)
 
-	for key, value := range query.Fields {
+	for key, value := range req.Fields {
 		column := interface{}(squirrel.Alias(squirrel.Expr(value.Format, value.Args...), key))
 		if key == value.Format {
 			if !strings.Contains(key, ".") {
@@ -35,35 +35,35 @@ func (tx txn) List(table string, v interface{}, opts ...database.QueryOption) er
 		builder = builder.Column(column)
 	}
 
-	for _, expr := range query.Tables {
+	for _, expr := range req.Tables {
 		builder = builder.JoinClause(expr.Format, expr.Args...)
 	}
 
-	for _, eq := range query.Eq {
+	for _, eq := range req.Eq {
 		builder = builder.Where(squirrel.Eq(eq))
 	}
 
-	for _, neq := range query.NotEq {
+	for _, neq := range req.NotEq {
 		builder = builder.Where(squirrel.NotEq(neq))
 	}
 
-	for _, lt := range query.Lt {
+	for _, lt := range req.Lt {
 		builder = builder.Where(squirrel.Lt(lt))
 	}
 
-	for _, gt := range query.Gt {
+	for _, gt := range req.Gt {
 		builder = builder.Where(squirrel.Gt(gt))
 	}
 
-	for _, xeq := range query.XEq {
+	for _, xeq := range req.XEq {
 		builder = builder.Where(squirrel.Like(xeq))
 	}
 
-	for _, nxeq := range query.XEq {
+	for _, nxeq := range req.XEq {
 		builder = builder.Where(squirrel.NotLike(nxeq))
 	}
 
-	for _, expr := range query.Filters {
+	for _, expr := range req.Filters {
 		builder = builder.Where(squirrel.Expr(expr.Format, expr.Args...))
 	}
 

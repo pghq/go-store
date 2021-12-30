@@ -34,11 +34,11 @@ type DB interface {
 
 // Txn A unit of work performed within a database
 type Txn interface {
-	Get(table string, k Key, v interface{}, opts ...QueryOption) error
-	Insert(table string, k Key, v interface{}, opts ...CommandOption) error
-	Update(table string, k Key, v interface{}, opts ...CommandOption) error
-	Remove(table string, k Key, opts ...CommandOption) error
-	List(table string, v interface{}, opts ...QueryOption) error
+	Get(table string, k, v interface{}, args ...interface{}) error
+	Insert(table string, k, v interface{}, args ...interface{}) error
+	Update(table string, k, v interface{}, args ...interface{}) error
+	Remove(table string, k interface{}, args ...interface{}) error
+	List(table string, v interface{}, args ...interface{}) error
 	Commit() error
 	Rollback() error
 }
@@ -145,35 +145,16 @@ func BatchReadSize(o int) TxnOption {
 	}
 }
 
-// Command A database command
-type Command struct {
-	Expire bool
-	TTL    time.Duration
-}
-
-// CommandWith Configure command with custom ops
-func CommandWith(opts []CommandOption) Command {
-	cmd := Command{}
-	for _, opt := range opts {
-		opt(&cmd)
-	}
-
-	return cmd
-}
-
-// CommandOption A command option
-type CommandOption func(*Command)
-
 // Expire time to live for inserts
-func Expire(o time.Duration) CommandOption {
-	return func(cmd *Command) {
-		cmd.TTL = o
-		cmd.Expire = true
+func Expire(o time.Duration) RequestOption {
+	return func(req *Request) {
+		req.TTL = o
+		req.Expire = true
 	}
 }
 
-// Query Database query
-type Query struct {
+// Request Database req
+type Request struct {
 	Page     int
 	Limit    int
 	OrderBy  []string
@@ -186,148 +167,167 @@ type Query struct {
 	NotXEq   []map[string]interface{}
 	Tables   []Expression
 	Filters  []Expression
+	Suffix   []Expression
 	Fields   map[string]Expression
+	Expire   bool
+	TTL      time.Duration
 	CacheKey []interface{}
 }
 
-// HasFilter checks if the query has any filter params
-func (q Query) HasFilter() bool {
+// HasFilter checks if the req has any filter params
+func (q Request) HasFilter() bool {
 	return q.Eq != nil || q.NotEq != nil || q.Lt != nil || q.Gt != nil || q.XEq != nil || q.NotXEq != nil
 }
 
-// QueryWith Configure query with custom ops
-func QueryWith(opts []QueryOption) Query {
-	query := Query{
+// NewRequest new database request
+func NewRequest(args ...interface{}) *Request {
+	req := Request{
 		Limit:  DefaultLimit,
 		Fields: make(map[string]Expression),
 	}
 
-	for _, opt := range opts {
-		opt(&query)
+	for _, arg := range args {
+		if opts, ok := arg.([]RequestOption); ok {
+			for _, opt := range opts {
+				opt(&req)
+			}
+		}
+
+		if opt, ok := arg.(RequestOption); ok {
+			opt(&req)
+		}
 	}
 
-	return query
+	return &req
 }
 
-// QueryOption A query option
-type QueryOption func(query *Query)
+// RequestOption A req option
+type RequestOption func(req *Request)
 
 // Page Set a page offset
-func Page(o int) QueryOption {
-	return func(query *Query) {
-		query.Page = o
-		query.CacheKey = append(query.CacheKey, "page", o)
+func Page(o int) RequestOption {
+	return func(req *Request) {
+		req.Page = o
+		req.CacheKey = append(req.CacheKey, "page", o)
 	}
 }
 
 // Limit Set a result limit
-func Limit(o int) QueryOption {
-	return func(query *Query) {
-		query.Limit = o
-		query.CacheKey = append(query.CacheKey, "limit", o)
+func Limit(o int) RequestOption {
+	return func(req *Request) {
+		req.Limit = o
+		req.CacheKey = append(req.CacheKey, "limit", o)
 	}
 }
 
 // OrderBy Order results by a field
-func OrderBy(o string) QueryOption {
-	return func(query *Query) {
-		query.OrderBy = append(query.OrderBy, o)
-		query.CacheKey = append(query.CacheKey, "orderBy", o)
+func OrderBy(o string) RequestOption {
+	return func(req *Request) {
+		req.OrderBy = append(req.OrderBy, o)
+		req.CacheKey = append(req.CacheKey, "orderBy", o)
 	}
 }
 
 // GroupBy Group results
-func GroupBy(o string) QueryOption {
-	return func(query *Query) {
-		query.GroupBy = append(query.GroupBy, o)
-		query.CacheKey = append(query.CacheKey, "groupBy", o)
+func GroupBy(o string) RequestOption {
+	return func(req *Request) {
+		req.GroupBy = append(req.GroupBy, o)
+		req.CacheKey = append(req.CacheKey, "groupBy", o)
 	}
 }
 
 // Eq Filter values where field equals value
-func Eq(key string, values ...interface{}) QueryOption {
-	return func(query *Query) {
+func Eq(key string, values ...interface{}) RequestOption {
+	return func(req *Request) {
 		var v interface{} = values
 		if len(values) == 1 {
 			v = values[0]
 		}
 
-		query.Eq = append(query.Eq, map[string]interface{}{key: v})
-		query.CacheKey = append(query.CacheKey, "eq", fmt.Sprintf("%s%+v", key, v))
+		req.Eq = append(req.Eq, map[string]interface{}{key: v})
+		req.CacheKey = append(req.CacheKey, "eq", fmt.Sprintf("%s%+v", key, v))
 	}
 }
 
 // NotEq Filter values where field does not equal value
-func NotEq(key string, value interface{}) QueryOption {
-	return func(query *Query) {
-		query.NotEq = append(query.NotEq, map[string]interface{}{key: value})
-		query.CacheKey = append(query.CacheKey, "neq", fmt.Sprintf("%s%+v", key, value))
+func NotEq(key string, value interface{}) RequestOption {
+	return func(req *Request) {
+		req.NotEq = append(req.NotEq, map[string]interface{}{key: value})
+		req.CacheKey = append(req.CacheKey, "neq", fmt.Sprintf("%s%+v", key, value))
 	}
 }
 
 // Lt Filter values where field is less than value
-func Lt(key string, value interface{}) QueryOption {
-	return func(query *Query) {
-		query.Lt = append(query.Lt, map[string]interface{}{key: value})
-		query.CacheKey = append(query.CacheKey, "lt", key, value)
+func Lt(key string, value interface{}) RequestOption {
+	return func(req *Request) {
+		req.Lt = append(req.Lt, map[string]interface{}{key: value})
+		req.CacheKey = append(req.CacheKey, "lt", key, value)
 	}
 }
 
 // Gt Filter values where field is greater than value
-func Gt(key string, value interface{}) QueryOption {
-	return func(query *Query) {
-		query.Gt = append(query.Gt, map[string]interface{}{key: value})
-		query.CacheKey = append(query.CacheKey, "gt", key, value)
+func Gt(key string, value interface{}) RequestOption {
+	return func(req *Request) {
+		req.Gt = append(req.Gt, map[string]interface{}{key: value})
+		req.CacheKey = append(req.CacheKey, "gt", key, value)
 	}
 }
 
 // XEq Filter values where field matches a regular expression
-func XEq(key string, value interface{}) QueryOption {
-	return func(query *Query) {
-		query.XEq = append(query.XEq, map[string]interface{}{key: value})
-		query.CacheKey = append(query.CacheKey, "xeq", fmt.Sprintf("%s%+v", key, value))
+func XEq(key string, value interface{}) RequestOption {
+	return func(req *Request) {
+		req.XEq = append(req.XEq, map[string]interface{}{key: value})
+		req.CacheKey = append(req.CacheKey, "xeq", fmt.Sprintf("%s%+v", key, value))
 	}
 }
 
 // NotXEq Filter values where field does not match a regular expression
-func NotXEq(key string, value interface{}) QueryOption {
-	return func(query *Query) {
-		query.NotXEq = append(query.NotEq, map[string]interface{}{key: value})
-		query.CacheKey = append(query.CacheKey, "nxeq", fmt.Sprintf("%s%+v", key, value))
+func NotXEq(key string, value interface{}) RequestOption {
+	return func(req *Request) {
+		req.NotXEq = append(req.NotEq, map[string]interface{}{key: value})
+		req.CacheKey = append(req.CacheKey, "nxeq", fmt.Sprintf("%s%+v", key, value))
 	}
 }
 
 // Filter raw filter
-func Filter(filter string, args ...interface{}) QueryOption {
-	return func(query *Query) {
-		query.Filters = append(query.Filters, Expression{Format: filter, Args: args})
-		query.CacheKey = append(query.CacheKey, "filter", fmt.Sprintf("%s%+v", filter, args))
+func Filter(filter string, args ...interface{}) RequestOption {
+	return func(req *Request) {
+		req.Filters = append(req.Filters, Expression{Format: filter, Args: args})
+		req.CacheKey = append(req.CacheKey, "filter", fmt.Sprintf("%s%+v", filter, args))
+	}
+}
+
+// Suffix for queries
+func Suffix(suffix string, args ...interface{}) RequestOption {
+	return func(req *Request) {
+		req.Suffix = append(req.Suffix, Expression{Format: suffix, Args: args})
+		req.CacheKey = append(req.CacheKey, "suffix", fmt.Sprintf("%s%+v", suffix, args))
 	}
 }
 
 // Table raw filter
-func Table(table string, args ...interface{}) QueryOption {
-	return func(query *Query) {
-		query.Tables = append(query.Tables, Expression{Format: table, Args: args})
-		query.CacheKey = append(query.CacheKey, "table", fmt.Sprintf("%s%+v", table, args))
+func Table(table string, args ...interface{}) RequestOption {
+	return func(req *Request) {
+		req.Tables = append(req.Tables, Expression{Format: table, Args: args})
+		req.CacheKey = append(req.CacheKey, "table", fmt.Sprintf("%s%+v", table, args))
 	}
 }
 
 // As specifies a field alias
-func As(key, value string, args ...interface{}) QueryOption {
-	return func(query *Query) {
-		if _, present := query.Fields[key]; present {
-			query.Fields[key] = Expression{Format: value, Args: args}
-			query.CacheKey = append(query.CacheKey, "alias", key, value)
+func As(key, value string, args ...interface{}) RequestOption {
+	return func(req *Request) {
+		if _, present := req.Fields[key]; present {
+			req.Fields[key] = Expression{Format: value, Args: args}
+			req.CacheKey = append(req.CacheKey, "alias", key, value)
 		}
 	}
 }
 
 // Field gets the fields to return
-func Field(field interface{}) QueryOption {
-	return func(query *Query) {
+func Field(field interface{}) RequestOption {
+	return func(req *Request) {
 		var fields []string
-		for field, _ := range query.Fields {
+		for field, _ := range req.Fields {
 			fields = append(fields, field)
 		}
 
@@ -352,8 +352,8 @@ func Field(field interface{}) QueryOption {
 			newFields[field] = Expression{Format: field}
 		}
 
-		query.Fields = newFields
-		query.CacheKey = append(query.CacheKey, "fields", fields)
+		req.Fields = newFields
+		req.CacheKey = append(req.CacheKey, "fields", fields)
 	}
 }
 
@@ -361,29 +361,6 @@ func Field(field interface{}) QueryOption {
 type Expression struct {
 	Format string
 	Args   []interface{}
-}
-
-// Key is a database key
-type Key struct {
-	Name  string
-	Value interface{}
-}
-
-func (k Key) String() string {
-	return fmt.Sprintf("%s%s", k.Name, k.Value)
-}
-
-// NamedKey creates a new named db ky
-func NamedKey(name, k interface{}) Key {
-	return Key{
-		Name:  KeyName(name),
-		Value: k,
-	}
-}
-
-// Id creates a new string key named id
-func Id(k string) Key {
-	return NamedKey("id", k)
 }
 
 // ToSnakeCase converts a string to snake_case

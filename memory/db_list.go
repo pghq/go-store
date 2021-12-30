@@ -10,16 +10,16 @@ import (
 	"github.com/pghq/go-ark/database"
 )
 
-func (tx txn) List(table string, v interface{}, opts ...database.QueryOption) error {
+func (tx txn) List(table string, v interface{}, args ...interface{}) error {
 	if tx.reader == nil {
 		return tea.Err("write only")
 	}
 
-	query := database.QueryWith(opts)
+	req := database.NewRequest(args...)
 	span := tea.Nest(tx.ctx, "memory")
 	defer span.End()
 	span.Tag("operation", "list")
-	span.Tag("query", query)
+	span.Tag("req", req)
 
 	rv := reflect.ValueOf(v)
 	if rv.Kind() != reflect.Ptr || rv.IsNil() || !rv.IsValid() {
@@ -32,15 +32,15 @@ func (tx txn) List(table string, v interface{}, opts ...database.QueryOption) er
 	}
 
 	tbl := tx.Table(table)
-	io := tbl.IteratorOptions(query)
+	io := tbl.IteratorOptions(req)
 	it := tx.reader.NewIterator(io.badger)
 	defer it.Close()
 
 	var values []reflect.Value
-	start := query.Limit * query.Page
+	start := req.Limit * req.Page
 	i := 0
 	for it.Rewind(); it.Valid(); it.Next() {
-		if len(values) == query.Limit {
+		if len(values) == req.Limit {
 			break
 		}
 
@@ -68,7 +68,7 @@ func (tx txn) List(table string, v interface{}, opts ...database.QueryOption) er
 
 		rv := reflect.New(reflect.TypeOf(v).Elem().Elem())
 		v := rv.Interface()
-		if !doc.Matches(query, v) {
+		if !doc.Matches(req, v) {
 			continue
 		}
 
@@ -81,7 +81,7 @@ func (tx txn) List(table string, v interface{}, opts ...database.QueryOption) er
 	}
 
 	if len(values) == 0 {
-		if query.Limit == 1 {
+		if req.Limit == 1 {
 			return tea.ErrNotFound("not found")
 		}
 

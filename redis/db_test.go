@@ -86,14 +86,14 @@ func TestTxn_Insert(t *testing.T) {
 	t.Run("bad value", func(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
-		err := tx.Insert("tests", database.Id("foo"), func() {})
+		err := tx.Insert("tests", "foo", func() {})
 		assert.NotNil(t, err)
 	})
 
 	t.Run("ok", func(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
-		err := tx.Insert("tests", database.Id("foo"), map[string]interface{}{"id": "foo"})
+		err := tx.Insert("tests", "foo", map[string]interface{}{"id": "foo"})
 		assert.Nil(t, err)
 		assert.Nil(t, tx.Commit())
 	})
@@ -112,18 +112,18 @@ func TestTxn_Update(t *testing.T) {
 	t.Run("not found", func(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		defer tx.Rollback()
-		err := tx.Update("tests", database.Id("foo"), map[string]interface{}{"id": "foo"})
+		err := tx.Update("tests", "foo", map[string]interface{}{"id": "foo"})
 		assert.NotNil(t, err)
 	})
 
 	t.Run("ok", func(t *testing.T) {
 		tx := d.Txn(context.TODO())
-		tx.Insert("tests", database.Id("foo"), map[string]interface{}{"id": "foo"})
+		tx.Insert("tests", "foo", map[string]interface{}{"id": "foo"})
 		tx.Commit()
 
 		tx = d.Txn(context.TODO())
 		defer tx.Rollback()
-		err := tx.Update("tests", database.Id("foo"), map[string]interface{}{"id": "foo"})
+		err := tx.Update("tests", "foo", map[string]interface{}{"id": "foo"})
 		assert.Nil(t, err)
 	})
 }
@@ -140,17 +140,17 @@ func TestTxn_Remove(t *testing.T) {
 
 	t.Run("ok", func(t *testing.T) {
 		tx := d.Txn(context.TODO())
-		tx.Insert("tests", database.Id("foo"), map[string]interface{}{"id": "foo"})
+		tx.Insert("tests", "foo", map[string]interface{}{"id": "foo"})
 		tx.Commit()
 
 		tx = d.Txn(context.TODO())
 		defer tx.Rollback()
-		err := tx.Remove("tests", database.Id("foo"))
+		err := tx.Remove("tests", "foo")
 		assert.Nil(t, tx.Commit())
 
 		tx = d.Txn(context.TODO())
 		defer tx.Rollback()
-		err = tx.Update("tests", database.Id("foo"), map[string]interface{}{"id": "foo"})
+		err = tx.Update("tests", "foo", map[string]interface{}{"id": "foo"})
 		assert.NotNil(t, err)
 	})
 }
@@ -165,29 +165,29 @@ func TestTxn_Get(t *testing.T) {
 	databaseURL, _ := url.Parse(dsn)
 	d := NewDB(databaseURL)
 	tx := d.Txn(context.TODO())
-	tx.Insert("tests", database.Id("foo"), map[string]interface{}{"id": "foo"})
-	tx.Insert("units", database.Id("foo"), map[string]interface{}{"id": "foo"})
+	tx.Insert("tests", "foo", map[string]interface{}{"id": "foo"})
+	tx.Insert("units", "foo", map[string]interface{}{"id": "foo"})
 	tx.Commit()
 
 	t.Run("read batch size exhausted", func(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		var v map[string]interface{}
-		tx.Get("tests", database.Id("foo"), &v)
-		err := tx.Get("tests", database.Id("foo"), &v)
+		tx.Get("tests", "foo", &v)
+		err := tx.Get("tests", "foo", &v)
 		assert.NotNil(t, err)
 	})
 
 	t.Run("not found", func(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		var v map[string]interface{}
-		tx.Get("tests", database.Id("not found"), &v)
+		tx.Get("tests", "not found", &v)
 		assert.NotNil(t, tx.Commit())
 	})
 
 	t.Run("rolled back", func(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		var v map[string]interface{}
-		tx.Get("tests", database.Id("not found"), &v)
+		tx.Get("tests", "not found", &v)
 		tx.Rollback()
 		assert.NotNil(t, tx.Commit())
 	})
@@ -195,7 +195,7 @@ func TestTxn_Get(t *testing.T) {
 	t.Run("bad decode value", func(t *testing.T) {
 		tx := d.Txn(context.TODO())
 		var v func()
-		tx.Get("tests", database.Id("foo"), &v)
+		tx.Get("tests", "foo", &v)
 		assert.NotNil(t, tx.Commit())
 	})
 
@@ -203,10 +203,10 @@ func TestTxn_Get(t *testing.T) {
 		tx := d.Txn(context.TODO(), database.BatchReadSize(2))
 		var v1 map[string]interface{}
 		var v2 map[string]interface{}
-		err := tx.Get("tests", database.Id("foo"), &v1)
+		err := tx.Get("tests", "foo", &v1)
 		assert.Nil(t, err)
 
-		err = tx.Get("units", database.Id("foo"), &v2)
+		err = tx.Get("units", "foo", &v2)
 		assert.Nil(t, err)
 
 		assert.Nil(t, tx.Commit())
@@ -225,10 +225,10 @@ func TestTxn_List(t *testing.T) {
 	databaseURL, _ := url.Parse(dsn)
 	d := NewDB(databaseURL)
 	tx := d.Txn(context.TODO())
-	tx.Insert("tests", database.Id("foo"), map[string]interface{}{"id": "foo"})
-	tx.Insert("tests", database.Id("bar"), map[string]interface{}{"id": "bar"})
-	tx.Insert("units", database.Id("foo"), map[string]interface{}{"id": "foo"})
-	tx.Insert("units", database.Id("bar"), map[string]interface{}{"id": "bar"})
+	tx.Insert("tests", "foo", map[string]interface{}{"id": "foo"})
+	tx.Insert("tests", "bar", map[string]interface{}{"id": "bar"})
+	tx.Insert("units", "foo", map[string]interface{}{"id": "foo"})
+	tx.Insert("units", "bar", map[string]interface{}{"id": "bar"})
 	tx.Commit()
 
 	t.Run("dst must be a pointer", func(t *testing.T) {

@@ -9,17 +9,18 @@ import (
 )
 
 // Get Retrieve a value
-func (tx Txn) Get(table string, k, v interface{}, opts ...database.QueryOption) error {
+func (tx Txn) Get(table string, k, v interface{}, args ...interface{}) error {
 	if tx.err != nil {
 		return tea.Stack(tx.err)
 	}
 
-	key := []byte(fmt.Sprintf("%s%s", table, k))
+	args = append(args, k)
+	key := []byte(fmt.Sprintf("%s%s", table, database.NewRequest(args...).CacheKey))
 	if cv, present := tx.cache.Get(key); present {
 		return database.Copy(cv, v)
 	}
 
-	if err := tx.backend.Get(table, database.NamedKey(v, k), v, opts...); err != nil {
+	if err := tx.backend.Get(table, k, v, args...); err != nil {
 		return tea.Stack(err)
 	}
 

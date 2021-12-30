@@ -9,17 +9,17 @@ import (
 )
 
 // List Retrieve a listing of values
-func (tx Txn) List(table string, v interface{}, opts ...database.QueryOption) error {
+func (tx Txn) List(table string, v interface{}, args ...interface{}) error {
 	if tx.err != nil {
 		return tea.Stack(tx.err)
 	}
 
-	key := []byte(fmt.Sprintf("%s", database.QueryWith(opts).CacheKey))
+	key := []byte(fmt.Sprintf("%s", database.NewRequest(args...).CacheKey))
 	if cv, present := tx.cache.Get(key); present {
 		return database.Copy(cv, v)
 	}
 
-	if err := tx.backend.List(table, v, opts...); err != nil {
+	if err := tx.backend.List(table, v, args...); err != nil {
 		return tea.Stack(err)
 	}
 

@@ -78,13 +78,13 @@ type Table struct {
 }
 
 // IteratorOptions gets the iterator options from the query
-func (tbl Table) IteratorOptions(query database.Query) IteratorOptions {
+func (tbl Table) IteratorOptions(req *database.Request) IteratorOptions {
 	io := IteratorOptions{
 		badger: badger.DefaultIteratorOptions,
 	}
 	io.badger.Prefix = tbl.index
-	if len(query.Eq) > 0 {
-		for _, eq := range query.Eq {
+	if len(req.Eq) > 0 {
+		for _, eq := range req.Eq {
 			for indexName, indexValue := range eq {
 				if index, err := tbl.NewIndex(indexName, indexValue); err == nil {
 					io.badger.Prefix = index.Index
@@ -164,10 +164,10 @@ func (doc *Document) Copy(v interface{}) error {
 }
 
 // Matches checks if query matches document
-func (doc *Document) Matches(query database.Query, v interface{}) bool {
+func (doc *Document) Matches(req *database.Request, v interface{}) bool {
 	_ = doc.Copy(v)
 	m, _ := database.Map(v)
-	return doc.Matcher.Contains(query, m)
+	return doc.Matcher.Contains(req, m)
 }
 
 // NewDocument creates a new document instance
@@ -189,12 +189,12 @@ func NewDocument(table Table, k interface{}) *Document {
 type Attributes map[string]SubIndex
 
 // Contains checks if the query contains a value
-func (a Attributes) Contains(query database.Query, hash map[string]interface{}) bool {
-	if !query.HasFilter() {
+func (a Attributes) Contains(req *database.Request, hash map[string]interface{}) bool {
+	if !req.HasFilter() {
 		return true
 	}
 
-	for _, eq := range query.Eq {
+	for _, eq := range req.Eq {
 		for k, v := range eq {
 			if index, present := a[k]; present {
 				if !index.Equal(hash, v) {
@@ -210,7 +210,7 @@ func (a Attributes) Contains(query database.Query, hash map[string]interface{}) 
 		}
 	}
 
-	for _, neq := range query.NotEq {
+	for _, neq := range req.NotEq {
 		for k, v := range neq {
 			if index, present := a[k]; present {
 				if index.Equal(hash, v) {

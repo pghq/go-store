@@ -4,11 +4,9 @@ import (
 	"fmt"
 
 	"github.com/pghq/go-tea"
-
-	"github.com/pghq/go-ark/database"
 )
 
-func (tx txn) Get(table string, k database.Key, v interface{}, _ ...database.QueryOption) error {
+func (tx txn) Get(table string, k, v interface{}, _ ...interface{}) error {
 	cmd := tx.unit.Get(tx.ctx, fmt.Sprintf("%s.%s", table, k))
 	span := tea.Nest(tx.ctx, "redis")
 	defer span.End()
