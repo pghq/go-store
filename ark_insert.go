@@ -9,12 +9,12 @@ import (
 )
 
 // Insert insert a value
-func (tx Txn) Insert(table string, k, v interface{}) error {
+func (tx Txn) Insert(table string, k, v interface{}, args ...interface{}) error {
 	if tx.err != nil {
 		return tea.Stack(tx.err)
 	}
 
-	return tx.backend.Insert(table, k, v)
+	return tx.backend.Insert(table, k, v, args...)
 }
 
 // InsertTTL insert a value with a ttl
