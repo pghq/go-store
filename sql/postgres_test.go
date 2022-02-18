@@ -54,6 +54,17 @@ func TestPostgresDB_Txn(t *testing.T) {
 		err := tx.Commit()
 		assert.Nil(t, err)
 	})
+
+	t.Run("context timeout", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Millisecond)
+		defer cancel()
+		tx := postgres.Txn(ctx)
+		assert.NotNil(t, tx)
+		<-time.After(10 * time.Millisecond)
+		err := tx.Commit()
+		assert.NotNil(t, err)
+		assert.False(t, tea.IsFatal(err))
+	})
 }
 
 func TestPostgresTxn_Insert(t *testing.T) {

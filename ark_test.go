@@ -97,6 +97,7 @@ func TestMapper_Do(t *testing.T) {
 		defer cancel()
 		err := m.Do(ctx, func(tx Txn) error { return nil })
 		assert.NotNil(t, err)
+		assert.False(t, tea.IsFatal(err))
 	})
 
 	t.Run("without fn error", func(t *testing.T) {
