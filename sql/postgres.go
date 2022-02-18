@@ -106,8 +106,14 @@ func (p pgTxn) Exec(ctx context.Context, query string, args ...interface{}) erro
 	_, err := p.txx.Exec(ctx, query, args...)
 	if err != nil {
 		var icv *pgconn.PgError
-		if tea.AsError(err, &icv) && pgerrcode.IsIntegrityConstraintViolation(icv.Code) {
-			err = tea.AsErrBadRequest(icv)
+		if tea.AsError(err, &icv) {
+			if pgerrcode.IsIntegrityConstraintViolation(icv.Code) {
+				err = tea.AsErrBadRequest(icv)
+			}
+
+			if pgerrcode.IsSyntaxErrororAccessRuleViolation(icv.Code) {
+				err = tea.AsErrBadRequest(icv)
+			}
 		}
 	}
 	return err
