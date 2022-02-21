@@ -36,6 +36,10 @@ func (tx txn) Get(table string, k, v interface{}, args ...interface{}) error {
 		builder = builder.Column(column)
 	}
 
+	for _, expr := range req.Tables {
+		builder = builder.JoinClause(expr.Format, expr.Args...)
+	}
+
 	for _, eq := range req.Eq {
 		builder = builder.Where(squirrel.Eq(eq))
 	}
