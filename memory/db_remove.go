@@ -27,16 +27,16 @@ func (tx txn) Remove(table string, k interface{}, _ ...interface{}) error {
 				if err == badger.ErrKeyNotFound {
 					err = tea.AsErrNotFound(err)
 				}
-				return tea.Stack(err)
+				return tea.Stacktrace(err)
 			}
 
 			if err := item.Value(func(b []byte) error { return database.Decode(b, &indexes) }); err != nil {
-				return tea.Stack(err)
+				return tea.Stacktrace(err)
 			}
 
 			for _, key := range indexes {
 				if err := tx.writer.Delete(key); err != nil {
-					return tea.Stack(err)
+					return tea.Stacktrace(err)
 				}
 			}
 		}

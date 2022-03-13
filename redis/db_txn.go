@@ -39,7 +39,7 @@ func (tx txn) Commit() error {
 		if err == redis.Nil {
 			return tea.AsErrNotFound(err)
 		}
-		return tea.Stack(err)
+		return tea.Stacktrace(err)
 	}
 
 	for {
@@ -49,7 +49,7 @@ func (tx txn) Commit() error {
 			case *redis.StringCmd:
 				b, _ := cmd.Bytes()
 				if err := database.Decode(b, read.v); err != nil {
-					return tea.Stack(err)
+					return tea.Stacktrace(err)
 				}
 			case *redis.ScanCmd:
 				keys, _, _ := cmd.Result()
@@ -59,7 +59,7 @@ func (tx txn) Commit() error {
 					b := []byte(v.(string))
 					rv := reflect.New(reflect.TypeOf(read.v).Elem().Elem())
 					if err := database.Decode(b, &rv); err != nil {
-						return tea.Stack(err)
+						return tea.Stacktrace(err)
 					}
 					values = append(values, rv.Elem())
 				}

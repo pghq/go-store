@@ -22,7 +22,7 @@ func (tx txn) Update(table string, k, v interface{}, args ...interface{}) error 
 			return tea.AsErrNotFound(err)
 		}
 
-		return tea.Stack(err)
+		return tea.Stacktrace(err)
 	}
 
 	return tx.Insert(table, k, v, args...)

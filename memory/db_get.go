@@ -23,11 +23,11 @@ func (tx txn) Get(table string, k, v interface{}, _ ...interface{}) error {
 			return tea.AsErrNotFound(err)
 		}
 
-		return tea.Stack(err)
+		return tea.Stacktrace(err)
 	}
 
 	if err := item.Value(func(b []byte) error { return doc.Decode(b) }); err != nil {
-		return tea.Stack(err)
+		return tea.Stacktrace(err)
 	}
 
 	return doc.Copy(v)

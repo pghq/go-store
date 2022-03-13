@@ -536,4 +536,16 @@ func TestAttributes_Contains(t *testing.T) {
 		req := database.NewRequest(database.NotEq("foo", "baz"))
 		assert.True(t, a.Contains(req, map[string]interface{}{"foo": "bar"}))
 	})
+
+	t.Run("prefix match", func(t *testing.T) {
+		a := Attributes{}
+		req := database.NewRequest(database.Px("foo", "ba"))
+		assert.True(t, a.Contains(req, map[string]interface{}{"foo": "bar"}))
+	})
+
+	t.Run("no prefix match", func(t *testing.T) {
+		a := Attributes{}
+		req := database.NewRequest(database.Px("foo", "baz"))
+		assert.False(t, a.Contains(req, map[string]interface{}{"foo": "bar"}))
+	})
 }

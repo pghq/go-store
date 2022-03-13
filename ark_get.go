@@ -11,7 +11,7 @@ import (
 // Get Retrieve a value
 func (tx Txn) Get(table string, k, v interface{}, args ...interface{}) error {
 	if tx.err != nil {
-		return tea.Stack(tx.err)
+		return tea.Stacktrace(tx.err)
 	}
 
 	args = append(args, k)
@@ -21,7 +21,7 @@ func (tx Txn) Get(table string, k, v interface{}, args ...interface{}) error {
 	}
 
 	if err := tx.backend.Get(table, k, v, args...); err != nil {
-		return tea.Stack(err)
+		return tea.Stacktrace(err)
 	}
 
 	select {

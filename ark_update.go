@@ -7,7 +7,7 @@ import (
 // Update Replace an existing value
 func (tx Txn) Update(table string, k, v interface{}, args ...interface{}) error {
 	if tx.err != nil {
-		return tea.Stack(tx.err)
+		return tea.Stacktrace(tx.err)
 	}
 
 	return tx.backend.Update(table, k, v, args...)

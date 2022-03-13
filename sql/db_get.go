@@ -1,6 +1,7 @@
 package sql
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/Masterminds/squirrel"
@@ -11,7 +12,7 @@ import (
 
 func (tx txn) Get(table string, k, v interface{}, args ...interface{}) error {
 	if tx.err != nil {
-		return tea.Stack(tx.err)
+		return tea.Stacktrace(tx.err)
 	}
 
 	args = append(args, k)
@@ -54,6 +55,10 @@ func (tx txn) Get(table string, k, v interface{}, args ...interface{}) error {
 
 	for _, gt := range req.Gt {
 		builder = builder.Where(squirrel.Gt(gt))
+	}
+
+	for k, v := range req.Px {
+		builder = builder.Where(squirrel.ILike(map[string]interface{}{k: fmt.Sprintf("%s%%", v)}))
 	}
 
 	for _, xeq := range req.XEq {

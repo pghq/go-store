@@ -37,14 +37,14 @@ func (m *Mapper) Txn(ctx context.Context, opts ...database.TxnOption) Txn {
 // Do Write and or read using a callback
 func (m *Mapper) Do(ctx context.Context, fn func(tx Txn) error, opts ...database.TxnOption) error {
 	if err := ctx.Err(); err != nil {
-		return tea.Stack(err)
+		return tea.Stacktrace(err)
 	}
 
 	tx := m.Txn(ctx, opts...)
 	defer tx.Rollback()
 
 	if err := fn(tx); err != nil {
-		return tea.Stack(err)
+		return tea.Stacktrace(err)
 	}
 
 	return tx.Commit()
@@ -53,14 +53,14 @@ func (m *Mapper) Do(ctx context.Context, fn func(tx Txn) error, opts ...database
 // View Read using a callback
 func (m *Mapper) View(ctx context.Context, fn func(tx Txn) error, opts ...database.TxnOption) error {
 	if err := ctx.Err(); err != nil {
-		return tea.Stack(err)
+		return tea.Stacktrace(err)
 	}
 
 	tx := m.Txn(ctx, append(opts, database.ReadOnly())...)
 	defer tx.Rollback()
 
 	if err := fn(tx); err != nil {
-		return tea.Stack(err)
+		return tea.Stacktrace(err)
 	}
 
 	return tx.Commit()
@@ -81,7 +81,7 @@ type Txn struct {
 // Commit Submit a unit of work
 func (tx Txn) Commit() error {
 	if tx.err != nil {
-		return tea.Stack(tx.err)
+		return tea.Stacktrace(tx.err)
 	}
 
 	if !tx.root {
@@ -90,7 +90,7 @@ func (tx Txn) Commit() error {
 
 	defer tx.span.End()
 	if err := tx.backend.Commit(); err != nil {
-		return tea.Stack(err)
+		return tea.Stacktrace(err)
 	}
 
 	config := database.TxnConfigWith(tx.opts)
@@ -109,7 +109,7 @@ func (tx Txn) Commit() error {
 // Rollback Cancel a unit of work
 func (tx Txn) Rollback() error {
 	if tx.err != nil {
-		return tea.Stack(tx.err)
+		return tea.Stacktrace(tx.err)
 	}
 
 	if !tx.root {

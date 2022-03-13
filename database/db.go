@@ -160,6 +160,7 @@ type Request struct {
 	OrderBy  []string
 	GroupBy  []string
 	Eq       []map[string]interface{}
+	Px       map[string]string
 	NotEq    []map[string]interface{}
 	Lt       []map[string]interface{}
 	Gt       []map[string]interface{}
@@ -176,7 +177,7 @@ type Request struct {
 
 // HasFilter checks if the req has any filter params
 func (q Request) HasFilter() bool {
-	return q.Eq != nil || q.NotEq != nil || q.Lt != nil || q.Gt != nil || q.XEq != nil || q.NotXEq != nil
+	return q.Eq != nil || q.Px != nil || q.NotEq != nil || q.Lt != nil || q.Gt != nil || q.XEq != nil || q.NotXEq != nil
 }
 
 // NewRequest new database request
@@ -254,6 +255,17 @@ func NotEq(key string, value interface{}) RequestOption {
 	return func(req *Request) {
 		req.NotEq = append(req.NotEq, map[string]interface{}{key: value})
 		req.CacheKey = append(req.CacheKey, "neq", fmt.Sprintf("%s%+v", key, value))
+	}
+}
+
+// Px Filter values where field matches prefix.
+func Px(key, value string) RequestOption {
+	return func(req *Request) {
+		if req.Px == nil {
+			req.Px = make(map[string]string)
+		}
+		req.Px[key] = value
+		req.CacheKey = append(req.CacheKey, "px", fmt.Sprintf("%s%+v", key, value))
 	}
 }
 

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math"
 	"reflect"
+	"strings"
 
 	"github.com/cespare/xxhash/v2"
 	"github.com/dgraph-io/badger/v3"
@@ -136,7 +137,7 @@ type Document struct {
 func (doc *Document) SetValue(v interface{}) error {
 	var buf bytes.Buffer
 	if err := gob.NewEncoder(&buf).Encode(v); err != nil {
-		return tea.Stack(err)
+		return tea.Stacktrace(err)
 	}
 	doc.Value = buf.Bytes()
 	doc.Matcher = NewAttributes(v, doc.table.subIndices)
@@ -152,7 +153,7 @@ func (doc *Document) Bytes() []byte {
 // Decode bytes into document
 func (doc *Document) Decode(b []byte) error {
 	if err := database.Decode(b, doc); err != nil {
-		return tea.Stack(err)
+		return tea.Stacktrace(err)
 	}
 
 	return nil
@@ -223,6 +224,14 @@ func (a Attributes) Contains(req *database.Request, hash map[string]interface{})
 			if reflect.DeepEqual(value, v) {
 				return false
 			}
+		}
+	}
+
+	for k, prefix := range req.Px {
+		value, _ := hash[k]
+		s, ok := value.(string)
+		if !ok || !strings.HasPrefix(s, prefix) {
+			return false
 		}
 	}
 

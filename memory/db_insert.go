@@ -12,7 +12,7 @@ import (
 func (tx txn) Insert(table string, k, v interface{}, args ...interface{}) error {
 	doc := tx.Table(table).NewDocument(k)
 	if err := doc.SetValue(v); err != nil {
-		return tea.Stack(err)
+		return tea.Stacktrace(err)
 	}
 
 	span := tea.Nest(tx.ctx, "memory")
@@ -31,7 +31,7 @@ func (tx txn) Insert(table string, k, v interface{}, args ...interface{}) error 
 		}
 
 		if err := tx.writer.SetEntry(entry); err != nil {
-			return tea.Stack(err)
+			return tea.Stacktrace(err)
 		}
 
 		indexes = append(indexes, key)
@@ -45,7 +45,7 @@ func (tx txn) Insert(table string, k, v interface{}, args ...interface{}) error 
 		}
 
 		if err := tx.writer.SetEntry(entry); err != nil {
-			return tea.Stack(err)
+			return tea.Stacktrace(err)
 		}
 	}
 

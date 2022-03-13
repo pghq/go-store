@@ -9,12 +9,12 @@ import (
 
 func (tx txn) Insert(table string, _, v interface{}, args ...interface{}) error {
 	if tx.err != nil {
-		return tea.Stack(tx.err)
+		return tea.Stacktrace(tx.err)
 	}
 
 	m, err := database.Map(v)
 	if err != nil {
-		return tea.Stack(err)
+		return tea.Stacktrace(err)
 	}
 
 	req := database.NewRequest(args...)

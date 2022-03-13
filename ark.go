@@ -28,7 +28,7 @@ import (
 
 const (
 	// Version of the mapper
-	Version = "0.0.69"
+	Version = "0.0.70"
 )
 
 // Mapper Data mapper for various backends
@@ -53,7 +53,7 @@ func New(dsn string, opts ...database.Option) *Mapper {
 	m := defaultMapper()
 	databaseURL, err := url.Parse(dsn)
 	if err != nil {
-		m.err = tea.Stack(err)
+		m.err = tea.Stacktrace(err)
 		return &m
 	}
 

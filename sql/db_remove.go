@@ -9,7 +9,7 @@ import (
 
 func (tx txn) Remove(table string, k interface{}, args ...interface{}) error {
 	if tx.err != nil {
-		return tea.Stack(tx.err)
+		return tea.Stacktrace(tx.err)
 	}
 
 	args = append(args, k)
