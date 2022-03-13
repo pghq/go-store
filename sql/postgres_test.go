@@ -158,6 +158,7 @@ func TestPostgresTxn_Update(t *testing.T) {
 			database.OrderBy("name"),
 			database.Gt("num", 0),
 			database.Lt("num", 2),
+			database.Px("name", "bar"),
 			database.Table("LEFT JOIN units ON units.id = tests.id"),
 			database.Filter("name = 'bar4'"),
 		}
@@ -234,6 +235,7 @@ func TestPostgresTxn_Get(t *testing.T) {
 		opts := []interface{}{
 			database.NotEq("name", "bar4"),
 			database.Field("tests.id"), database.Field("tests.name"),
+			database.Px("name", "bar"),
 			database.XEq("name", "%bar%"),
 			database.Limit(1),
 			database.OrderBy("name"),
@@ -361,6 +363,7 @@ func TestPostgresTxn_List(t *testing.T) {
 			database.Eq("name", "bar4"),
 			database.NotEq("name", "bar4"),
 			database.Field("tests.id"), database.Field("tests.name"),
+			database.Px("name", "bar"),
 			database.XEq("name", "%bar%"),
 			database.Limit(1),
 			database.OrderBy("name"),

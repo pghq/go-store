@@ -41,6 +41,7 @@ func TestRequestOption(t *testing.T) {
 		Field(""),
 		XEq("", ""),
 		NotXEq("", ""),
+		Px("", ""),
 		Page(0),
 		Limit(0),
 		OrderBy(""),

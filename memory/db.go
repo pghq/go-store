@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math"
 	"reflect"
+	"strings"
 
 	"github.com/cespare/xxhash/v2"
 	"github.com/dgraph-io/badger/v3"
@@ -223,6 +224,14 @@ func (a Attributes) Contains(req *database.Request, hash map[string]interface{})
 			if reflect.DeepEqual(value, v) {
 				return false
 			}
+		}
+	}
+
+	for k, prefix := range req.Px {
+		value, _ := hash[k]
+		s, ok := value.(string)
+		if !ok || !strings.HasPrefix(s, prefix) {
+			return false
 		}
 	}
 

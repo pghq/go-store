@@ -1,6 +1,7 @@
 package sql
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/Masterminds/squirrel"
@@ -41,6 +42,10 @@ func (tx txn) List(table string, v interface{}, args ...interface{}) error {
 
 	for _, eq := range req.Eq {
 		builder = builder.Where(squirrel.Eq(eq))
+	}
+
+	for k, v := range req.Px {
+		builder = builder.Where(squirrel.ILike(map[string]interface{}{k: fmt.Sprintf("%s%%", v)}))
 	}
 
 	for _, neq := range req.NotEq {
