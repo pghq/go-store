@@ -11,7 +11,7 @@ import (
 // List Retrieve a listing of values
 func (tx Txn) List(table string, v interface{}, args ...interface{}) error {
 	if tx.err != nil {
-		return tea.Stack(tx.err)
+		return tea.Stacktrace(tx.err)
 	}
 
 	key := []byte(fmt.Sprintf("%s", database.NewRequest(args...).CacheKey))
@@ -20,7 +20,7 @@ func (tx Txn) List(table string, v interface{}, args ...interface{}) error {
 	}
 
 	if err := tx.backend.List(table, v, args...); err != nil {
-		return tea.Stack(err)
+		return tea.Stacktrace(err)
 	}
 
 	select {

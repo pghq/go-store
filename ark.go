@@ -53,7 +53,7 @@ func New(dsn string, opts ...database.Option) *Mapper {
 	m := defaultMapper()
 	databaseURL, err := url.Parse(dsn)
 	if err != nil {
-		m.err = tea.Stack(err)
+		m.err = tea.Stacktrace(err)
 		return &m
 	}
 

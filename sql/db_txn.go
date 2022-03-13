@@ -34,7 +34,7 @@ type txn struct {
 
 func (tx txn) Commit() error {
 	if tx.err != nil {
-		return tea.Stack(tx.err)
+		return tea.Stacktrace(tx.err)
 	}
 
 	return tx.uow.Commit(tx.ctx)
@@ -42,7 +42,7 @@ func (tx txn) Commit() error {
 
 func (tx txn) Rollback() error {
 	if tx.err != nil {
-		return tea.Stack(tx.err)
+		return tea.Stacktrace(tx.err)
 	}
 
 	return tx.uow.Rollback(tx.ctx)

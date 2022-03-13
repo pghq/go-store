@@ -16,7 +16,7 @@ type DB struct {
 
 func (d DB) Ping(ctx context.Context) error {
 	if d.err != nil {
-		return tea.Stack(d.err)
+		return tea.Stacktrace(d.err)
 	}
 
 	return d.backend.Ping(ctx).Err()
@@ -27,7 +27,7 @@ func NewDB(databaseURL *url.URL) *DB {
 	db := DB{}
 	opts, err := redis.ParseURL(databaseURL.String())
 	if err != nil {
-		db.err = tea.Stack(err)
+		db.err = tea.Stacktrace(err)
 		return &db
 	}
 	db.backend = redis.NewClient(opts)

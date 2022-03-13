@@ -11,7 +11,7 @@ import (
 func (tx txn) Insert(table string, k, v interface{}, args ...interface{}) error {
 	b, err := database.Encode(v)
 	if err != nil {
-		return tea.Stack(err)
+		return tea.Stacktrace(err)
 	}
 
 	cmd := tx.unit.Set(tx.ctx, fmt.Sprintf("%s.%s", table, k), b, database.NewRequest(args...).TTL)

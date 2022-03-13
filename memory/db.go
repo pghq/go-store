@@ -137,7 +137,7 @@ type Document struct {
 func (doc *Document) SetValue(v interface{}) error {
 	var buf bytes.Buffer
 	if err := gob.NewEncoder(&buf).Encode(v); err != nil {
-		return tea.Stack(err)
+		return tea.Stacktrace(err)
 	}
 	doc.Value = buf.Bytes()
 	doc.Matcher = NewAttributes(v, doc.table.subIndices)
@@ -153,7 +153,7 @@ func (doc *Document) Bytes() []byte {
 // Decode bytes into document
 func (doc *Document) Decode(b []byte) error {
 	if err := database.Decode(b, doc); err != nil {
-		return tea.Stack(err)
+		return tea.Stacktrace(err)
 	}
 
 	return nil

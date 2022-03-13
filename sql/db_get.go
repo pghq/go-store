@@ -12,7 +12,7 @@ import (
 
 func (tx txn) Get(table string, k, v interface{}, args ...interface{}) error {
 	if tx.err != nil {
-		return tea.Stack(tx.err)
+		return tea.Stacktrace(tx.err)
 	}
 
 	args = append(args, k)

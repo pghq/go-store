@@ -57,13 +57,13 @@ func (tx txn) List(table string, v interface{}, args ...interface{}) error {
 				if err == badger.ErrKeyNotFound {
 					err = tea.AsErrNotFound(err)
 				}
-				return tea.Stack(err)
+				return tea.Stacktrace(err)
 			}
 		}
 
 		doc := tbl.NewDocument(item.Key())
 		if err := item.Value(func(b []byte) error { return doc.Decode(b) }); err != nil {
-			return tea.Stack(err)
+			return tea.Stacktrace(err)
 		}
 
 		rv := reflect.New(reflect.TypeOf(v).Elem().Elem())
@@ -73,7 +73,7 @@ func (tx txn) List(table string, v interface{}, args ...interface{}) error {
 		}
 
 		if err := doc.Copy(v); err != nil {
-			return tea.Stack(err)
+			return tea.Stacktrace(err)
 		}
 
 		values = append(values, rv.Elem())

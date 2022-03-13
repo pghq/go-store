@@ -12,7 +12,7 @@ import (
 
 func (tx txn) List(table string, v interface{}, args ...interface{}) error {
 	if tx.err != nil {
-		return tea.Stack(tx.err)
+		return tea.Stacktrace(tx.err)
 	}
 
 	req := database.NewRequest(args...)
@@ -83,7 +83,7 @@ func (tx txn) List(table string, v interface{}, args ...interface{}) error {
 	span.Tag("statement", stmt)
 	span.Tag("arguments", args)
 	if err := tx.uow.List(span, v, stmt, args...); err != nil {
-		return tea.Stack(err)
+		return tea.Stacktrace(err)
 	}
 
 	return nil

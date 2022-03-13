@@ -22,7 +22,7 @@ type DB struct {
 
 func (d DB) Ping(ctx context.Context) error {
 	if d.err != nil {
-		return tea.Stack(d.err)
+		return tea.Stacktrace(d.err)
 	}
 
 	return d.backend.Ping(ctx)
@@ -41,7 +41,7 @@ func NewDB(dialect string, databaseURL *url.URL, opts ...database.Option) *DB {
 	}
 
 	if err != nil {
-		db.err = tea.Stack(err)
+		db.err = tea.Stacktrace(err)
 		return &db
 	}
 
@@ -56,7 +56,7 @@ func NewDB(dialect string, databaseURL *url.URL, opts ...database.Option) *DB {
 
 		if err != nil {
 			_ = goose.Down(db.backend.SQL(), config.MigrationDirectory)
-			db.err = tea.Stack(err)
+			db.err = tea.Stacktrace(err)
 			return &db
 		}
 	}
