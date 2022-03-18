@@ -78,15 +78,6 @@ func (p pgTxn) Rollback(ctx context.Context) error {
 
 func (p pgTxn) Get(ctx context.Context, dest interface{}, query string, args ...interface{}) error {
 	err := pgxscan.Get(ctx, p.txx, dest, query, args...)
-	if err != nil {
-		var icv *pgconn.PgError
-		if tea.AsError(err, &icv) {
-			if pgerrcode.IsSyntaxErrororAccessRuleViolation(icv.Code) {
-				err = tea.AsErrBadRequest(icv)
-			}
-		}
-	}
-
 	if tea.IsError(err, pgx.ErrNoRows) {
 		err = tea.AsErrNotFound(err)
 	}
@@ -102,15 +93,6 @@ func (p pgTxn) List(ctx context.Context, dest interface{}, query string, args ..
 			continue
 		}
 		break
-	}
-
-	if err != nil {
-		var icv *pgconn.PgError
-		if tea.AsError(err, &icv) {
-			if pgerrcode.IsSyntaxErrororAccessRuleViolation(icv.Code) {
-				err = tea.AsErrBadRequest(icv)
-			}
-		}
 	}
 
 	if err == nil && rv.IsNil() {

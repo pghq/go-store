@@ -194,16 +194,6 @@ func TestPostgresTxn_Get(t *testing.T) {
 		assert.False(t, tea.IsFatal(err))
 	})
 
-	t.Run("bad field", func(t *testing.T) {
-		tx := postgres.Txn(context.TODO())
-		defer tx.Rollback()
-		tx.Insert("tests", nil, map[string]interface{}{"id": "get:foo1"})
-		var id string
-		err := tx.Get("tests", database.Eq("id", "get:foo1"), &id, database.Field("foo"))
-		assert.NotNil(t, err)
-		assert.False(t, tea.IsFatal(err))
-	})
-
 	t.Run("ok for single field", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
 		defer tx.Rollback()
@@ -302,16 +292,6 @@ func TestPostgresTxn_List(t *testing.T) {
 		defer tx.Rollback()
 		err := tx.List("tests", nil, database.Field("id"))
 		assert.NotNil(t, err)
-	})
-
-	t.Run("bad field", func(t *testing.T) {
-		tx := postgres.Txn(context.TODO())
-		defer tx.Rollback()
-		tx.Insert("tests", nil, map[string]interface{}{"id": "foo1", "name": "bar1"})
-		var ids []string
-		err := tx.List("tests", &ids, database.Eq("tests.name", "bar2"), database.Field("foo"))
-		assert.NotNil(t, err)
-		assert.False(t, tea.IsFatal(err))
 	})
 
 	t.Run("ok for single field", func(t *testing.T) {
