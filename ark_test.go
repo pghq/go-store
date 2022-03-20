@@ -203,11 +203,11 @@ func TestTxn_Get(t *testing.T) {
 	})
 
 	t.Run("read batch size exhausted", func(t *testing.T) {
-		tx := m.Txn(context.TODO())
+		tx := m.Txn(context.TODO(), database.BatchReadSize(1))
 		defer tx.Rollback()
 		var v string
 		tx.Get("", "foo", &v)
-		assert.NotNil(t, tx.Get("", "foo", &v))
+		assert.Nil(t, tx.Get("", "foo", &v))
 	})
 
 	t.Run("can get", func(t *testing.T) {
@@ -243,11 +243,11 @@ func TestTxn_List(t *testing.T) {
 	})
 
 	t.Run("read batch size exhausted", func(t *testing.T) {
-		tx := m.Txn(context.TODO())
+		tx := m.Txn(context.TODO(), database.BatchReadSize(1))
 		defer tx.Rollback()
 		var v []string
 		tx.List("", &v)
-		assert.NotNil(t, tx.List("", &v))
+		assert.Nil(t, tx.List("", &v))
 	})
 
 	t.Run("can list", func(t *testing.T) {

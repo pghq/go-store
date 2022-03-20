@@ -170,7 +170,7 @@ func TestTxn_Get(t *testing.T) {
 	tx.Commit()
 
 	t.Run("read batch size exhausted", func(t *testing.T) {
-		tx := d.Txn(context.TODO())
+		tx := d.Txn(context.TODO(), database.BatchReadSize(1))
 		var v map[string]interface{}
 		tx.Get("tests", "foo", &v)
 		err := tx.Get("tests", "foo", &v)
@@ -246,7 +246,7 @@ func TestTxn_List(t *testing.T) {
 	})
 
 	t.Run("read batch size exhausted", func(t *testing.T) {
-		tx := d.Txn(context.TODO())
+		tx := d.Txn(context.TODO(), database.BatchReadSize(1))
 		var v []map[string]interface{}
 		tx.List("tests", &v)
 		err := tx.List("tests", &v)

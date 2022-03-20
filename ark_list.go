@@ -26,7 +26,7 @@ func (tx Txn) List(table string, v interface{}, args ...interface{}) error {
 	select {
 	case tx.views <- view{Key: key, Value: v}:
 	default:
-		return tea.Err("read batch size exhausted")
+		return nil
 	}
 
 	return nil
