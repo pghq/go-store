@@ -15,7 +15,7 @@ const (
 	DefaultLimit = 50
 
 	// DefaultBatchReadSize Default batch read size
-	DefaultBatchReadSize = 1
+	DefaultBatchReadSize = 25
 
 	// DefaultViewTTL Default view TTL
 	DefaultViewTTL = 500 * time.Millisecond
