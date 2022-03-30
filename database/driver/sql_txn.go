@@ -1,4 +1,4 @@
-package sql
+package driver
 
 import (
 	"context"
@@ -9,11 +9,7 @@ import (
 	"github.com/pghq/go-ark/database"
 )
 
-func (d DB) Txn(ctx context.Context, opts ...database.TxnOption) database.Txn {
-	if d.err != nil {
-		return txn{err: d.err}
-	}
-
+func (d SQL) Txn(ctx context.Context, opts ...database.TxnOption) database.Txn {
 	config := database.TxnConfigWith(opts)
 	uow, err := d.backend.Txn(ctx, &sql.TxOptions{ReadOnly: config.ReadOnly && !config.BatchWrite})
 	return txn{

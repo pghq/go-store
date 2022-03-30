@@ -7,10 +7,6 @@ import (
 	"github.com/pghq/go-tea"
 )
 
-// Schema Schema for in-memory database
-// todo: rename
-type Schema map[string]map[string][]string
-
 // Map Convert a struct (w. optional tags) to a map using reflection
 // variation of: https://play.golang.org/p/2Qi3thFf--
 // meant to be used for data persistence.
@@ -25,9 +21,14 @@ func Map(v interface{}, transient ...interface{}) (map[string]interface{}, error
 
 	rv := reflect.Indirect(reflect.ValueOf(v))
 	for {
+		if rv.Kind() == reflect.Slice || rv.Kind() == reflect.Array {
+			rv = reflect.Zero(rv.Type().Elem())
+		}
+
 		if rv.Kind() != reflect.Ptr {
 			break
 		}
+
 		rv = reflect.Indirect(rv)
 	}
 
@@ -68,28 +69,4 @@ func Copy(src, dst interface{}) error {
 
 	dv.Set(sv)
 	return nil
-}
-
-// KeyName is a helper to determine a good default for struct persistence keys
-func KeyName(v interface{}) string {
-	if v == nil {
-		return ""
-	}
-
-	rv := reflect.Indirect(reflect.ValueOf(v))
-	for {
-		if rv.Kind() != reflect.Ptr {
-			break
-		}
-		rv = reflect.Indirect(rv)
-	}
-
-	switch rv.Kind() {
-	case reflect.String:
-		return ""
-	case reflect.Struct:
-		return ToSnakeCase(rv.Type().Name()) + "_id"
-	default:
-		return "id"
-	}
 }

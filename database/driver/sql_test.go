@@ -1,11 +1,9 @@
-package sql
+package driver
 
 import (
-	"context"
 	"database/sql"
 	"embed"
 	"net/url"
-	"os"
 	"testing"
 
 	"github.com/pghq/go-tea"
@@ -14,46 +12,29 @@ import (
 	"github.com/pghq/go-ark/database"
 )
 
-func TestMain(m *testing.M) {
-	tea.Testing()
-	var teardown func()
-
-	postgres, teardown = NewTestPostgresDB()
-	defer teardown()
-
-	os.Exit(m.Run())
-}
-
 func TestNewDB(t *testing.T) {
 	t.Parallel()
 
 	t.Run("bad open", func(t *testing.T) {
-		d := NewDB("", &url.URL{}, database.SQLOpen(func(driverName, dataSourceName string) (*sql.DB, error) {
+		_, err := NewSQL("postgres", &url.URL{}, database.SQLOpen(func(driverName, dataSourceName string) (*sql.DB, error) {
 			return nil, tea.Err("bad open")
 		}))
-		assert.NotNil(t, d.Ping(context.TODO()))
-		assert.NotNil(t, d.Txn(context.TODO()).Commit())
-		assert.NotNil(t, d.Txn(context.TODO()).Rollback())
-		assert.NotNil(t, d.Txn(context.TODO()).Get("", nil, nil))
-		assert.NotNil(t, d.Txn(context.TODO()).Insert("", nil, nil))
-		assert.NotNil(t, d.Txn(context.TODO()).Remove("", nil))
-		assert.NotNil(t, d.Txn(context.TODO()).Update("", nil, nil))
-		assert.NotNil(t, d.Txn(context.TODO()).List("", ""))
+		assert.NotNil(t, err)
 	})
 
 	t.Run("bad migration", func(t *testing.T) {
-		db := NewDB("postgres", postgres.backend.URL(), database.SQLOpen(func(driverName, dataSourceName string) (*sql.DB, error) {
+		_, err := NewSQL("postgres", postgres.backend.URL(), database.SQLOpen(func(driverName, dataSourceName string) (*sql.DB, error) {
 			return postgres.backend.SQL(), nil
-		}), database.Migrate(embed.FS{}, "migrations", "migrations"))
-		assert.NotNil(t, db.err)
+		}), database.Migrate(embed.FS{}))
+		assert.NotNil(t, err)
 	})
 
 	t.Run("unrecognized dialect", func(t *testing.T) {
-		d := NewDB("", &url.URL{}, database.SQLOpen(func(driverName, dataSourceName string) (*sql.DB, error) {
+		d, err := NewSQL("", &url.URL{}, database.SQLOpen(func(driverName, dataSourceName string) (*sql.DB, error) {
 			return &sql.DB{}, nil
 		}))
-		assert.NotNil(t, d)
-		assert.NotNil(t, d.err)
+		assert.Nil(t, d)
+		assert.NotNil(t, err)
 	})
 }
 
@@ -103,11 +84,4 @@ func TestPlaceholder(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, "SELECT * FROM tests WHERE name = ?", r)
 	})
-}
-
-// must be nil error or panic
-func must(err error) {
-	if err != nil {
-		panic(err)
-	}
 }

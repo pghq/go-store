@@ -48,6 +48,25 @@ func TestMap(t *testing.T) {
 		m, _ := Map(&v, true)
 		assert.Equal(t, map[string]interface{}{"field1": 1, "field2": 2, "Field4": 4}, m)
 	})
+
+	t.Run("struct slice", func(t *testing.T) {
+		type value struct {
+			Field1 int `db:"field1"`
+			Field2 int `db:"field2,transient"`
+			Field3 int `db:"-"`
+			Field4 int
+		}
+
+		v := []value{{
+			Field1: 1,
+			Field2: 2,
+			Field3: 3,
+			Field4: 4,
+		}}
+
+		m, _ := Map(&v, true)
+		assert.Equal(t, map[string]interface{}{"field1": 0, "field2": 0, "Field4": 0}, m)
+	})
 }
 
 func TestCopy(t *testing.T) {
@@ -67,36 +86,5 @@ func TestCopy(t *testing.T) {
 		var v string
 		assert.Nil(t, Copy("foo", &v))
 		assert.Equal(t, "foo", v)
-	})
-}
-
-func TestKeyName(t *testing.T) {
-	t.Parallel()
-
-	t.Run("nil", func(t *testing.T) {
-		assert.Equal(t, "", KeyName(nil))
-	})
-
-	t.Run("empty string", func(t *testing.T) {
-		assert.Equal(t, "", KeyName(""))
-	})
-
-	t.Run("string", func(t *testing.T) {
-		assert.Equal(t, "", KeyName("hi"))
-	})
-
-	t.Run("unknown type", func(t *testing.T) {
-		assert.Equal(t, "id", KeyName(func() {}))
-	})
-
-	t.Run("struct pointer", func(t *testing.T) {
-		type value struct{}
-		assert.Equal(t, "value_id", KeyName(&value{}))
-	})
-
-	t.Run("struct pointer to pointer", func(t *testing.T) {
-		type value struct{}
-		v := &value{}
-		assert.Equal(t, "value_id", KeyName(&v))
 	})
 }
