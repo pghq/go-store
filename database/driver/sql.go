@@ -1,4 +1,4 @@
-package sql
+package driver
 
 import (
 	"bytes"
@@ -14,35 +14,29 @@ import (
 	"github.com/pghq/go-ark/database"
 )
 
-// DB SQL database
-type DB struct {
+// SQL database
+type SQL struct {
 	backend db
-	err     error
 }
 
-func (d DB) Ping(ctx context.Context) error {
-	if d.err != nil {
-		return tea.Stacktrace(d.err)
-	}
-
+func (d SQL) Ping(ctx context.Context) error {
 	return d.backend.Ping(ctx)
 }
 
-// NewDB Create a new SQL database
-func NewDB(dialect string, databaseURL *url.URL, opts ...database.Option) *DB {
+// NewSQL Create a new SQL database
+func NewSQL(dialect string, databaseURL *url.URL, opts ...database.Option) (*SQL, error) {
 	config := database.ConfigWith(opts)
-	db := DB{}
+	db := SQL{}
 	var err error
 	switch dialect {
 	case "postgres", "redshift":
 		db.backend, err = newPostgres(dialect, databaseURL, config)
 	default:
-		err = tea.Err("unrecognized dialect")
+		return nil, tea.Err("unrecognized dialect")
 	}
 
 	if err != nil {
-		db.err = tea.Stacktrace(err)
-		return &db
+		return nil, tea.Stacktrace(err)
 	}
 
 	if config.MigrationFS != nil && config.MigrationDirectory != "" {
@@ -56,12 +50,11 @@ func NewDB(dialect string, databaseURL *url.URL, opts ...database.Option) *DB {
 
 		if err != nil {
 			_ = goose.Down(db.backend.SQL(), config.MigrationDirectory)
-			db.err = tea.Stacktrace(err)
-			return &db
+			return nil, tea.Stacktrace(err)
 		}
 	}
 
-	return &db
+	return &db, nil
 }
 
 // gooseLogger Custom goose logger implementation

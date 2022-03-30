@@ -10,12 +10,12 @@ func TestOption(t *testing.T) {
 	t.Parallel()
 
 	opts := []Option{
-		Storage(Schema{}),
 		SQLOpen(nil),
-		Migrate(nil, "", ""),
+		Migrate(nil),
+		MigrateDirectory(nil, "", ""),
 	}
 	config := ConfigWith(opts)
-	assert.NotEqual(t, Config{}, config)
+	assert.Equal(t, Config{}, config)
 }
 
 func TestTxnOption(t *testing.T) {
@@ -25,64 +25,33 @@ func TestTxnOption(t *testing.T) {
 		ReadOnly(),
 		BatchWrite(),
 		ViewTTL(0),
-		BatchReadSize(0),
 	}
 	config := TxnConfigWith(opts)
 	assert.NotEqual(t, TxnConfig{}, config)
 }
 
-func TestRequestOption(t *testing.T) {
+func TestQueryOption(t *testing.T) {
 	t.Parallel()
-
-	opts := []RequestOption{
-		Eq("", "bar4"),
-		NotEq("", ""),
-		As("", ""),
-		Field(""),
-		XEq("", ""),
-		NotXEq("", ""),
-		Px("", ""),
-		Page(0),
-		Limit(0),
-		OrderBy(""),
-		GroupBy(""),
-		Gt("", 0),
-		Lt("", 0),
-		Table(""),
-		Filter(""),
-		Suffix(""),
-		Expire(0),
-	}
-	req := NewRequest(opts)
-	assert.NotEqual(t, Request{}, req)
-	assert.True(t, req.HasFilter())
+	req := Query{Tables: []Expression{Expr("")}}
+	assert.NotEqual(t, Query{}, req)
+	assert.NotEqual(t, []byte{}, Query{}.Key(""))
 }
 
 func TestFields(t *testing.T) {
 	t.Parallel()
 
-	t.Run("field func", func(t *testing.T) {
-		req := NewRequest([]RequestOption{
-			Field([]string{"field2"}),
-			As("field2", "field1"),
-		})
-		assert.Len(t, req.Fields, 1)
-		assert.NotNil(t, req.Fields["field2"])
-		assert.Equal(t, "field1", req.Fields["field2"].Format)
-	})
-
 	t.Run("slice present", func(t *testing.T) {
-		req := NewRequest(Field("field1"), Field([]string{"field2"}))
-		assert.Len(t, req.Fields, 1)
-		assert.NotNil(t, req.Fields["field2"])
-		assert.Equal(t, "field2", req.Fields["field2"].Format)
+		fields := AppendFields(nil, "field1", []string{"field2"})
+		assert.Len(t, fields, 1)
+		assert.NotNil(t, fields[0])
+		assert.Equal(t, "field2", fields[0])
 	})
 
 	t.Run("mixed args", func(t *testing.T) {
-		req := NewRequest([]RequestOption{Field("field1"), Field(map[string]interface{}{"field3": ""})})
-		assert.Len(t, req.Fields, 2)
-		assert.Contains(t, req.Fields, "field1")
-		assert.Contains(t, req.Fields, "field3")
+		fields := AppendFields(nil, "field1", map[string]interface{}{"field3": ""})
+		assert.Len(t, fields, 2)
+		assert.Contains(t, fields, "field1")
+		assert.Contains(t, fields, "field3")
 	})
 
 	t.Run("struct", func(t *testing.T) {
@@ -90,15 +59,15 @@ func TestFields(t *testing.T) {
 			Field1 int `db:"field1"`
 			Field2 int
 		}
-		req := NewRequest([]RequestOption{Field(&v)})
-		assert.Len(t, req.Fields, 2)
-		assert.Contains(t, req.Fields, "field1")
-		assert.Contains(t, req.Fields, "field2")
+		fields := AppendFields([]string{"field"}, &v)
+		assert.Len(t, fields, 3)
+		assert.Contains(t, fields, "field1")
+		assert.Contains(t, fields, "field2")
 	})
 
 	t.Run("unknown type", func(t *testing.T) {
 		var v int
-		req := NewRequest([]RequestOption{Field(&v)})
-		assert.Len(t, req.Fields, 0)
+		fields := AppendFields(nil, &v)
+		assert.Len(t, fields, 0)
 	})
 }

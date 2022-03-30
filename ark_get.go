@@ -1,34 +1,35 @@
 package ark
 
 import (
-	"fmt"
-
 	"github.com/pghq/go-tea"
 
 	"github.com/pghq/go-ark/database"
 )
 
 // Get Retrieve a value
-func (tx Txn) Get(table string, k, v interface{}, args ...interface{}) error {
-	if tx.err != nil {
-		return tea.Stacktrace(tx.err)
-	}
+func (tx Txn) Get(table string, query database.Query, v DocumentDecoder) error {
+	return v.Decode(func(v interface{}) error {
+		if len(query.Fields) == 0 {
+			query.Fields = database.AppendFields(query.Fields, v)
+		}
 
-	args = append(args, k)
-	key := []byte(fmt.Sprintf("%s%s", table, database.NewRequest(args...).CacheKey))
-	if cv, present := tx.cache.Get(key); present {
-		return database.Copy(cv, v)
-	}
+		if query.Limit <= 0 {
+			query.Limit = database.DefaultLimit
+		}
 
-	if err := tx.backend.Get(table, k, v, args...); err != nil {
-		return tea.Stacktrace(err)
-	}
+		key := query.Key(table)
+		if cv, present := tx.cache.Get(key); present {
+			return database.Copy(cv, v)
+		}
 
-	select {
-	case tx.views <- view{Key: key, Value: v}:
-	default:
+		if err := tx.backend.Get(table, query, v); err != nil {
+			return tea.Stacktrace(err)
+		}
+
+		if tx.config.ViewTTL != 0 {
+			tx.cache.SetWithTTL(key, v, 1, tx.config.ViewTTL)
+		}
+
 		return nil
-	}
-
-	return nil
+	})
 }

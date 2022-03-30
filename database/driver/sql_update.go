@@ -1,4 +1,4 @@
-package sql
+package driver
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 	"github.com/pghq/go-ark/database"
 )
 
-func (tx txn) Update(table string, k, v interface{}, args ...interface{}) error {
+func (tx txn) Update(table string, query database.Query, v interface{}) error {
 	if tx.err != nil {
 		return tea.Stacktrace(tx.err)
 	}
@@ -19,42 +19,22 @@ func (tx txn) Update(table string, k, v interface{}, args ...interface{}) error 
 		return tea.Stacktrace(err)
 	}
 
-	args = append(args, k)
-	req := database.NewRequest(args...)
 	builder := squirrel.StatementBuilder.
 		Update(table).
 		SetMap(m).
+		Where(squirrel.Eq(query.Eq)).
+		Where(squirrel.NotEq(query.NotEq)).
+		Where(squirrel.Lt(query.Lt)).
+		Where(squirrel.Gt(query.Gt)).
+		Where(squirrel.Like(query.XEq)).
+		Where(squirrel.NotLike(query.NotXEq)).
 		PlaceholderFormat(tx.ph)
 
-	for _, eq := range req.Eq {
-		builder = builder.Where(squirrel.Eq(eq))
-	}
-
-	for _, neq := range req.NotEq {
-		builder = builder.Where(squirrel.NotEq(neq))
-	}
-
-	for _, lt := range req.Lt {
-		builder = builder.Where(squirrel.Lt(lt))
-	}
-
-	for _, gt := range req.Gt {
-		builder = builder.Where(squirrel.Gt(gt))
-	}
-
-	for k, v := range req.Px {
+	for k, v := range query.Px {
 		builder = builder.Where(squirrel.ILike(map[string]interface{}{k: fmt.Sprintf("%s%%", v)}))
 	}
 
-	for _, xeq := range req.XEq {
-		builder = builder.Where(squirrel.Like(xeq))
-	}
-
-	for _, nxeq := range req.XEq {
-		builder = builder.Where(squirrel.NotLike(nxeq))
-	}
-
-	for _, expr := range req.Filters {
+	for _, expr := range query.Filters {
 		builder = builder.Where(squirrel.Expr(expr.Format, expr.Args...))
 	}
 

@@ -1,4 +1,4 @@
-// Copyright 2021 PGHQ. All Rights Reserved.
+// Copyright 2022 PGHQ. All Rights Reserved.
 //
 // Licensed under the GNU General Public License, Version 3 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,6 +14,7 @@ package ark
 
 import (
 	"context"
+	"github.com/pghq/go-ark/database/driver"
 	"net/url"
 	"strings"
 
@@ -21,57 +22,40 @@ import (
 	"github.com/pghq/go-tea"
 
 	"github.com/pghq/go-ark/database"
-	"github.com/pghq/go-ark/memory"
-	"github.com/pghq/go-ark/redis"
-	"github.com/pghq/go-ark/sql"
-)
-
-const (
-	// Version of the mapper
-	Version = "0.0.76"
 )
 
 // Mapper Data mapper for various backends
 type Mapper struct {
-	db    database.DB
-	err   error
+	db    database.Driver
 	cache *ristretto.Cache
 }
 
-// SetError sets a mapper error
-func (m *Mapper) SetError(err error) {
-	m.err = err
-}
-
-// Error exposes any underlying mapper errors
-func (m Mapper) Error() error {
-	return m.err
-}
-
 // New Create a new mapper
-func New(dsn string, opts ...database.Option) *Mapper {
+func New(dsn string, opts ...database.Option) (*Mapper, error) {
 	m := defaultMapper()
 	databaseURL, err := url.Parse(dsn)
 	if err != nil {
-		m.err = tea.Stacktrace(err)
-		return &m
+		return nil, tea.Stacktrace(err)
 	}
 
 	dialect := strings.TrimSuffix(databaseURL.Scheme, ":")
 	switch dialect {
 	case "postgres", "redshift":
-		m.db = sql.NewDB(dialect, databaseURL, opts...)
-	case "redis":
-		m.db = redis.NewDB(databaseURL)
-	case "memory":
-		m.db = memory.NewDB(opts...)
+		m.db, err = driver.NewSQL(dialect, databaseURL, opts...)
 	default:
-		m.err = tea.Err("unrecognized dialect: '", dialect, "'")
-		return &m
+		return nil, tea.Err("unrecognized dialect: '", dialect, "'")
 	}
 
-	m.err = m.db.Ping(context.Background())
-	return &m
+	if err == nil {
+		err = m.db.Ping(context.Background())
+	}
+
+	return &m, err
+}
+
+// DocumentDecoder decodes a database document.
+type DocumentDecoder interface {
+	Decode(fn func(v interface{}) error) error
 }
 
 // defaultMapper create a new default mapper
