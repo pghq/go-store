@@ -1,6 +1,7 @@
 package driver
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/Masterminds/squirrel"
@@ -9,10 +10,13 @@ import (
 	"github.com/pghq/go-ark/database"
 )
 
-func (tx txn) Remove(table string, query database.Query) error {
+func (tx txn) Remove(ctx context.Context, table string, query database.Query) error {
 	if tx.err != nil {
 		return trail.Stacktrace(tx.err)
 	}
+
+	span := trail.StartSpan(ctx, "database.operation")
+	defer span.Finish()
 
 	builder := squirrel.StatementBuilder.
 		Delete(table).
@@ -37,5 +41,7 @@ func (tx txn) Remove(table string, query database.Query) error {
 		return trail.Stacktrace(err)
 	}
 
-	return tx.uow.Exec(tx.ctx, stmt, args...)
+	span.Fields.Set("sql.statement", stmt)
+	span.Fields.Set("sql.arguments", args)
+	return tx.uow.Exec(span.Context(), stmt, args...)
 }

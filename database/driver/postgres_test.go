@@ -41,13 +41,13 @@ func TestPostgresDB_Txn(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 0)
 		defer cancel()
 		db := postgres
-		assert.NotNil(t, db.Txn(ctx).List("", database.Query{}, ""))
-		assert.NotNil(t, db.Txn(ctx).Commit())
-		assert.NotNil(t, db.Txn(ctx).Rollback())
-		assert.NotNil(t, db.Txn(ctx).Get("", database.Query{}, nil))
-		assert.NotNil(t, db.Txn(ctx).Insert("", nil))
-		assert.NotNil(t, db.Txn(ctx).Remove("", database.Query{}))
-		assert.NotNil(t, db.Txn(ctx).Update("", database.Query{}, nil))
+		assert.NotNil(t, db.Txn(ctx).List(context.TODO(), "", database.Query{}, ""))
+		assert.NotNil(t, db.Txn(ctx).Commit(context.TODO()))
+		assert.NotNil(t, db.Txn(ctx).Rollback(context.TODO()))
+		assert.NotNil(t, db.Txn(ctx).Get(context.TODO(), "", database.Query{}, nil))
+		assert.NotNil(t, db.Txn(ctx).Insert(context.TODO(), "", nil))
+		assert.NotNil(t, db.Txn(ctx).Remove(context.TODO(), "", database.Query{}))
+		assert.NotNil(t, db.Txn(ctx).Update(context.TODO(), "", database.Query{}, nil))
 	})
 
 	t.Run("read only", func(t *testing.T) {
@@ -57,14 +57,14 @@ func TestPostgresDB_Txn(t *testing.T) {
 
 	t.Run("can rollback", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
-		err := tx.Rollback()
+		err := tx.Rollback(context.TODO())
 		assert.Nil(t, err)
 	})
 
 	t.Run("can commit", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
 		assert.NotNil(t, tx)
-		err := tx.Commit()
+		err := tx.Commit(context.TODO())
 		assert.Nil(t, err)
 	})
 
@@ -74,7 +74,7 @@ func TestPostgresDB_Txn(t *testing.T) {
 		tx := postgres.Txn(ctx)
 		assert.NotNil(t, tx)
 		<-time.After(10 * time.Millisecond)
-		err := tx.Commit()
+		err := tx.Commit(context.TODO())
 		assert.NotNil(t, err)
 		assert.False(t, trail.IsFatal(err))
 	})
@@ -85,43 +85,43 @@ func TestPostgresTxn_Insert(t *testing.T) {
 
 	t.Run("bad value", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
-		defer tx.Rollback()
-		err := tx.Insert("tests", func() {})
+		defer tx.Rollback(context.TODO())
+		err := tx.Insert(context.TODO(), "tests", func() {})
 		assert.NotNil(t, err)
 	})
 
 	t.Run("bad sql", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
-		defer tx.Rollback()
-		err := tx.Insert("", map[string]interface{}{"id": "foo"})
+		defer tx.Rollback(context.TODO())
+		err := tx.Insert(context.TODO(), "", map[string]interface{}{"id": "foo"})
 		assert.NotNil(t, err)
 	})
 
 	t.Run("bad exec", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
-		defer tx.Rollback()
-		err := tx.Insert("tests", map[string]interface{}{"id": "foo", "fn": func() {}})
+		defer tx.Rollback(context.TODO())
+		err := tx.Insert(context.TODO(), "tests", map[string]interface{}{"id": "foo", "fn": func() {}})
 		assert.NotNil(t, err)
 	})
 
 	t.Run("ok", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
-		defer tx.Commit()
-		err := tx.Insert("tests", map[string]interface{}{"id": "insert:foo"})
+		defer tx.Commit(context.TODO())
+		err := tx.Insert(context.TODO(), "tests", map[string]interface{}{"id": "insert:foo"})
 		assert.Nil(t, err)
 	})
 
 	t.Run("integrity violation", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
-		defer tx.Rollback()
-		err := tx.Insert("tests", map[string]interface{}{"id": "insert:foo"})
+		defer tx.Rollback(context.TODO())
+		err := tx.Insert(context.TODO(), "tests", map[string]interface{}{"id": "insert:foo"})
 		assert.NotNil(t, err)
 	})
 
 	t.Run("suffix", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
-		defer tx.Rollback()
-		err := tx.Insert("tests", map[string]interface{}{"id": "insert:foo"})
+		defer tx.Rollback(context.TODO())
+		err := tx.Insert(context.TODO(), "tests", map[string]interface{}{"id": "insert:foo"})
 		assert.NotNil(t, err)
 	})
 }
@@ -131,38 +131,38 @@ func TestPostgresTxn_Update(t *testing.T) {
 
 	t.Run("bad value", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
-		defer tx.Rollback()
-		err := tx.Update("tests", database.Query{}, func() {})
+		defer tx.Rollback(context.TODO())
+		err := tx.Update(context.TODO(), "tests", database.Query{}, func() {})
 		assert.NotNil(t, err)
 	})
 
 	t.Run("bad sql", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
-		defer tx.Rollback()
-		err := tx.Update("", database.Query{}, map[string]interface{}{"id": "foo"})
+		defer tx.Rollback(context.TODO())
+		err := tx.Update(context.TODO(), "", database.Query{}, map[string]interface{}{"id": "foo"})
 		assert.NotNil(t, err)
 	})
 
 	t.Run("bad exec", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
-		defer tx.Rollback()
-		err := tx.Update("tests", database.Query{}, map[string]interface{}{"id": "foo", "fn": func() {}})
+		defer tx.Rollback(context.TODO())
+		err := tx.Update(context.TODO(), "tests", database.Query{}, map[string]interface{}{"id": "foo", "fn": func() {}})
 		assert.NotNil(t, err)
 	})
 
 	t.Run("ok", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
-		defer tx.Rollback()
-		assert.Nil(t, tx.Insert("tests", map[string]interface{}{"id": "ok"}))
-		err := tx.Update("tests", database.Query{Eq: map[string]interface{}{"id": "ok"}}, map[string]interface{}{"id": "ok"})
+		defer tx.Rollback(context.TODO())
+		assert.Nil(t, tx.Insert(context.TODO(), "tests", map[string]interface{}{"id": "ok"}))
+		err := tx.Update(context.TODO(), "tests", database.Query{Eq: map[string]interface{}{"id": "ok"}}, map[string]interface{}{"id": "ok"})
 		assert.Nil(t, err)
 	})
 
 	t.Run("use opts", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
-		defer tx.Rollback()
+		defer tx.Rollback(context.TODO())
 
-		assert.Nil(t, tx.Insert("tests", map[string]interface{}{"id": "opts:ok"}))
+		assert.Nil(t, tx.Insert(context.TODO(), "tests", map[string]interface{}{"id": "opts:ok"}))
 		query := database.Query{
 			Fields:  []string{"tests.id", "tests.name"},
 			NotEq:   map[string]interface{}{"name": "bar4"},
@@ -178,7 +178,7 @@ func TestPostgresTxn_Update(t *testing.T) {
 		}
 
 		var doc map[string]interface{}
-		err := tx.Update("tests", query, &doc)
+		err := tx.Update(context.TODO(), "tests", query, &doc)
 		assert.NotNil(t, err)
 	})
 }
@@ -188,47 +188,47 @@ func TestPostgresTxn_Get(t *testing.T) {
 
 	t.Run("bad sql", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
-		defer tx.Rollback()
-		err := tx.Get("", database.Query{}, nil)
+		defer tx.Rollback(context.TODO())
+		err := tx.Get(context.TODO(), "", database.Query{}, nil)
 		assert.NotNil(t, err)
 	})
 
 	t.Run("bad exec", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
-		defer tx.Rollback()
-		err := tx.Get("tests", database.Query{Fields: []string{"id"}}, nil)
+		defer tx.Rollback(context.TODO())
+		err := tx.Get(context.TODO(), "tests", database.Query{Fields: []string{"id"}}, nil)
 		assert.NotNil(t, err)
 	})
 
 	t.Run("not found", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
-		defer tx.Rollback()
+		defer tx.Rollback(context.TODO())
 		var id string
-		err := tx.Get("tests", database.Query{Eq: map[string]interface{}{"id": "not found"}, Fields: []string{"id"}}, &id)
+		err := tx.Get(context.TODO(), "tests", database.Query{Eq: map[string]interface{}{"id": "not found"}, Fields: []string{"id"}}, &id)
 		assert.NotNil(t, err)
 		assert.False(t, trail.IsFatal(err))
 	})
 
 	t.Run("ok for single field", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
-		defer tx.Rollback()
-		tx.Insert("tests", map[string]interface{}{"id": "get:foo1"})
+		defer tx.Rollback(context.TODO())
+		tx.Insert(context.TODO(), "tests", map[string]interface{}{"id": "get:foo1"})
 		var id string
-		err := tx.Get("tests", database.Query{Eq: map[string]interface{}{"id": "get:foo1"}, Fields: []string{"id"}}, &id)
+		err := tx.Get(context.TODO(), "tests", database.Query{Eq: map[string]interface{}{"id": "get:foo1"}, Fields: []string{"id"}}, &id)
 		assert.Nil(t, err)
 		assert.Equal(t, "get:foo1", id)
 	})
 
 	t.Run("ok for multiple fields", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
-		defer tx.Rollback()
-		tx.Insert("tests", map[string]interface{}{"id": "get:foo2", "name": "bar2"})
+		defer tx.Rollback(context.TODO())
+		tx.Insert(context.TODO(), "tests", map[string]interface{}{"id": "get:foo2", "name": "bar2"})
 		type data struct {
 			Id   *string `db:"id"`
 			Name *string `db:"name"`
 		}
 		var doc data
-		err := tx.Get("tests", database.Query{Eq: map[string]interface{}{"id": "get:foo2"}, Fields: []string{"id", "name"}}, &doc)
+		err := tx.Get(context.TODO(), "tests", database.Query{Eq: map[string]interface{}{"id": "get:foo2"}, Fields: []string{"id", "name"}}, &doc)
 		assert.Nil(t, err)
 		assert.Equal(t, "get:foo2", *doc.Id)
 		assert.Equal(t, "bar2", *doc.Name)
@@ -236,7 +236,7 @@ func TestPostgresTxn_Get(t *testing.T) {
 
 	t.Run("use opts", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
-		defer tx.Rollback()
+		defer tx.Rollback(context.TODO())
 		query := database.Query{
 			Fields:  []string{"tests.id", "tests.name"},
 			NotEq:   map[string]interface{}{"name": "bar4"},
@@ -251,19 +251,19 @@ func TestPostgresTxn_Get(t *testing.T) {
 			Filters: []database.Expression{database.Expr("name = 'bar4'")},
 		}
 		var doc map[string]interface{}
-		err := tx.Get("tests", query, &doc)
+		err := tx.Get(context.TODO(), "tests", query, &doc)
 		assert.NotNil(t, err)
 	})
 
 	t.Run("alias", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
-		defer tx.Rollback()
+		defer tx.Rollback(context.TODO())
 
-		tx.Insert("tests", map[string]interface{}{"id": "alias:foo3", "name": "bar3"})
-		tx.Insert("tests", map[string]interface{}{"id": "alias:foo4", "name": "bar4", "num": 1})
+		tx.Insert(context.TODO(), "tests", map[string]interface{}{"id": "alias:foo3", "name": "bar3"})
+		tx.Insert(context.TODO(), "tests", map[string]interface{}{"id": "alias:foo4", "name": "bar4", "num": 1})
 
 		var dst map[string]interface{}
-		err := tx.Get("tests",
+		err := tx.Get(context.TODO(), "tests",
 			database.Query{
 				Fields: []string{"count"},
 				Alias:  map[string]string{"count": "SELECT count(id) FROM units WHERE tests.id = units.id"},
@@ -279,22 +279,22 @@ func TestPostgresTxn_Remove(t *testing.T) {
 
 	t.Run("bad sql", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
-		defer tx.Rollback()
-		err := tx.Remove("", database.Query{Eq: map[string]interface{}{"id": "foo"}})
+		defer tx.Rollback(context.TODO())
+		err := tx.Remove(context.TODO(), "", database.Query{Eq: map[string]interface{}{"id": "foo"}})
 		assert.NotNil(t, err)
 	})
 
 	t.Run("ok", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
-		defer tx.Rollback()
-		tx.Insert("tests", map[string]interface{}{"id": "remove:foo"})
-		err := tx.Remove("tests", database.Query{Eq: map[string]interface{}{"id": "remove:foo"}})
+		defer tx.Rollback(context.TODO())
+		tx.Insert(context.TODO(), "tests", map[string]interface{}{"id": "remove:foo"})
+		err := tx.Remove(context.TODO(), "tests", database.Query{Eq: map[string]interface{}{"id": "remove:foo"}})
 		assert.Nil(t, err)
 	})
 
 	t.Run("use opts", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
-		defer tx.Rollback()
+		defer tx.Rollback(context.TODO())
 		query := database.Query{
 			Fields:  []string{"tests.id", "tests.name"},
 			NotEq:   map[string]interface{}{"name": "bar4"},
@@ -308,7 +308,7 @@ func TestPostgresTxn_Remove(t *testing.T) {
 			Tables:  []database.Expression{database.Expr("LEFT JOIN units ON units.id = tests.id")},
 			Filters: []database.Expression{database.Expr("name = 'bar4'")},
 		}
-		err := tx.Remove("tests", query)
+		err := tx.Remove(context.TODO(), "tests", query)
 		assert.Nil(t, err)
 	})
 }
@@ -318,38 +318,38 @@ func TestPostgresTxn_List(t *testing.T) {
 
 	t.Run("bad sql", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
-		defer tx.Rollback()
-		err := tx.List("", database.Query{}, nil)
+		defer tx.Rollback(context.TODO())
+		err := tx.List(context.TODO(), "", database.Query{}, nil)
 		assert.NotNil(t, err)
 	})
 
 	t.Run("bad exec", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
-		defer tx.Rollback()
-		err := tx.List("tests", database.Query{Fields: []string{"id"}}, nil)
+		defer tx.Rollback(context.TODO())
+		err := tx.List(context.TODO(), "tests", database.Query{Fields: []string{"id"}}, nil)
 		assert.NotNil(t, err)
 	})
 
 	t.Run("ok for single field", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
-		defer tx.Rollback()
-		tx.Insert("tests", map[string]interface{}{"id": "foo1", "name": "bar1"})
-		tx.Insert("tests", map[string]interface{}{"id": "list:foo2", "name": "bar2"})
+		defer tx.Rollback(context.TODO())
+		tx.Insert(context.TODO(), "tests", map[string]interface{}{"id": "foo1", "name": "bar1"})
+		tx.Insert(context.TODO(), "tests", map[string]interface{}{"id": "list:foo2", "name": "bar2"})
 		var ids []string
-		err := tx.List("tests", database.Query{Eq: map[string]interface{}{"tests.name": "bar2"}, Fields: []string{"id"}}, &ids)
+		err := tx.List(context.TODO(), "tests", database.Query{Eq: map[string]interface{}{"tests.name": "bar2"}, Fields: []string{"id"}}, &ids)
 		assert.Nil(t, err)
 		assert.Equal(t, []string{"list:foo2"}, ids)
 	})
 
 	t.Run("alias", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
-		defer tx.Rollback()
+		defer tx.Rollback(context.TODO())
 
-		tx.Insert("tests", map[string]interface{}{"id": "alias:foo3", "name": "bar3"})
-		tx.Insert("tests", map[string]interface{}{"id": "alias:foo4", "name": "bar4", "num": 1})
+		tx.Insert(context.TODO(), "tests", map[string]interface{}{"id": "alias:foo3", "name": "bar3"})
+		tx.Insert(context.TODO(), "tests", map[string]interface{}{"id": "alias:foo4", "name": "bar4", "num": 1})
 
 		var dst []map[string]interface{}
-		err := tx.List("tests",
+		err := tx.List(context.TODO(), "tests",
 			database.Query{
 				Fields: []string{"count"},
 				Alias:  map[string]string{"count": "SELECT count(id) FROM units WHERE tests.id = units.id"},
@@ -361,18 +361,18 @@ func TestPostgresTxn_List(t *testing.T) {
 
 	t.Run("no content", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
-		defer tx.Rollback()
+		defer tx.Rollback(context.TODO())
 
 		var dst []map[string]interface{}
-		err := tx.List("tests", database.Query{Eq: map[string]interface{}{"id": "not found"}, Fields: []string{"id"}}, &dst)
+		err := tx.List(context.TODO(), "tests", database.Query{Eq: map[string]interface{}{"id": "not found"}, Fields: []string{"id"}}, &dst)
 		assert.NotNil(t, err)
 	})
 
 	t.Run("uses opts", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
-		defer tx.Rollback()
-		tx.Insert("tests", map[string]interface{}{"id": "list:foo3", "name": "bar3"})
-		tx.Insert("tests", map[string]interface{}{"id": "list:foo4", "name": "bar4", "num": 1})
+		defer tx.Rollback(context.TODO())
+		tx.Insert(context.TODO(), "tests", map[string]interface{}{"id": "list:foo3", "name": "bar3"})
+		tx.Insert(context.TODO(), "tests", map[string]interface{}{"id": "list:foo4", "name": "bar4", "num": 1})
 		type data struct {
 			Id   *string `db:"id"`
 			Name *string `db:"name"`
@@ -391,7 +391,7 @@ func TestPostgresTxn_List(t *testing.T) {
 			Tables:  []database.Expression{database.Expr("LEFT JOIN units ON units.id = tests.id")},
 			Filters: []database.Expression{database.Expr("name = 'bar4'")},
 		}
-		err := tx.List("tests", query, &d)
+		err := tx.List(context.TODO(), "tests", query, &d)
 		assert.NotNil(t, err)
 	})
 }

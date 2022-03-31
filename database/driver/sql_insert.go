@@ -1,20 +1,19 @@
 package driver
 
 import (
-	"fmt"
-
+	"context"
 	"github.com/Masterminds/squirrel"
 	"github.com/pghq/go-tea/trail"
 
 	"github.com/pghq/go-ark/database"
 )
 
-func (tx txn) Insert(table string, v interface{}) error {
+func (tx txn) Insert(ctx context.Context, table string, v interface{}) error {
 	if tx.err != nil {
 		return trail.Stacktrace(tx.err)
 	}
 
-	span := trail.StartSpan(tx.ctx, "database.operation")
+	span := trail.StartSpan(ctx, "database.operation")
 	defer span.Finish()
 
 	m, err := database.Map(v)
@@ -32,7 +31,7 @@ func (tx txn) Insert(table string, v interface{}) error {
 		return trail.Stacktrace(err)
 	}
 
-	span.Tag("sql.statement", stmt)
-	span.Tag("sql.arguments", fmt.Sprintf("%+v", args))
+	span.Fields.Set("sql.statement", stmt)
+	span.Fields.Set("sql.arguments", args)
 	return tx.uow.Exec(span.Context(), stmt, args...)
 }

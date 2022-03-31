@@ -1,6 +1,7 @@
 package driver
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/Masterminds/squirrel"
@@ -9,12 +10,12 @@ import (
 	"github.com/pghq/go-ark/database"
 )
 
-func (tx txn) Get(table string, query database.Query, v interface{}) error {
+func (tx txn) Get(ctx context.Context, table string, query database.Query, v interface{}) error {
 	if tx.err != nil {
 		return trail.Stacktrace(tx.err)
 	}
 
-	span := trail.StartSpan(tx.ctx, "database.operation")
+	span := trail.StartSpan(ctx, "database.operation")
 	defer span.Finish()
 
 	builder := squirrel.StatementBuilder.
@@ -56,7 +57,7 @@ func (tx txn) Get(table string, query database.Query, v interface{}) error {
 		return trail.Stacktrace(err)
 	}
 
-	span.Tag("sql.statement", stmt)
-	span.Tag("sql.arguments", fmt.Sprintf("%+v", args))
+	span.Fields.Set("sql.statement", stmt)
+	span.Fields.Set("sql.arguments", args)
 	return tx.uow.Get(span.Context(), v, stmt, args...)
 }

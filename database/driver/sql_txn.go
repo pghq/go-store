@@ -13,7 +13,6 @@ func (d SQL) Txn(ctx context.Context, opts ...database.TxnOption) database.Txn {
 	config := database.TxnConfigWith(opts)
 	uow, err := d.backend.Txn(ctx, &sql.TxOptions{ReadOnly: config.ReadOnly && !config.BatchWrite})
 	return txn{
-		ctx: ctx,
 		uow: uow,
 		err: err,
 		ph:  d.backend.placeholder(),
@@ -22,26 +21,25 @@ func (d SQL) Txn(ctx context.Context, opts ...database.TxnOption) database.Txn {
 
 // txn SQL transaction
 type txn struct {
-	ctx context.Context
 	ph  placeholder
 	uow uow
 	err error
 }
 
-func (tx txn) Commit() error {
+func (tx txn) Commit(ctx context.Context) error {
 	if tx.err != nil {
 		return trail.Stacktrace(tx.err)
 	}
 
-	return tx.uow.Commit(tx.ctx)
+	return tx.uow.Commit(ctx)
 }
 
-func (tx txn) Rollback() error {
+func (tx txn) Rollback(ctx context.Context) error {
 	if tx.err != nil {
 		return trail.Stacktrace(tx.err)
 	}
 
-	return tx.uow.Rollback(tx.ctx)
+	return tx.uow.Rollback(ctx)
 }
 
 type uow interface {
