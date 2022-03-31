@@ -16,9 +16,12 @@ func (m *Mapper) Txn(ctx context.Context, opts ...database.TxnOption) Txn {
 		return tx
 	}
 
+	span := trail.StartSpan(ctx, "transaction.begin")
+	defer span.Finish()
+
 	config := database.TxnConfigWith(opts)
 	return Txn{
-		Context: ctx,
+		Context: span.Context(),
 		cache:   m.cache,
 		backend: m.db.Txn(ctx, opts...),
 		root:    true,
@@ -73,7 +76,9 @@ func (tx Txn) Commit() error {
 		return nil
 	}
 
-	return tx.backend.Commit()
+	span := trail.StartSpan(tx, "transaction.commit")
+	defer span.Finish()
+	return tx.backend.Commit(span.Context())
 }
 
 // Rollback Cancel a unit of work
@@ -82,5 +87,7 @@ func (tx Txn) Rollback() error {
 		return nil
 	}
 
-	return tx.backend.Rollback()
+	span := trail.StartSpan(tx, "transaction.rollback")
+	defer span.Finish()
+	return tx.backend.Rollback(span.Context())
 }

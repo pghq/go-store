@@ -290,8 +290,8 @@ github.com/ory/dockertest/v3 v3.8.0/go.mod h1:9zPATATlWQru+ynXP+DytBQrsXV7Tmlx7K
 github.com/ory/dockertest/v3 v3.8.1 h1:vU/8d1We4qIad2YM0kOwRVtnyue7ExvacPiw1yDm17g=
 github.com/ory/dockertest/v3 v3.8.1/go.mod h1:wSRQ3wmkz+uSARYMk7kVJFDBGm8x5gSxIhI7NDc+BAQ=
 github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=
-github.com/pghq/go-tea v0.1.0 h1:uqolQmX1Qz/P4Ryi5dXhxvp/TkXb0Ol4q0QHAT0q1E0=
-github.com/pghq/go-tea v0.1.0/go.mod h1:JfkuN8838j5kKDeexN/t+aEkaJYlagJIrPkTUIErugA=
+github.com/pghq/go-tea v0.1.1 h1:2IKf0HYNaX/r1jLb3QX9FGEO0erzBhdmNr/qwSp2ukM=
+github.com/pghq/go-tea v0.1.1/go.mod h1:JfkuN8838j5kKDeexN/t+aEkaJYlagJIrPkTUIErugA=
 github.com/pierrec/lz4 v2.0.5+incompatible/go.mod h1:pdkljMzZIN41W+lC3N2tnIh5sFi+IEE17M5jbnwPHcY=
 github.com/pingcap/errors v0.11.4 h1:lFuQV/oaUMGcD2tqt+01ROSmJs75VG1ToEOkZIZ4nE4=
 github.com/pkg/errors v0.8.0/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=

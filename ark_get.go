@@ -9,6 +9,9 @@ import (
 // Get Retrieve a value
 func (tx Txn) Get(table string, query database.Query, v DocumentDecoder) error {
 	return v.Decode(func(v interface{}) error {
+		span := trail.StartSpan(tx, "database.view")
+		defer span.Finish()
+
 		if len(query.Fields) == 0 {
 			query.Fields = database.AppendFields(query.Fields, v)
 		}
@@ -18,11 +21,13 @@ func (tx Txn) Get(table string, query database.Query, v DocumentDecoder) error {
 		}
 
 		key := query.Key(table)
-		if cv, present := tx.cache.Get(key); present {
+		cv, present := tx.cache.Get(key)
+		span.Fields.Set("cache.hit", present)
+		if present {
 			return database.Copy(cv, v)
 		}
 
-		if err := tx.backend.Get(table, query, v); err != nil {
+		if err := tx.backend.Get(span.Context(), table, query, v); err != nil {
 			return trail.Stacktrace(err)
 		}
 

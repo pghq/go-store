@@ -31,13 +31,13 @@ type Driver interface {
 
 // Txn A unit of work performed within a database
 type Txn interface {
-	Get(table string, query Query, v interface{}) error
-	Insert(table string, v interface{}) error
-	Update(table string, query Query, v interface{}) error
-	Remove(table string, query Query) error
-	List(table string, query Query, v interface{}) error
-	Commit() error
-	Rollback() error
+	Get(ctx context.Context, table string, query Query, v interface{}) error
+	Insert(ctx context.Context, table string, v interface{}) error
+	Update(ctx context.Context, table string, query Query, v interface{}) error
+	Remove(ctx context.Context, table string, query Query) error
+	List(ctx context.Context, table string, query Query, v interface{}) error
+	Commit(ctx context.Context) error
+	Rollback(ctx context.Context) error
 }
 
 // Config Database configuration
