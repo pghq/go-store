@@ -111,7 +111,7 @@ func TestPostgresTxn_Insert(t *testing.T) {
 		assert.Nil(t, err)
 	})
 
-	t.Run("integrity violation", func(t *testing.T) {
+	t.Run("unique violation", func(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
 		defer tx.Rollback(context.TODO())
 		err := tx.Insert(context.TODO(), "tests", map[string]interface{}{"id": "insert:foo"})
@@ -428,7 +428,7 @@ func NewTestPostgresDB() (*SQL, func()) {
 
 	fs := fstest.MapFS{
 		"migrations/00001_test.sql": &fstest.MapFile{
-			Data: []byte("-- +goose Up\nCREATE TABLE IF NOT EXISTS tests (id text unique, name text, num int);\nCREATE TABLE IF NOT EXISTS units (id text);"),
+			Data: []byte("-- +goose Up\nCREATE TABLE IF NOT EXISTS tests (id text primary key, name text, num int);\nCREATE TABLE IF NOT EXISTS units (id text);"),
 		},
 	}
 

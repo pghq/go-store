@@ -24,8 +24,8 @@ var (
 	// ErrNoResults is return for list ops with no results
 	ErrNoResults = trail.NewErrorNoContent("there are no items matching your search criteria")
 
-	// ErrConflict is return for write ops with conflict
-	ErrConflict = trail.NewErrorNoContent("there was a conflict processing your request")
+	// ErrUnique is return for write ops that violate unique constraint
+	ErrUnique = trail.NewErrorConflict("an item already exists matching your request")
 )
 
 // pg backend
@@ -118,8 +118,9 @@ func (p pgTxn) Exec(ctx context.Context, query string, args ...interface{}) erro
 	if err != nil {
 		var icv *pgconn.PgError
 		if trail.AsError(err, &icv) {
-			if pgerrcode.IsIntegrityConstraintViolation(icv.Code) {
-				err = ErrConflict
+			switch {
+			case pgerrcode.UniqueViolation == icv.Code:
+				err = ErrUnique
 			}
 		}
 	}
