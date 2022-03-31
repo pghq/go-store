@@ -13,7 +13,7 @@ import (
 
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
-	"github.com/pghq/go-tea"
+	"github.com/pghq/go-tea/trail"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/pghq/go-ark/database"
@@ -76,7 +76,7 @@ func TestPostgresDB_Txn(t *testing.T) {
 		<-time.After(10 * time.Millisecond)
 		err := tx.Commit()
 		assert.NotNil(t, err)
-		assert.False(t, tea.IsFatal(err))
+		assert.False(t, trail.IsFatal(err))
 	})
 }
 
@@ -206,7 +206,7 @@ func TestPostgresTxn_Get(t *testing.T) {
 		var id string
 		err := tx.Get("tests", database.Query{Eq: map[string]interface{}{"id": "not found"}, Fields: []string{"id"}}, &id)
 		assert.NotNil(t, err)
-		assert.False(t, tea.IsFatal(err))
+		assert.False(t, trail.IsFatal(err))
 	})
 
 	t.Run("ok for single field", func(t *testing.T) {

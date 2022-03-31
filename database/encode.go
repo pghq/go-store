@@ -5,7 +5,7 @@ import (
 	"encoding/gob"
 	"reflect"
 
-	"github.com/pghq/go-tea"
+	"github.com/pghq/go-tea/trail"
 )
 
 // Encode Encode a value to bytes
@@ -23,7 +23,7 @@ func GobEncode(v interface{}) ([]byte, error) {
 	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)
 	if err := enc.Encode(v); err != nil {
-		return nil, tea.Stacktrace(err)
+		return nil, trail.Stacktrace(err)
 	}
 	return buf.Bytes(), nil
 }

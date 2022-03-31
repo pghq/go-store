@@ -1,13 +1,14 @@
 package driver
 
 import (
-	"github.com/pghq/go-tea"
 	"os"
 	"testing"
+
+	"github.com/pghq/go-tea/trail"
 )
 
 func TestMain(m *testing.M) {
-	tea.Testing()
+	trail.Testing()
 	var teardown func()
 
 	postgres, teardown = NewTestPostgresDB()

@@ -1,5 +1,5 @@
 # go-ark
-Go data mapper for internally supported providers.
+Go data mapper providing a familiar API for internally supported database providers.
 
 ## Installation
 
@@ -16,24 +16,25 @@ A typical usage scenario:
 import (
     "context"
     
+    "github.com/pghq/go-ark/database"
     "github.com/pghq/go-ark"
 )
 
-// Open an in-memory data mapper
-db := ark.New("memory://")
+//go:embed migrations/*.sql
+var migrations embed.FS
+
+// Open a postgres connection
+db, err := ark.New("postgres://user:pass@postgres/db", database.Migrate(migrations))
+if err != nil{
+    panic(err)
+}
 
 // Create a transaction
 tx := db.Txn(context.Background())
 defer tx.Rollback()
 
 // Commit some data
-err := tx.Insert("", []byte("dog"), "roof")
-if err != nil{
-    panic(err)
-}
-
-err := tx.InsertTTL("", []byte("cat"), "meow", 0)
-if err != nil{
+if err := tx.Insert("foos", map[string]interface{}{"id": "foo"}); err != nil{
     panic(err)
 }
 
@@ -43,7 +44,5 @@ if err := tx.Commit(); err != nil{
 ```
 
 ## Supported Providers
-- In-Memory
-- Redis
 - Postgres
 - Redshift

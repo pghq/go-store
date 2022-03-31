@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/pghq/go-tea"
+	"github.com/pghq/go-tea/trail"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/pghq/go-ark/database"
@@ -17,7 +17,7 @@ func TestNewDB(t *testing.T) {
 
 	t.Run("bad open", func(t *testing.T) {
 		_, err := NewSQL("postgres", &url.URL{}, database.SQLOpen(func(driverName, dataSourceName string) (*sql.DB, error) {
-			return nil, tea.Err("bad open")
+			return nil, trail.NewError("bad open")
 		}))
 		assert.NotNil(t, err)
 	})

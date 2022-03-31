@@ -11,7 +11,7 @@ require (
 	github.com/jackc/pgx/v4 v4.14.1
 	github.com/lib/pq v1.10.3
 	github.com/ory/dockertest/v3 v3.8.1
-	github.com/pghq/go-tea v0.0.59
+	github.com/pghq/go-tea v0.1.0
 	github.com/pressly/goose/v3 v3.4.1
 	github.com/stretchr/testify v1.7.0
 )
@@ -29,13 +29,11 @@ require (
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect
-	github.com/getsentry/sentry-go v0.11.0 // indirect
+	github.com/getsentry/sentry-go v0.13.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
-	github.com/gorilla/mux v1.8.0 // indirect
-	github.com/gorilla/schema v1.2.0 // indirect
-	github.com/hashicorp/go-version v1.3.0 // indirect
+	github.com/google/uuid v1.3.0 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
 	github.com/jackc/pgio v1.0.0 // indirect
@@ -54,7 +52,6 @@ require (
 	github.com/opencontainers/runc v1.0.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/rs/cors v1.8.0 // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
 	github.com/stretchr/objx v0.2.0 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f // indirect
@@ -63,10 +60,10 @@ require (
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	go.uber.org/zap v1.21.0 // indirect
-	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97 // indirect
+	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519 // indirect
 	golang.org/x/net v0.0.0-20211015210444-4f30a5c0130f // indirect
 	golang.org/x/sys v0.0.0-20211007075335-d3039528d8ac // indirect
-	golang.org/x/text v0.3.6 // indirect
+	golang.org/x/text v0.3.7 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 )

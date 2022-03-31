@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/dgraph-io/ristretto"
-	"github.com/pghq/go-tea"
+	"github.com/pghq/go-tea/trail"
 
 	"github.com/pghq/go-ark/database"
 )
@@ -29,14 +29,14 @@ func (m *Mapper) Txn(ctx context.Context, opts ...database.TxnOption) Txn {
 // Do Write and or read using a callback
 func (m *Mapper) Do(ctx context.Context, fn func(tx Txn) error, opts ...database.TxnOption) error {
 	if err := ctx.Err(); err != nil {
-		return tea.Stacktrace(err)
+		return trail.Stacktrace(err)
 	}
 
 	tx := m.Txn(ctx, opts...)
 	defer tx.Rollback()
 
 	if err := fn(tx); err != nil {
-		return tea.Stacktrace(err)
+		return trail.Stacktrace(err)
 	}
 
 	return tx.Commit()
@@ -45,14 +45,14 @@ func (m *Mapper) Do(ctx context.Context, fn func(tx Txn) error, opts ...database
 // View Read using a callback
 func (m *Mapper) View(ctx context.Context, fn func(tx Txn) error, opts ...database.TxnOption) error {
 	if err := ctx.Err(); err != nil {
-		return tea.Stacktrace(err)
+		return trail.Stacktrace(err)
 	}
 
 	tx := m.Txn(ctx, append(opts, database.ReadOnly())...)
 	defer tx.Rollback()
 
 	if err := fn(tx); err != nil {
-		return tea.Stacktrace(err)
+		return trail.Stacktrace(err)
 	}
 
 	return tx.Commit()

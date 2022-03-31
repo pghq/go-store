@@ -2,16 +2,20 @@ package driver
 
 import (
 	"fmt"
+
 	"github.com/Masterminds/squirrel"
-	"github.com/pghq/go-tea"
+	"github.com/pghq/go-tea/trail"
 
 	"github.com/pghq/go-ark/database"
 )
 
 func (tx txn) List(table string, query database.Query, v interface{}) error {
 	if tx.err != nil {
-		return tea.Stacktrace(tx.err)
+		return trail.Stacktrace(tx.err)
 	}
+
+	span := trail.StartSpan(tx.ctx, "database.operation")
+	defer span.Finish()
 
 	builder := squirrel.StatementBuilder.
 		Select().
@@ -51,15 +55,12 @@ func (tx txn) List(table string, query database.Query, v interface{}) error {
 		builder = builder.Where(squirrel.Expr(expr.Format, expr.Args...))
 	}
 
-	stmt, args, err := builder.
-		ToSql()
+	stmt, args, err := builder.ToSql()
 	if err != nil {
-		return tea.Err(err)
+		return trail.Stacktrace(err)
 	}
 
-	if err := tx.uow.List(tx.ctx, v, stmt, args...); err != nil {
-		return tea.Stacktrace(err)
-	}
-
-	return nil
+	span.Tag("sql.statement", stmt)
+	span.Tag("sql.arguments", fmt.Sprintf("%+v", args))
+	return tx.uow.List(span.Context(), v, stmt, args...)
 }

@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/pghq/go-tea"
+	"github.com/pghq/go-tea/trail"
 
 	"github.com/pghq/go-ark/database"
 )
@@ -30,7 +30,7 @@ type txn struct {
 
 func (tx txn) Commit() error {
 	if tx.err != nil {
-		return tea.Stacktrace(tx.err)
+		return trail.Stacktrace(tx.err)
 	}
 
 	return tx.uow.Commit(tx.ctx)
@@ -38,7 +38,7 @@ func (tx txn) Commit() error {
 
 func (tx txn) Rollback() error {
 	if tx.err != nil {
-		return tea.Stacktrace(tx.err)
+		return trail.Stacktrace(tx.err)
 	}
 
 	return tx.uow.Rollback(tx.ctx)

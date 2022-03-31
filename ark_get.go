@@ -1,7 +1,7 @@
 package ark
 
 import (
-	"github.com/pghq/go-tea"
+	"github.com/pghq/go-tea/trail"
 
 	"github.com/pghq/go-ark/database"
 )
@@ -23,7 +23,7 @@ func (tx Txn) Get(table string, query database.Query, v DocumentDecoder) error {
 		}
 
 		if err := tx.backend.Get(table, query, v); err != nil {
-			return tea.Stacktrace(err)
+			return trail.Stacktrace(err)
 		}
 
 		if tx.config.ViewTTL != 0 {

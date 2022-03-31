@@ -12,9 +12,20 @@ import (
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 	_ "github.com/lib/pq"
-	"github.com/pghq/go-tea"
+	"github.com/pghq/go-tea/trail"
 
 	"github.com/pghq/go-ark/database"
+)
+
+var (
+	// ErrNotFound is returned for get ops with no results
+	ErrNotFound = trail.NewErrorNotFound("the requested item does not exist")
+
+	// ErrNoResults is return for list ops with no results
+	ErrNoResults = trail.NewErrorNoContent("there are no items matching your search criteria")
+
+	// ErrConflict is return for write ops with conflict
+	ErrConflict = trail.NewErrorNoContent("there was a conflict processing your request")
 )
 
 // pg backend
@@ -78,8 +89,8 @@ func (p pgTxn) Rollback(ctx context.Context) error {
 
 func (p pgTxn) Get(ctx context.Context, dest interface{}, query string, args ...interface{}) error {
 	err := pgxscan.Get(ctx, p.txx, dest, query, args...)
-	if tea.IsError(err, pgx.ErrNoRows) {
-		err = tea.AsErrNotFound(err)
+	if trail.IsError(err, pgx.ErrNoRows) {
+		err = ErrNotFound
 	}
 	return err
 }
@@ -96,7 +107,7 @@ func (p pgTxn) List(ctx context.Context, dest interface{}, query string, args ..
 	}
 
 	if err == nil && rv.IsNil() {
-		err = tea.ErrNoContent("no content")
+		err = ErrNoResults
 	}
 
 	return err
@@ -106,9 +117,9 @@ func (p pgTxn) Exec(ctx context.Context, query string, args ...interface{}) erro
 	_, err := p.txx.Exec(ctx, query, args...)
 	if err != nil {
 		var icv *pgconn.PgError
-		if tea.AsError(err, &icv) {
+		if trail.AsError(err, &icv) {
 			if pgerrcode.IsIntegrityConstraintViolation(icv.Code) {
-				err = tea.AsErrBadRequest(icv)
+				err = ErrConflict
 			}
 		}
 	}
