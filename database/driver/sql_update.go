@@ -4,19 +4,22 @@ import (
 	"fmt"
 
 	"github.com/Masterminds/squirrel"
-	"github.com/pghq/go-tea"
+	"github.com/pghq/go-tea/trail"
 
 	"github.com/pghq/go-ark/database"
 )
 
 func (tx txn) Update(table string, query database.Query, v interface{}) error {
 	if tx.err != nil {
-		return tea.Stacktrace(tx.err)
+		return trail.Stacktrace(tx.err)
 	}
+
+	span := trail.StartSpan(tx.ctx, "database.operation")
+	defer span.Finish()
 
 	m, err := database.Map(v)
 	if err != nil {
-		return tea.Stacktrace(err)
+		return trail.Stacktrace(err)
 	}
 
 	builder := squirrel.StatementBuilder.
@@ -40,12 +43,10 @@ func (tx txn) Update(table string, query database.Query, v interface{}) error {
 
 	stmt, args, err := builder.ToSql()
 	if err != nil {
-		return tea.Err(err)
+		return trail.Stacktrace(err)
 	}
 
-	span := tea.Nest(tx.ctx, "sql")
-	defer span.End()
-	span.Tag("statement", stmt)
-	span.Tag("arguments", args)
-	return tx.uow.Exec(span, stmt, args...)
+	span.Tag("sql.statement", stmt)
+	span.Tag("sql.arguments", fmt.Sprintf("%+v", args))
+	return tx.uow.Exec(span.Context(), stmt, args...)
 }

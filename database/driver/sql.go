@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/pghq/go-tea"
+	"github.com/pghq/go-tea/trail"
 	"github.com/pressly/goose/v3"
 
 	"github.com/pghq/go-ark/database"
@@ -32,11 +32,11 @@ func NewSQL(dialect string, databaseURL *url.URL, opts ...database.Option) (*SQL
 	case "postgres", "redshift":
 		db.backend, err = newPostgres(dialect, databaseURL, config)
 	default:
-		return nil, tea.Err("unrecognized dialect")
+		return nil, trail.NewError("unrecognized dialect")
 	}
 
 	if err != nil {
-		return nil, tea.Stacktrace(err)
+		return nil, trail.Stacktrace(err)
 	}
 
 	if config.MigrationFS != nil && config.MigrationDirectory != "" {
@@ -50,7 +50,7 @@ func NewSQL(dialect string, databaseURL *url.URL, opts ...database.Option) (*SQL
 
 		if err != nil {
 			_ = goose.Down(db.backend.SQL(), config.MigrationDirectory)
-			return nil, tea.Stacktrace(err)
+			return nil, trail.Stacktrace(err)
 		}
 	}
 
@@ -61,23 +61,23 @@ func NewSQL(dialect string, databaseURL *url.URL, opts ...database.Option) (*SQL
 type gooseLogger struct{}
 
 func (g gooseLogger) Fatal(v ...interface{}) {
-	tea.Log(context.Background(), "error", tea.Err(v...))
+	trail.Fatal(fmt.Sprint(v...))
 }
 
 func (g gooseLogger) Fatalf(format string, v ...interface{}) {
-	tea.Log(context.Background(), "error", tea.Errf(format, v...))
+	trail.Fatalf(format, v...)
 }
 
 func (g gooseLogger) Print(v ...interface{}) {
-	tea.Log(context.Background(), "info", v...)
+	trail.Info(fmt.Sprint(v...))
 }
 
 func (g gooseLogger) Println(v ...interface{}) {
-	tea.Log(context.Background(), "info", v...)
+	trail.Info(fmt.Sprint(v...))
 }
 
 func (g gooseLogger) Printf(format string, v ...interface{}) {
-	tea.Logf(context.Background(), "info", format, v...)
+	trail.Infof(format, v...)
 }
 
 // placeholder placeholder prefix for replacing ?s

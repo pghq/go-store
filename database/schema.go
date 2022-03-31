@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/pghq/go-tea"
+	"github.com/pghq/go-tea/trail"
 )
 
 // Map Convert a struct (w. optional tags) to a map using reflection
@@ -33,7 +33,7 @@ func Map(v interface{}, transient ...interface{}) (map[string]interface{}, error
 	}
 
 	if rv.Kind() != reflect.Struct {
-		return nil, tea.Errf("item of type %T is not a struct", v)
+		return nil, trail.NewErrorf("item of type %T is not a struct", v)
 	}
 
 	item := make(map[string]interface{})
@@ -59,12 +59,12 @@ func Map(v interface{}, transient ...interface{}) (map[string]interface{}, error
 func Copy(src, dst interface{}) error {
 	dv := reflect.Indirect(reflect.ValueOf(dst))
 	if !dv.CanSet() {
-		return tea.Err("bad destination")
+		return trail.NewError("bad destination")
 	}
 
 	sv := reflect.Indirect(reflect.ValueOf(src))
 	if dv.Type() != sv.Type() {
-		return tea.Err("type mismatch")
+		return trail.NewError("type mismatch")
 	}
 
 	dv.Set(sv)

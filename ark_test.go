@@ -4,9 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/ory/dockertest/v3"
-	"github.com/ory/dockertest/v3/docker"
-	"github.com/pghq/go-ark/database/driver"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -15,16 +12,19 @@ import (
 	"testing/fstest"
 	"time"
 
-	"github.com/pghq/go-tea"
+	"github.com/ory/dockertest/v3"
+	"github.com/ory/dockertest/v3/docker"
+	"github.com/pghq/go-tea/trail"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/pghq/go-ark/database"
+	"github.com/pghq/go-ark/database/driver"
 )
 
 var databaseURL *url.URL
 
 func TestMain(m *testing.M) {
-	tea.Testing()
+	trail.Testing()
 	var teardown func()
 
 	databaseURL, teardown = NewTestPostgresDB()
@@ -64,7 +64,7 @@ func TestMapper_View(t *testing.T) {
 
 	m, _ := New(databaseURL.String())
 	t.Run("with fn error", func(t *testing.T) {
-		err := m.View(context.TODO(), func(tx Txn) error { return tea.Err("with fn error") })
+		err := m.View(context.TODO(), func(tx Txn) error { return trail.NewError("with fn error") })
 		assert.NotNil(t, err)
 	})
 
@@ -86,7 +86,7 @@ func TestMapper_Do(t *testing.T) {
 
 	m, _ := New(databaseURL.String())
 	t.Run("with fn error", func(t *testing.T) {
-		err := m.Do(context.TODO(), func(tx Txn) error { return tea.Err("with fn error") })
+		err := m.Do(context.TODO(), func(tx Txn) error { return trail.NewError("with fn error") })
 		assert.NotNil(t, err)
 	})
 
@@ -95,7 +95,7 @@ func TestMapper_Do(t *testing.T) {
 		defer cancel()
 		err := m.Do(ctx, func(tx Txn) error { return nil })
 		assert.NotNil(t, err)
-		assert.False(t, tea.IsFatal(err))
+		assert.False(t, trail.IsFatal(err))
 	})
 
 	t.Run("without fn error", func(t *testing.T) {

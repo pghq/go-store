@@ -14,14 +14,14 @@ package ark
 
 import (
 	"context"
-	"github.com/pghq/go-ark/database/driver"
 	"net/url"
 	"strings"
 
 	"github.com/dgraph-io/ristretto"
-	"github.com/pghq/go-tea"
+	"github.com/pghq/go-tea/trail"
 
 	"github.com/pghq/go-ark/database"
+	"github.com/pghq/go-ark/database/driver"
 )
 
 // Mapper Data mapper for various backends
@@ -35,7 +35,7 @@ func New(dsn string, opts ...database.Option) (*Mapper, error) {
 	m := defaultMapper()
 	databaseURL, err := url.Parse(dsn)
 	if err != nil {
-		return nil, tea.Stacktrace(err)
+		return nil, trail.Stacktrace(err)
 	}
 
 	dialect := strings.TrimSuffix(databaseURL.Scheme, ":")
@@ -43,7 +43,7 @@ func New(dsn string, opts ...database.Option) (*Mapper, error) {
 	case "postgres", "redshift":
 		m.db, err = driver.NewSQL(dialect, databaseURL, opts...)
 	default:
-		return nil, tea.Err("unrecognized dialect: '", dialect, "'")
+		return nil, trail.NewErrorf("unrecognized dialect: '%s'", dialect)
 	}
 
 	if err == nil {
