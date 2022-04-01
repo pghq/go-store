@@ -58,6 +58,11 @@ type DocumentDecoder interface {
 	Decode(ctx context.Context, fn func(v interface{}) error) error
 }
 
+// DocumentEncoder encodes a database document
+type DocumentEncoder interface {
+	Encode() interface{}
+}
+
 // defaultMapper create a new default mapper
 func defaultMapper() Mapper {
 	cache, _ := ristretto.NewCache(&ristretto.Config{

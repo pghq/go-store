@@ -111,7 +111,7 @@ func TestMapper_Txn(t *testing.T) {
 
 	t.Run("bad commit", func(t *testing.T) {
 		tx := m.Txn(context.TODO())
-		tx.Insert("tests", map[string]interface{}{"id": "foo"})
+		tx.Insert("tests", document(map[string]interface{}{"id": "foo"}))
 		tx.Rollback()
 		assert.NotNil(t, tx.Commit())
 	})
@@ -132,7 +132,7 @@ func TestTxn_Insert(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		tx := m.Txn(context.TODO())
 		defer tx.Rollback()
-		assert.Nil(t, tx.Insert("tests", map[string]interface{}{"id": "insert:foo"}))
+		assert.Nil(t, tx.Insert("tests", document(map[string]interface{}{"id": "insert:foo"})))
 	})
 }
 
@@ -141,13 +141,13 @@ func TestTxn_Update(t *testing.T) {
 
 	m, _ := New(databaseURL.String())
 	tx := m.Txn(context.TODO())
-	tx.Insert("tests", map[string]interface{}{"id": "update:foo"})
+	tx.Insert("tests", document(map[string]interface{}{"id": "update:foo"}))
 	tx.Commit()
 
 	t.Run("can update", func(t *testing.T) {
 		tx := m.Txn(context.TODO())
 		defer tx.Rollback()
-		assert.Nil(t, tx.Update("tests", database.Query{Eq: map[string]interface{}{"id": "update:foo"}}, map[string]interface{}{"id": "update:foo"}))
+		assert.Nil(t, tx.Update("tests", database.Query{Eq: map[string]interface{}{"id": "update:foo"}}, document(map[string]interface{}{"id": "update:foo"})))
 	})
 }
 
@@ -156,7 +156,7 @@ func TestTxn_Remove(t *testing.T) {
 
 	m, _ := New(databaseURL.String())
 	tx := m.Txn(context.TODO())
-	tx.Insert("tests", map[string]interface{}{"id": "remove:foo"})
+	tx.Insert("tests", document(map[string]interface{}{"id": "remove:foo"}))
 	tx.Commit()
 
 	t.Run("can remove", func(t *testing.T) {
@@ -171,7 +171,7 @@ func TestTxn_Get(t *testing.T) {
 
 	m, _ := New(databaseURL.String())
 	tx := m.Txn(context.TODO())
-	tx.Insert("tests", map[string]interface{}{"id": "get:foo"})
+	tx.Insert("tests", document(map[string]interface{}{"id": "get:foo"}))
 	tx.Commit()
 
 	t.Run("not found", func(t *testing.T) {
@@ -207,7 +207,7 @@ func TestTxn_List(t *testing.T) {
 
 	m, _ := New(databaseURL.String())
 	tx := m.Txn(context.TODO())
-	tx.Insert("tests", map[string]interface{}{"id": "list:foo"})
+	tx.Insert("tests", document(map[string]interface{}{"id": "list:foo"}))
 	tx.Commit()
 
 	t.Run("not found", func(t *testing.T) {
@@ -288,14 +288,18 @@ func must(err error) {
 	}
 }
 
-func document(v interface{}) DocumentDecoder {
-	return documentDecoder{v: v}
+func document(v interface{}) testDocument {
+	return testDocument{v: v}
 }
 
-type documentDecoder struct {
+type testDocument struct {
 	v interface{}
 }
 
-func (d documentDecoder) Decode(_ context.Context, fn func(v interface{}) error) error {
+func (d testDocument) Encode() interface{} {
+	return d.v
+}
+
+func (d testDocument) Decode(_ context.Context, fn func(v interface{}) error) error {
 	return fn(d.v)
 }

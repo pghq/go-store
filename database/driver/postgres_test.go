@@ -73,7 +73,7 @@ func TestPostgresDB_Txn(t *testing.T) {
 		defer cancel()
 		tx := postgres.Txn(ctx)
 		assert.NotNil(t, tx)
-		<-time.After(10 * time.Millisecond)
+		<-time.After(11 * time.Millisecond)
 		err := tx.Commit(ctx)
 		assert.NotNil(t, err)
 		assert.False(t, trail.IsFatal(err))

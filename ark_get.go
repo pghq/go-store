@@ -16,10 +16,7 @@ func (tx Txn) Get(table string, query database.Query, v DocumentDecoder) error {
 			query.Fields = database.AppendFields(query.Fields, v)
 		}
 
-		if query.Limit <= 0 {
-			query.Limit = database.DefaultLimit
-		}
-
+		query.Limit = 1
 		key := query.Key(table)
 		cv, present := tx.cache.Get(key)
 		span.Fields.Set("cache.hit", present)
