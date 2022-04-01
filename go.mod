@@ -11,7 +11,7 @@ require (
 	github.com/jackc/pgx/v4 v4.14.1
 	github.com/lib/pq v1.10.3
 	github.com/ory/dockertest/v3 v3.8.1
-	github.com/pghq/go-tea v0.1.1
+	github.com/pghq/go-tea v0.1.2
 	github.com/pressly/goose/v3 v3.4.1
 	github.com/stretchr/testify v1.7.0
 )

@@ -6,9 +6,9 @@ import (
 )
 
 // Update Replace an existing value
-func (tx Txn) Update(table string, query database.Query, v interface{}) error {
+func (tx Txn) Update(table string, query database.Query, v DocumentEncoder) error {
 	span := trail.StartSpan(tx, "database.modification")
 	defer span.Finish()
 
-	return tx.backend.Update(span.Context(), table, query, v)
+	return tx.backend.Update(span.Context(), table, query, v.Encode())
 }
