@@ -55,7 +55,7 @@ func New(dsn string, opts ...database.Option) (*Mapper, error) {
 
 // DocumentDecoder decodes a database document.
 type DocumentDecoder interface {
-	Decode(fn func(v interface{}) error) error
+	Decode(ctx context.Context, fn func(v interface{}) error) error
 }
 
 // defaultMapper create a new default mapper

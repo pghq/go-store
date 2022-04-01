@@ -296,6 +296,6 @@ type documentDecoder struct {
 	v interface{}
 }
 
-func (d documentDecoder) Decode(fn func(v interface{}) error) error {
+func (d documentDecoder) Decode(_ context.Context, fn func(v interface{}) error) error {
 	return fn(d.v)
 }
