@@ -8,7 +8,7 @@ import (
 
 // Get Retrieve a value
 func (tx Txn) Get(table string, query database.Query, v DocumentDecoder) error {
-	return v.Decode(func(v interface{}) error {
+	return v.Decode(tx, func(v interface{}) error {
 		span := trail.StartSpan(tx, "database.view")
 		defer span.Finish()
 

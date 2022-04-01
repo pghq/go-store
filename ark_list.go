@@ -8,7 +8,7 @@ import (
 
 // List Retrieve a listing of values
 func (tx Txn) List(table string, query database.Query, v DocumentDecoder) error {
-	return v.Decode(func(v interface{}) error {
+	return v.Decode(tx, func(v interface{}) error {
 		span := trail.StartSpan(tx, "database.view")
 		defer span.Finish()
 
