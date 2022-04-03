@@ -15,7 +15,7 @@ func (tx txn) List(ctx context.Context, table string, query database.Query, v in
 		return trail.Stacktrace(tx.err)
 	}
 
-	span := trail.StartSpan(ctx, "database.operation")
+	span := trail.StartSpan(ctx, "transaction.list")
 	defer span.Finish()
 
 	builder := squirrel.StatementBuilder.

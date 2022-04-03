@@ -7,11 +7,16 @@ import (
 )
 
 // List Retrieve a listing of values
-func (tx Txn) List(table string, query database.Query, v DocumentDecoder) error {
-	return v.Decode(tx, func(v interface{}) error {
-		span := trail.StartSpan(tx, "database.view")
-		defer span.Finish()
+func (tx Txn) List(table string, query database.Query, v interface{}) error {
+	span := trail.StartSpan(tx, "database.list")
+	defer span.Finish()
 
+	decoder, ok := v.(DocumentDecoder)
+	if !ok {
+		decoder = newTransientDocument(v)
+	}
+
+	return decoder.Decode(span.Context(), func(v interface{}) error {
 		if len(query.Fields) == 0 {
 			query.Fields = database.AppendFields(query.Fields, v)
 		}

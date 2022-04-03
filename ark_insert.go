@@ -3,9 +3,14 @@ package ark
 import "github.com/pghq/go-tea/trail"
 
 // Insert insert a value
-func (tx Txn) Insert(table string, v DocumentEncoder) error {
-	span := trail.StartSpan(tx, "database.modification")
+func (tx Txn) Insert(table string, v interface{}) error {
+	span := trail.StartSpan(tx, "database.insert")
 	defer span.Finish()
 
-	return tx.backend.Insert(span.Context(), table, v.Encode())
+	encoder, ok := v.(DocumentEncoder)
+	if !ok {
+		encoder = newTransientDocument(v)
+	}
+
+	return tx.backend.Insert(span.Context(), table, encoder.Encode())
 }

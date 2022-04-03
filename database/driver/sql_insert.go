@@ -13,7 +13,7 @@ func (tx txn) Insert(ctx context.Context, table string, v interface{}) error {
 		return trail.Stacktrace(tx.err)
 	}
 
-	span := trail.StartSpan(ctx, "database.operation")
+	span := trail.StartSpan(ctx, "transaction.insert")
 	defer span.Finish()
 
 	m, err := database.Map(v)

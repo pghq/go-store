@@ -63,6 +63,22 @@ type DocumentEncoder interface {
 	Encode() interface{}
 }
 
+type transientDocument struct {
+	v interface{}
+}
+
+func (d transientDocument) Encode() interface{} {
+	return d.v
+}
+
+func (d transientDocument) Decode(_ context.Context, fn func(v interface{}) error) error {
+	return fn(d.v)
+}
+
+func newTransientDocument(v interface{}) *transientDocument {
+	return &transientDocument{v: v}
+}
+
 // defaultMapper create a new default mapper
 func defaultMapper() Mapper {
 	cache, _ := ristretto.NewCache(&ristretto.Config{
