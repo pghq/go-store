@@ -2,9 +2,9 @@ package driver
 
 import (
 	"database/sql"
-	"embed"
 	"net/url"
 	"testing"
+	"testing/fstest"
 
 	"github.com/pghq/go-tea/trail"
 	"github.com/stretchr/testify/assert"
@@ -25,7 +25,25 @@ func TestNewDB(t *testing.T) {
 	t.Run("bad migration", func(t *testing.T) {
 		_, err := NewSQL("postgres", postgres.backend.URL(), database.SQLOpen(func(driverName, dataSourceName string) (*sql.DB, error) {
 			return postgres.backend.SQL(), nil
-		}), database.Migrate(embed.FS{}))
+		}), database.Migrate(fstest.MapFS{
+			"schema/migrations/00003_test.sql": &fstest.MapFile{
+				Data: []byte("-- +goose Up\nCREATE BAD TABLE tests (id text primary key, name text, num int);"),
+			},
+		}))
+		assert.NotNil(t, err)
+	})
+
+	t.Run("bad seed", func(t *testing.T) {
+		_, err := NewSQL("postgres", postgres.backend.URL(), database.SQLOpen(func(driverName, dataSourceName string) (*sql.DB, error) {
+			return postgres.backend.SQL(), nil
+		}), database.Migrate(fstest.MapFS{
+			"schema/migrations/00001_test.sql": &fstest.MapFile{
+				Data: []byte("-- +goose Up\nCREATE TABLE IF NOT EXISTS tests (id text primary key, name text, num int);"),
+			},
+			"schema/seed/00001_test.sql": &fstest.MapFile{
+				Data: []byte("-- +goose Up\nINSERT INTO tests (id) VALUES (bad);"),
+			},
+		}))
 		assert.NotNil(t, err)
 	})
 

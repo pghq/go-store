@@ -1,6 +1,7 @@
 package driver
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -10,6 +11,9 @@ import (
 func TestMain(m *testing.M) {
 	trail.Testing()
 	var teardown func()
+	env := os.Getenv("APP_ENV")
+	os.Setenv("APP_ENV", "dev")
+	defer os.Setenv("APP_ENV", env)
 
 	postgres, teardown = NewTestPostgresDB()
 	defer teardown()
@@ -20,6 +24,7 @@ func TestMain(m *testing.M) {
 // must be nil error or panic
 func must(err error) {
 	if err != nil {
-		panic(err)
+		trail.OneOff(fmt.Sprintf("%+v", err))
+		os.Exit(1)
 	}
 }

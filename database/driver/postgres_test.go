@@ -427,8 +427,14 @@ func NewTestPostgresDB() (*SQL, func()) {
 	databaseURL, _ := url.Parse(dsn)
 
 	fs := fstest.MapFS{
-		"migrations/00001_test.sql": &fstest.MapFile{
-			Data: []byte("-- +goose Up\nCREATE TABLE IF NOT EXISTS tests (id text primary key, name text, num int);\nCREATE TABLE IF NOT EXISTS units (id text);"),
+		"schema/migrations/00001_test.sql": &fstest.MapFile{
+			Data: []byte("-- +goose Up\nCREATE TABLE IF NOT EXISTS tests (id text primary key, name text, num int);"),
+		},
+		"schema/migrations/00002_test.sql": &fstest.MapFile{
+			Data: []byte("-- +goose Up\nCREATE TABLE IF NOT EXISTS units (id text);"),
+		},
+		"schema/seed/00001_test.sql": &fstest.MapFile{
+			Data: []byte("-- +goose Up\nINSERT INTO tests (id) VALUES ('seed');"),
 		},
 	}
 

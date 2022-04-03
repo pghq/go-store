@@ -43,8 +43,9 @@ type Txn interface {
 // Config Database configuration
 type Config struct {
 	SQLOpenFunc        func(driverName, dataSourceName string) (*sql.DB, error)
-	MigrationFS        fs.FS
+	MigrationFS        fs.ReadDirFS
 	MigrationDirectory string
+	SeedDirectory      string
 	MigrationTable     string
 	PlaceholderPrefix  string
 }
@@ -71,20 +72,27 @@ func SQLOpen(o func(driverName, dataSourceName string) (*sql.DB, error)) Option 
 }
 
 // Migrate Configure a database migration
-func Migrate(fs fs.FS) Option {
+func Migrate(fs fs.ReadDirFS) Option {
 	return func(config *Config) {
 		config.MigrationFS = fs
-		config.MigrationDirectory = "migrations"
+		config.MigrationDirectory = "schema/migrations"
+		config.SeedDirectory = "schema/seed"
 		config.MigrationTable = "migrations"
 	}
 }
 
 // MigrateDirectory Configure a database migration with custom table and directory
-func MigrateDirectory(fs fs.FS, directory, table string) Option {
+func MigrateDirectory(directory, table string) Option {
 	return func(config *Config) {
-		config.MigrationFS = fs
 		config.MigrationDirectory = directory
 		config.MigrationTable = table
+	}
+}
+
+// SeedDirectory Configure a database migration with custom seed directory
+func SeedDirectory(directory string) Option {
+	return func(config *Config) {
+		config.SeedDirectory = directory
 	}
 }
 
