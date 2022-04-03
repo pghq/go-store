@@ -5,13 +5,22 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"io/fs"
 	"net/url"
+	"os"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/pghq/go-tea/trail"
 	"github.com/pressly/goose/v3"
 
 	"github.com/pghq/go-ark/database"
+)
+
+var (
+	// migrationFile regex match
+	migrationFile = regexp.MustCompile(`(\d+)_.+\.sql$`)
 )
 
 // SQL database
@@ -40,21 +49,76 @@ func NewSQL(dialect string, databaseURL *url.URL, opts ...database.Option) (*SQL
 	}
 
 	if config.MigrationFS != nil && config.MigrationDirectory != "" {
-		goose.SetLogger(gooseLogger{})
-		goose.SetBaseFS(config.MigrationFS)
-		err := goose.SetDialect(dialect)
-		if err == nil {
-			goose.SetTableName(config.MigrationTable)
-			err = goose.Up(db.backend.SQL(), config.MigrationDirectory)
-		}
+		err := applyMigration(
+			db.backend.SQL(),
+			config.MigrationFS,
+			dialect,
+			config.MigrationTable,
+			config.MigrationDirectory,
+			config.SeedDirectory,
+		)
 
 		if err != nil {
-			_ = goose.Down(db.backend.SQL(), config.MigrationDirectory)
 			return nil, trail.Stacktrace(err)
 		}
 	}
 
 	return &db, nil
+}
+
+// applyMigration applies the migration and seeds data
+func applyMigration(db *sql.DB, dir fs.ReadDirFS, dialect, migrationTable, migrationDirectory, seedDirectory string) error {
+	goose.SetLogger(gooseLogger{})
+	goose.SetBaseFS(dir)
+	_ = goose.SetDialect(dialect)
+
+	goose.SetTableName(migrationTable)
+	entries, _ := dir.ReadDir(migrationDirectory)
+	maxMigrationVersion := 0
+	for _, entry := range entries {
+		matches := migrationFile.FindStringSubmatch(entry.Name())
+		if len(matches) > 0 {
+			version, _ := strconv.Atoi(matches[1])
+			if version > maxMigrationVersion {
+				maxMigrationVersion = version
+			}
+		}
+	}
+
+	maxSeedVersion := 0
+	if os.Getenv("APP_ENV") == "dev" && seedDirectory != "" {
+		entries, _ := dir.ReadDir(seedDirectory)
+		for _, entry := range entries {
+			matches := migrationFile.FindStringSubmatch(entry.Name())
+			if len(matches) > 0 {
+				version, _ := strconv.Atoi(matches[1])
+				if version > maxSeedVersion {
+					maxSeedVersion = version
+				}
+			}
+		}
+	}
+
+	var err error
+	for i := 0; i < maxMigrationVersion; i++ {
+		if err = goose.UpTo(db, migrationDirectory, int64(i+1)); err != nil {
+			break
+		}
+
+		if i < maxSeedVersion {
+			if err = goose.UpTo(db, seedDirectory, int64(i+1), goose.WithNoVersioning()); err != nil {
+				break
+			}
+		}
+	}
+
+	if err != nil {
+		_ = goose.Down(db, migrationDirectory)
+		_ = goose.Down(db, seedDirectory)
+		return trail.Stacktrace(err)
+	}
+
+	return nil
 }
 
 // gooseLogger Custom goose logger implementation

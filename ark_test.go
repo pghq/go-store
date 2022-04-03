@@ -25,6 +25,10 @@ var databaseURL *url.URL
 
 func TestMain(m *testing.M) {
 	trail.Testing()
+	env := os.Getenv("APP_ENV")
+	os.Setenv("APP_ENV", "dev")
+	defer os.Setenv("APP_ENV", env)
+
 	var teardown func()
 
 	databaseURL, teardown = NewTestPostgresDB()
@@ -269,7 +273,7 @@ func NewTestPostgresDB() (*url.URL, func()) {
 	databaseURL, _ := url.Parse(dsn)
 
 	fs := fstest.MapFS{
-		"migrations/00001_test.sql": &fstest.MapFile{
+		"schema/migrations/00001_test.sql": &fstest.MapFile{
 			Data: []byte("-- +goose Up\nCREATE TABLE IF NOT EXISTS tests (id text unique, name text, num int);\nCREATE TABLE IF NOT EXISTS units (id text);"),
 		},
 	}

@@ -12,7 +12,8 @@ func TestOption(t *testing.T) {
 	opts := []Option{
 		SQLOpen(nil),
 		Migrate(nil),
-		MigrateDirectory(nil, "", ""),
+		MigrateDirectory("", ""),
+		SeedDirectory(""),
 	}
 	config := ConfigWith(opts)
 	assert.Equal(t, Config{}, config)
