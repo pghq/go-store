@@ -15,7 +15,7 @@ func (tx txn) Remove(ctx context.Context, table string, query database.Query) er
 		return trail.Stacktrace(tx.err)
 	}
 
-	span := trail.StartSpan(ctx, "database.operation")
+	span := trail.StartSpan(ctx, "transaction.remove")
 	defer span.Finish()
 
 	builder := squirrel.StatementBuilder.

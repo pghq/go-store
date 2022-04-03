@@ -15,7 +15,7 @@ func (tx txn) Update(ctx context.Context, table string, query database.Query, v 
 		return trail.Stacktrace(tx.err)
 	}
 
-	span := trail.StartSpan(ctx, "database.operation")
+	span := trail.StartSpan(ctx, "transaction.update")
 	defer span.Finish()
 
 	m, err := database.Map(v)

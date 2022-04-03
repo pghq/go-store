@@ -115,7 +115,7 @@ func TestMapper_Txn(t *testing.T) {
 
 	t.Run("bad commit", func(t *testing.T) {
 		tx := m.Txn(context.TODO())
-		tx.Insert("tests", document(map[string]interface{}{"id": "foo"}))
+		tx.Insert("tests", newTransientDocument(map[string]interface{}{"id": "foo"}))
 		tx.Rollback()
 		assert.NotNil(t, tx.Commit())
 	})
@@ -136,7 +136,13 @@ func TestTxn_Insert(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		tx := m.Txn(context.TODO())
 		defer tx.Rollback()
-		assert.Nil(t, tx.Insert("tests", document(map[string]interface{}{"id": "insert:foo"})))
+		assert.Nil(t, tx.Insert("tests", newTransientDocument(map[string]interface{}{"id": "insert:foo"})))
+	})
+
+	t.Run("ok transient", func(t *testing.T) {
+		tx := m.Txn(context.TODO())
+		defer tx.Rollback()
+		assert.Nil(t, tx.Insert("tests", map[string]interface{}{"id": "insert:foo transient"}))
 	})
 }
 
@@ -145,13 +151,19 @@ func TestTxn_Update(t *testing.T) {
 
 	m, _ := New(databaseURL.String())
 	tx := m.Txn(context.TODO())
-	tx.Insert("tests", document(map[string]interface{}{"id": "update:foo"}))
+	tx.Insert("tests", map[string]interface{}{"id": "update:foo"})
 	tx.Commit()
 
 	t.Run("can update", func(t *testing.T) {
 		tx := m.Txn(context.TODO())
 		defer tx.Rollback()
-		assert.Nil(t, tx.Update("tests", database.Query{Eq: map[string]interface{}{"id": "update:foo"}}, document(map[string]interface{}{"id": "update:foo"})))
+		assert.Nil(t, tx.Update("tests", database.Query{Eq: map[string]interface{}{"id": "update:foo"}}, newTransientDocument(map[string]interface{}{"id": "update:foo"})))
+	})
+
+	t.Run("can update transient", func(t *testing.T) {
+		tx := m.Txn(context.TODO())
+		defer tx.Rollback()
+		assert.Nil(t, tx.Update("tests", database.Query{Eq: map[string]interface{}{"id": "update:foo"}}, map[string]interface{}{"id": "update:foo"}))
 	})
 }
 
@@ -160,7 +172,7 @@ func TestTxn_Remove(t *testing.T) {
 
 	m, _ := New(databaseURL.String())
 	tx := m.Txn(context.TODO())
-	tx.Insert("tests", document(map[string]interface{}{"id": "remove:foo"}))
+	tx.Insert("tests", newTransientDocument(map[string]interface{}{"id": "remove:foo"}))
 	tx.Commit()
 
 	t.Run("can remove", func(t *testing.T) {
@@ -175,14 +187,14 @@ func TestTxn_Get(t *testing.T) {
 
 	m, _ := New(databaseURL.String())
 	tx := m.Txn(context.TODO())
-	tx.Insert("tests", document(map[string]interface{}{"id": "get:foo"}))
+	tx.Insert("tests", newTransientDocument(map[string]interface{}{"id": "get:foo"}))
 	tx.Commit()
 
 	t.Run("not found", func(t *testing.T) {
 		tx := m.Txn(context.TODO())
 		defer tx.Rollback()
 		var v string
-		assert.NotNil(t, tx.Get("tests", database.Query{Eq: map[string]interface{}{"id": "not found"}}, document(&v)))
+		assert.NotNil(t, tx.Get("tests", database.Query{Eq: map[string]interface{}{"id": "not found"}}, newTransientDocument(&v)))
 	})
 
 	t.Run("can get", func(t *testing.T) {
@@ -191,7 +203,18 @@ func TestTxn_Get(t *testing.T) {
 		var v struct {
 			Id string `db:"id"`
 		}
-		assert.Nil(t, tx.Get("tests", database.Query{Eq: map[string]interface{}{"id": "get:foo"}}, document(&v)))
+		assert.Nil(t, tx.Get("tests", database.Query{Eq: map[string]interface{}{"id": "get:foo"}}, newTransientDocument(&v)))
+		tx.Commit()
+		tx.cache.Wait()
+	})
+
+	t.Run("can get transient", func(t *testing.T) {
+		tx := m.Txn(context.TODO())
+		defer tx.Rollback()
+		var v struct {
+			Id string `db:"id"`
+		}
+		assert.Nil(t, tx.Get("tests", database.Query{Eq: map[string]interface{}{"id": "get:foo"}}, &v))
 		tx.Commit()
 		tx.cache.Wait()
 	})
@@ -202,7 +225,7 @@ func TestTxn_Get(t *testing.T) {
 		var v struct {
 			Id string `db:"id"`
 		}
-		assert.Nil(t, tx.Get("tests", database.Query{Eq: map[string]interface{}{"id": "get:foo"}}, document(&v)))
+		assert.Nil(t, tx.Get("tests", database.Query{Eq: map[string]interface{}{"id": "get:foo"}}, newTransientDocument(&v)))
 	})
 }
 
@@ -211,14 +234,14 @@ func TestTxn_List(t *testing.T) {
 
 	m, _ := New(databaseURL.String())
 	tx := m.Txn(context.TODO())
-	tx.Insert("tests", document(map[string]interface{}{"id": "list:foo"}))
+	tx.Insert("tests", newTransientDocument(map[string]interface{}{"id": "list:foo"}))
 	tx.Commit()
 
 	t.Run("not found", func(t *testing.T) {
 		tx := m.Txn(context.TODO())
 		defer tx.Rollback()
 		var v []string
-		assert.NotNil(t, tx.List("tests", database.Query{Eq: map[string]interface{}{"id": "not found"}}, document(&v)))
+		assert.NotNil(t, tx.List("tests", database.Query{Eq: map[string]interface{}{"id": "not found"}}, newTransientDocument(&v)))
 	})
 
 	t.Run("can list", func(t *testing.T) {
@@ -227,7 +250,18 @@ func TestTxn_List(t *testing.T) {
 		var v []struct {
 			Id string `db:"id"`
 		}
-		assert.Nil(t, tx.List("tests", database.Query{}, document(&v)))
+		assert.Nil(t, tx.List("tests", database.Query{}, newTransientDocument(&v)))
+		tx.Commit()
+		tx.cache.Wait()
+	})
+
+	t.Run("can list transient", func(t *testing.T) {
+		tx := m.Txn(context.TODO())
+		defer tx.Rollback()
+		var v []struct {
+			Id string `db:"id"`
+		}
+		assert.Nil(t, tx.List("tests", database.Query{}, &v))
 		tx.Commit()
 		tx.cache.Wait()
 	})
@@ -238,7 +272,7 @@ func TestTxn_List(t *testing.T) {
 		var v []struct {
 			Id string `db:"id"`
 		}
-		assert.Nil(t, tx.List("tests", database.Query{}, document(&v)))
+		assert.Nil(t, tx.List("tests", database.Query{}, newTransientDocument(&v)))
 	})
 }
 
@@ -290,20 +324,4 @@ func must(err error) {
 	if err != nil {
 		panic(err)
 	}
-}
-
-func document(v interface{}) testDocument {
-	return testDocument{v: v}
-}
-
-type testDocument struct {
-	v interface{}
-}
-
-func (d testDocument) Encode() interface{} {
-	return d.v
-}
-
-func (d testDocument) Decode(_ context.Context, fn func(v interface{}) error) error {
-	return fn(d.v)
 }

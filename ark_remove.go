@@ -7,7 +7,7 @@ import (
 
 // Remove Delete a value by key
 func (tx Txn) Remove(table string, query database.Query) error {
-	span := trail.StartSpan(tx, "database.modification")
+	span := trail.StartSpan(tx, "database.remove")
 	defer span.Finish()
 
 	key := query.Key(table)
