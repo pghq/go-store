@@ -292,8 +292,8 @@ github.com/opencontainers/selinux v1.8.2/go.mod h1:MUIHuUEvKB1wtJjQdOyYRgOnLD2xA
 github.com/ory/dockertest/v3 v3.8.1 h1:vU/8d1We4qIad2YM0kOwRVtnyue7ExvacPiw1yDm17g=
 github.com/ory/dockertest/v3 v3.8.1/go.mod h1:wSRQ3wmkz+uSARYMk7kVJFDBGm8x5gSxIhI7NDc+BAQ=
 github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=
-github.com/pghq/go-tea v0.1.2 h1:9GlcREF1UkAloCsKZEghDVZXfLe6T/1GYOaxw3f78ZQ=
-github.com/pghq/go-tea v0.1.2/go.mod h1:JfkuN8838j5kKDeexN/t+aEkaJYlagJIrPkTUIErugA=
+github.com/pghq/go-tea v0.1.5 h1:obbFwpIJM+iaK0J2xY0D4iVc9RlLF9B98CWnR1b1/HQ=
+github.com/pghq/go-tea v0.1.5/go.mod h1:JfkuN8838j5kKDeexN/t+aEkaJYlagJIrPkTUIErugA=
 github.com/pierrec/lz4 v2.0.5+incompatible/go.mod h1:pdkljMzZIN41W+lC3N2tnIh5sFi+IEE17M5jbnwPHcY=
 github.com/pingcap/errors v0.11.4 h1:lFuQV/oaUMGcD2tqt+01ROSmJs75VG1ToEOkZIZ4nE4=
 github.com/pkg/browser v0.0.0-20180916011732-0a3d74bf9ce4/go.mod h1:4OwLy04Bl9Ef3GJJCoec+30X3LQs/0/m4HFRt/2LUSA=
