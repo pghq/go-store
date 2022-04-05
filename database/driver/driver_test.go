@@ -11,9 +11,6 @@ import (
 func TestMain(m *testing.M) {
 	trail.Testing()
 	var teardown func()
-	env := os.Getenv("APP_ENV")
-	os.Setenv("APP_ENV", "dev")
-	defer os.Setenv("APP_ENV", env)
 
 	postgres, teardown = NewTestPostgresDB()
 	defer teardown()
