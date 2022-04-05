@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"fmt"
 	"io/fs"
+	"math"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -70,9 +71,9 @@ func NewSQL(dialect string, databaseURL *url.URL, opts ...database.Option) (*SQL
 func applyMigration(localhost bool, db *sql.DB, dir fs.ReadDirFS, dialect, migrationTable, migrationDirectory, seedDirectory string) error {
 	goose.SetLogger(gooseLogger{})
 	goose.SetBaseFS(dir)
+	goose.SetTableName(migrationTable)
 	_ = goose.SetDialect(dialect)
 
-	goose.SetTableName(migrationTable)
 	entries, _ := dir.ReadDir(migrationDirectory)
 	maxMigrationVersion := 0
 	for _, entry := range entries {
@@ -99,13 +100,17 @@ func applyMigration(localhost bool, db *sql.DB, dir fs.ReadDirFS, dialect, migra
 		}
 	}
 
+	version, _ := goose.GetDBVersion(db)
+	trail.OneOff(fmt.Sprintf("upTo: %d", int(math.Max(float64(maxMigrationVersion), float64(maxSeedVersion)))))
 	var err error
-	for i := 0; i < maxMigrationVersion; i++ {
-		if err = goose.UpTo(db, migrationDirectory, int64(i+1)); err != nil {
-			break
+	for i := 0; i < int(math.Max(float64(maxMigrationVersion), float64(maxSeedVersion))); i++ {
+		if i < maxMigrationVersion {
+			if err = goose.UpTo(db, migrationDirectory, int64(i+1)); err != nil {
+				break
+			}
 		}
 
-		if i < maxSeedVersion {
+		if (i+1 > int(version)) && i < maxSeedVersion {
 			if err = goose.UpTo(db, seedDirectory, int64(i+1), goose.WithNoVersioning()); err != nil {
 				break
 			}
