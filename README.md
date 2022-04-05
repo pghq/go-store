@@ -20,11 +20,11 @@ import (
     "github.com/pghq/go-ark"
 )
 
-//go:embed migrations/*.sql
-var migrations embed.FS
+//go:embed schema
+var schema embed.FS
 
 // Open a postgres connection
-db, err := ark.New("postgres://user:pass@postgres/db", database.Migrate(migrations))
+db, err := ark.New("postgres://user:pass@postgres/db", database.Migrate(schema))
 if err != nil{
     panic(err)
 }

@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io/fs"
 	"net/url"
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -50,6 +49,7 @@ func NewSQL(dialect string, databaseURL *url.URL, opts ...database.Option) (*SQL
 
 	if config.MigrationFS != nil && config.MigrationDirectory != "" {
 		err := applyMigration(
+			strings.HasPrefix(databaseURL.Host, "localhost"),
 			db.backend.SQL(),
 			config.MigrationFS,
 			dialect,
@@ -67,7 +67,7 @@ func NewSQL(dialect string, databaseURL *url.URL, opts ...database.Option) (*SQL
 }
 
 // applyMigration applies the migration and seeds data
-func applyMigration(db *sql.DB, dir fs.ReadDirFS, dialect, migrationTable, migrationDirectory, seedDirectory string) error {
+func applyMigration(localhost bool, db *sql.DB, dir fs.ReadDirFS, dialect, migrationTable, migrationDirectory, seedDirectory string) error {
 	goose.SetLogger(gooseLogger{})
 	goose.SetBaseFS(dir)
 	_ = goose.SetDialect(dialect)
@@ -86,7 +86,7 @@ func applyMigration(db *sql.DB, dir fs.ReadDirFS, dialect, migrationTable, migra
 	}
 
 	maxSeedVersion := 0
-	if os.Getenv("APP_ENV") == "dev" && seedDirectory != "" {
+	if localhost && seedDirectory != "" {
 		entries, _ := dir.ReadDir(seedDirectory)
 		for _, entry := range entries {
 			matches := migrationFile.FindStringSubmatch(entry.Name())
