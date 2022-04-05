@@ -101,7 +101,6 @@ func applyMigration(localhost bool, db *sql.DB, dir fs.ReadDirFS, dialect, migra
 	}
 
 	version, _ := goose.GetDBVersion(db)
-	trail.OneOff(fmt.Sprintf("upTo: %d", int(math.Max(float64(maxMigrationVersion), float64(maxSeedVersion)))))
 	var err error
 	for i := 0; i < int(math.Max(float64(maxMigrationVersion), float64(maxSeedVersion))); i++ {
 		if i < maxMigrationVersion {
