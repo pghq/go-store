@@ -1,9 +1,10 @@
 package ark
 
 import (
-	"github.com/pghq/go-tea/trail"
+	"fmt"
 
 	"github.com/pghq/go-ark/database"
+	"github.com/pghq/go-tea/trail"
 )
 
 // Get Retrieve a value
@@ -24,7 +25,7 @@ func (tx Txn) Get(table string, query database.Query, v interface{}) error {
 		query.Limit = 1
 		key := query.Key(table)
 		cv, present := tx.cache.Get(key)
-		span.Fields.Set("cache.hit", present)
+		span.Tags.Set("cache.hit", fmt.Sprintf("%t", present))
 		if present {
 			return database.Copy(cv, v)
 		}

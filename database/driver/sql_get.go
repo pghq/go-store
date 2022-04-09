@@ -57,7 +57,7 @@ func (tx txn) Get(ctx context.Context, table string, query database.Query, v int
 		return trail.Stacktrace(err)
 	}
 
-	span.Fields.Set("sql.statement", stmt)
-	span.Fields.Set("sql.arguments", args)
+	span.Tags.Set("sql.statement", stmt)
+	span.Tags.SetJSON("sql.arguments", args)
 	return tx.uow.Get(span.Context(), v, stmt, args...)
 }

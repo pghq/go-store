@@ -1,9 +1,10 @@
 package ark
 
 import (
-	"github.com/pghq/go-tea/trail"
+	"fmt"
 
 	"github.com/pghq/go-ark/database"
+	"github.com/pghq/go-tea/trail"
 )
 
 // List Retrieve a listing of values
@@ -27,7 +28,7 @@ func (tx Txn) List(table string, query database.Query, v interface{}) error {
 
 		key := query.Key(table)
 		cv, present := tx.cache.Get(key)
-		span.Fields.Set("cache.hit", present)
+		span.Tags.Set("cache.hit", fmt.Sprintf("%t", present))
 		if present {
 			return database.Copy(cv, v)
 		}
