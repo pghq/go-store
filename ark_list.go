@@ -1,6 +1,7 @@
 package ark
 
 import (
+	"fmt"
 	"github.com/pghq/go-tea/trail"
 
 	"github.com/pghq/go-ark/database"
@@ -27,7 +28,7 @@ func (tx Txn) List(table string, query database.Query, v interface{}) error {
 
 		key := query.Key(table)
 		cv, present := tx.cache.Get(key)
-		span.Fields.Set("cache.hit", present)
+		span.Tags.Set("cache.hit", fmt.Sprintf("%t", present))
 		if present {
 			return database.Copy(cv, v)
 		}

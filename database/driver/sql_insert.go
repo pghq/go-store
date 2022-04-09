@@ -31,7 +31,7 @@ func (tx txn) Insert(ctx context.Context, table string, v interface{}) error {
 		return trail.Stacktrace(err)
 	}
 
-	span.Fields.Set("sql.statement", stmt)
-	span.Fields.Set("sql.arguments", args)
+	span.Tags.Set("sql.statement", stmt)
+	span.Tags.SetJSON("sql.arguments", args)
 	return tx.uow.Exec(span.Context(), stmt, args...)
 }
