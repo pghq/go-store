@@ -2,9 +2,9 @@ package ark
 
 import (
 	"fmt"
-	"github.com/pghq/go-tea/trail"
 
 	"github.com/pghq/go-ark/database"
+	"github.com/pghq/go-tea/trail"
 )
 
 // List Retrieve a listing of values
