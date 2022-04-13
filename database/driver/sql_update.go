@@ -15,7 +15,7 @@ func (tx txn) Update(ctx context.Context, table string, query database.Query, v 
 		return trail.Stacktrace(tx.err)
 	}
 
-	span := trail.StartSpan(ctx, "transaction.update")
+	span := trail.StartSpan(ctx, "SQL.Update")
 	defer span.Finish()
 
 	m, err := database.Map(v)
@@ -47,7 +47,7 @@ func (tx txn) Update(ctx context.Context, table string, query database.Query, v 
 		return trail.Stacktrace(err)
 	}
 
-	span.Tags.Set("sql.statement", stmt)
-	span.Tags.SetJSON("sql.arguments", args)
+	span.Tags.Set("Statement", stmt)
+	span.Tags.SetJSON("Arguments", args)
 	return tx.uow.Exec(span.Context(), stmt, args...)
 }

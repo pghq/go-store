@@ -15,7 +15,7 @@ func (tx txn) Remove(ctx context.Context, table string, query database.Query) er
 		return trail.Stacktrace(tx.err)
 	}
 
-	span := trail.StartSpan(ctx, "transaction.remove")
+	span := trail.StartSpan(ctx, "SQL.Remove")
 	defer span.Finish()
 
 	builder := squirrel.StatementBuilder.
@@ -41,7 +41,7 @@ func (tx txn) Remove(ctx context.Context, table string, query database.Query) er
 		return trail.Stacktrace(err)
 	}
 
-	span.Tags.Set("sql.statement", stmt)
-	span.Tags.SetJSON("sql.arguments", args)
+	span.Tags.Set("Statement", stmt)
+	span.Tags.SetJSON("Arguments", args)
 	return tx.uow.Exec(span.Context(), stmt, args...)
 }

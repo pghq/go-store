@@ -15,7 +15,7 @@ func (tx txn) Get(ctx context.Context, table string, query database.Query, v int
 		return trail.Stacktrace(tx.err)
 	}
 
-	span := trail.StartSpan(ctx, "transaction.get")
+	span := trail.StartSpan(ctx, "SQL.Get")
 	defer span.Finish()
 
 	builder := squirrel.StatementBuilder.
@@ -57,7 +57,7 @@ func (tx txn) Get(ctx context.Context, table string, query database.Query, v int
 		return trail.Stacktrace(err)
 	}
 
-	span.Tags.Set("sql.statement", stmt)
-	span.Tags.SetJSON("sql.arguments", args)
+	span.Tags.Set("Statement", stmt)
+	span.Tags.SetJSON("Arguments", args)
 	return tx.uow.Get(span.Context(), v, stmt, args...)
 }

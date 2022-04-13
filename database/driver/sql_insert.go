@@ -13,7 +13,7 @@ func (tx txn) Insert(ctx context.Context, table string, v interface{}) error {
 		return trail.Stacktrace(tx.err)
 	}
 
-	span := trail.StartSpan(ctx, "transaction.insert")
+	span := trail.StartSpan(ctx, "SQL.Insert")
 	defer span.Finish()
 
 	m, err := database.Map(v)
@@ -31,7 +31,7 @@ func (tx txn) Insert(ctx context.Context, table string, v interface{}) error {
 		return trail.Stacktrace(err)
 	}
 
-	span.Tags.Set("sql.statement", stmt)
-	span.Tags.SetJSON("sql.arguments", args)
+	span.Tags.Set("Statement", stmt)
+	span.Tags.SetJSON("Arguments", args)
 	return tx.uow.Exec(span.Context(), stmt, args...)
 }
