@@ -9,7 +9,7 @@ import (
 
 // Get Retrieve a value
 func (tx Txn) Get(table string, query database.Query, v interface{}) error {
-	span := trail.StartSpan(tx, "database.get")
+	span := trail.StartSpan(tx, "Database.Get")
 	defer span.Finish()
 
 	decoder, ok := v.(DocumentDecoder)
@@ -25,7 +25,7 @@ func (tx Txn) Get(table string, query database.Query, v interface{}) error {
 		query.Limit = 1
 		key := query.Key(table)
 		cv, present := tx.cache.Get(key)
-		span.Tags.Set("cache.hit", fmt.Sprintf("%t", present))
+		span.Tags.Set("CacheHit", fmt.Sprintf("%t", present))
 		if present {
 			return database.Copy(cv, v)
 		}

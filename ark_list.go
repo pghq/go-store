@@ -9,7 +9,7 @@ import (
 
 // List Retrieve a listing of values
 func (tx Txn) List(table string, query database.Query, v interface{}) error {
-	span := trail.StartSpan(tx, "database.list")
+	span := trail.StartSpan(tx, "Database.List")
 	defer span.Finish()
 
 	decoder, ok := v.(DocumentDecoder)
@@ -28,7 +28,7 @@ func (tx Txn) List(table string, query database.Query, v interface{}) error {
 
 		key := query.Key(table)
 		cv, present := tx.cache.Get(key)
-		span.Tags.Set("cache.hit", fmt.Sprintf("%t", present))
+		span.Tags.Set("CacheHit", fmt.Sprintf("%t", present))
 		if present {
 			return database.Copy(cv, v)
 		}
