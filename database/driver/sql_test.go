@@ -41,6 +41,9 @@ func TestNewDB(t *testing.T) {
 				Data: []byte("-- +goose Up\nCREATE TABLE IF NOT EXISTS tests (id text primary key, name text, num int);"),
 			},
 			"schema/seed/1/00001_test.sql": &fstest.MapFile{
+				Data: []byte("-- +goose Up\nINSERT INTO tests (id) VALUES ('');"),
+			},
+			"schema/seed/2/00001_test.sql": &fstest.MapFile{
 				Data: []byte("-- +goose Up\nINSERT INTO tests (id) VALUES (bad);"),
 			},
 		}))
