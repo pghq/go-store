@@ -17,7 +17,7 @@ func (tx Txn) List(table string, query database.Query, v interface{}) error {
 		decoder = newTransientDocument(v)
 	}
 
-	return decoder.Decode(span.Context(), func(v interface{}) error {
+	return decoder.Decode(func(v interface{}) error {
 		if len(query.Fields) == 0 {
 			query.Fields = database.AppendFields(query.Fields, v)
 		}
