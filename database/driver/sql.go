@@ -113,7 +113,7 @@ func applyMigration(localhost bool, db *sql.DB, dir fs.ReadDirFS, dialect, migra
 			break
 		}
 
-		if seed, present := seeds[i+1]; present && int(version) > i {
+		if seed, present := seeds[i+1]; present && int(version) >= i {
 			if err = goose.Up(db, seed, goose.WithNoVersioning(), goose.WithAllowMissing()); err != nil {
 				break
 			}
