@@ -121,7 +121,7 @@ func applyMigration(localhost bool, db *sql.DB, dir fs.ReadDirFS, dialect, migra
 		}
 
 		seedVersion := i + minSeedVersion
-		if seed, present := seeds[seedVersion]; present && seedVersion >= int(version) {
+		if seed, present := seeds[seedVersion]; present && seedVersion > int(version) {
 			if err = goose.Up(db, seed, goose.WithNoVersioning(), goose.WithAllowMissing()); err != nil && err != goose.ErrNoNextVersion {
 				break
 			}
