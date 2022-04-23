@@ -90,6 +90,7 @@ func applyMigration(localhost bool, db *sql.DB, dir fs.ReadDirFS, dialect, migra
 	}
 
 	seeds := make(map[int]string)
+	minSeedVersion := -1
 	if localhost && seedDirectory != "" {
 		entries, _ := dir.ReadDir(seedDirectory)
 		for _, entry := range entries {
@@ -101,6 +102,10 @@ func applyMigration(localhost bool, db *sql.DB, dir fs.ReadDirFS, dialect, migra
 							strings.TrimSuffix(seedDirectory, "/"),
 							entry.Name(),
 						)
+
+						if minSeedVersion == -1 || version < minSeedVersion {
+							minSeedVersion = version
+						}
 					}
 				}
 			}
@@ -115,8 +120,9 @@ func applyMigration(localhost bool, db *sql.DB, dir fs.ReadDirFS, dialect, migra
 			break
 		}
 
-		if seed, present := seeds[i+1]; present && int(version) >= (i+1) {
-			if err = goose.Up(db, seed, goose.WithNoVersioning(), goose.WithAllowMissing()); err != nil {
+		seedVersion := i + minSeedVersion
+		if seed, present := seeds[seedVersion]; present && seedVersion >= int(version) {
+			if err = goose.Up(db, seed, goose.WithNoVersioning(), goose.WithAllowMissing()); err != nil && err != goose.ErrNoNextVersion {
 				break
 			}
 		}
