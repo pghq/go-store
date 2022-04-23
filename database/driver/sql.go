@@ -6,7 +6,6 @@ import (
 	"database/sql"
 	"fmt"
 	"io/fs"
-	"math"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -20,7 +19,10 @@ import (
 
 var (
 	// migrationFile regex match
-	migrationFile = regexp.MustCompile(`(\d+)_.+\.sql$`)
+	migrationFile = regexp.MustCompile(`^(\d+)_.+\.sql$`)
+
+	// seedFile regex match
+	seedFile = regexp.MustCompile(`^(\d+).*$`)
 )
 
 // SQL database
@@ -86,39 +88,42 @@ func applyMigration(localhost bool, db *sql.DB, dir fs.ReadDirFS, dialect, migra
 		}
 	}
 
-	maxSeedVersion := 0
+	seeds := make(map[int]string)
 	if localhost && seedDirectory != "" {
 		entries, _ := dir.ReadDir(seedDirectory)
 		for _, entry := range entries {
-			matches := migrationFile.FindStringSubmatch(entry.Name())
-			if len(matches) > 0 {
-				version, _ := strconv.Atoi(matches[1])
-				if version > maxSeedVersion {
-					maxSeedVersion = version
+			if entry.IsDir() {
+				matches := seedFile.FindStringSubmatch(entry.Name())
+				if len(matches) > 0 {
+					if version, err := strconv.Atoi(matches[1]); err == nil {
+						seeds[version] = fmt.Sprintf("%s/%s",
+							strings.TrimSuffix(seedDirectory, "/"),
+							entry.Name(),
+						)
+					}
 				}
 			}
 		}
 	}
 
-	version, _ := goose.GetDBVersion(db)
 	var err error
-	for i := 0; i < int(math.Max(float64(maxMigrationVersion), float64(maxSeedVersion))); i++ {
-		if i < maxMigrationVersion {
-			if err = goose.UpTo(db, migrationDirectory, int64(i+1)); err != nil {
-				break
-			}
+	for i := 0; i < maxMigrationVersion; i++ {
+		if err = goose.UpByOne(db, migrationDirectory); err != nil && err != goose.ErrNoNextVersion {
+			break
 		}
 
-		if (i+1 > int(version)) && i < maxSeedVersion {
-			if err = goose.UpTo(db, seedDirectory, int64(i+1), goose.WithNoVersioning()); err != nil {
+		if seed, present := seeds[i+1]; present {
+			if err = goose.Up(db, seed, goose.WithNoVersioning(), goose.WithAllowMissing()); err != nil {
 				break
 			}
 		}
 	}
 
-	if err != nil {
+	if err != nil && err != goose.ErrNoNextVersion {
 		_ = goose.Down(db, migrationDirectory)
-		_ = goose.Down(db, seedDirectory)
+		for _, seed := range seeds {
+			_ = goose.Down(db, seed)
+		}
 		return trail.Stacktrace(err)
 	}
 

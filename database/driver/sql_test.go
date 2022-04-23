@@ -37,7 +37,10 @@ func TestNewDB(t *testing.T) {
 		_, err := NewSQL("postgres", postgres.backend.URL(), database.SQLOpen(func(driverName, dataSourceName string) (*sql.DB, error) {
 			return postgres.backend.SQL(), nil
 		}), database.Migrate(fstest.MapFS{
-			"schema/seed/00003_test.sql": &fstest.MapFile{
+			"schema/migrations/00001_test.sql": &fstest.MapFile{
+				Data: []byte("-- +goose Up\nCREATE TABLE IF NOT EXISTS tests (id text primary key, name text, num int);"),
+			},
+			"schema/seed/1/00001_test.sql": &fstest.MapFile{
 				Data: []byte("-- +goose Up\nINSERT INTO tests (id) VALUES (bad);"),
 			},
 		}))

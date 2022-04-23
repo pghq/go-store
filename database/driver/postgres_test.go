@@ -433,7 +433,7 @@ func NewTestPostgresDB() (*SQL, func()) {
 		"schema/migrations/00002_test.sql": &fstest.MapFile{
 			Data: []byte("-- +goose Up\nCREATE TABLE IF NOT EXISTS units (id text);"),
 		},
-		"schema/seed/00001_test.sql": &fstest.MapFile{
+		"schema/seed/1/00001_test.sql": &fstest.MapFile{
 			Data: []byte("-- +goose Up\nINSERT INTO tests (id) VALUES ('seed');"),
 		},
 	}
