@@ -55,7 +55,7 @@ func New(dsn string, opts ...database.Option) (*Mapper, error) {
 
 // DocumentDecoder decodes a database document.
 type DocumentDecoder interface {
-	Decode(ctx context.Context, fn func(v interface{}) error) error
+	Decode(fn func(v interface{}) error) error
 }
 
 // DocumentEncoder encodes a database document
@@ -71,7 +71,7 @@ func (d transientDocument) Encode() interface{} {
 	return d.v
 }
 
-func (d transientDocument) Decode(_ context.Context, fn func(v interface{}) error) error {
+func (d transientDocument) Decode(fn func(v interface{}) error) error {
 	return fn(d.v)
 }
 
