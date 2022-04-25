@@ -29,7 +29,7 @@ func (m *Mapper) Txn(ctx context.Context, opts ...database.TxnOption) Txn {
 		config:  config,
 	}
 
-	tx.Context = context.WithValue(span.Context(), contextKey{}, tx)
+	tx.ctx = context.WithValue(span.Context(), contextKey{}, tx)
 	return tx
 }
 
@@ -67,11 +67,16 @@ func (m *Mapper) View(ctx context.Context, fn func(tx Txn) error, opts ...databa
 
 // Txn A unit of work
 type Txn struct {
-	context.Context
+	ctx     context.Context
 	root    bool
 	backend database.Txn
 	cache   *ristretto.Cache
 	config  database.TxnConfig
+}
+
+// Context gets the context of the transaction
+func (tx Txn) Context() context.Context {
+	return tx.ctx
 }
 
 // Commit Submit a unit of work
@@ -80,7 +85,7 @@ func (tx Txn) Commit() error {
 		return nil
 	}
 
-	span := trail.StartSpan(tx, "Transaction.Commit")
+	span := trail.StartSpan(tx.Context(), "Transaction.Commit")
 	defer span.Finish()
 	return tx.backend.Commit(span.Context())
 }
@@ -91,7 +96,7 @@ func (tx Txn) Rollback() error {
 		return nil
 	}
 
-	span := trail.StartSpan(tx, "Transaction.Rollback")
+	span := trail.StartSpan(tx.Context(), "Transaction.Rollback")
 	defer span.Finish()
 	return tx.backend.Rollback(span.Context())
 }

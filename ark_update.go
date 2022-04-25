@@ -7,7 +7,7 @@ import (
 
 // Update Replace an existing value
 func (tx Txn) Update(table string, query database.Query, v interface{}) error {
-	span := trail.StartSpan(tx, "Database.Update")
+	span := trail.StartSpan(tx.Context(), "Database.Update")
 	defer span.Finish()
 
 	encoder, ok := v.(DocumentEncoder)
