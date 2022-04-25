@@ -9,9 +9,11 @@ import (
 	"github.com/pghq/go-ark/database"
 )
 
+type contextKey = struct{}
+
 // Txn Begin or fork a transaction
 func (m *Mapper) Txn(ctx context.Context, opts ...database.TxnOption) Txn {
-	if tx, ok := ctx.(Txn); ok {
+	if tx, ok := ctx.Value(contextKey{}).(Txn); ok {
 		tx.root = false
 		return tx
 	}
@@ -20,13 +22,15 @@ func (m *Mapper) Txn(ctx context.Context, opts ...database.TxnOption) Txn {
 	defer span.Finish()
 
 	config := database.TxnConfigWith(opts)
-	return Txn{
-		Context: span.Context(),
+	tx := Txn{
 		cache:   m.cache,
 		backend: m.db.Txn(ctx, opts...),
 		root:    true,
 		config:  config,
 	}
+
+	tx.Context = context.WithValue(span.Context(), contextKey{}, tx)
+	return tx
 }
 
 // Do Write and or read using a callback
