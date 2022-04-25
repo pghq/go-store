@@ -121,7 +121,7 @@ func TestMapper_Txn(t *testing.T) {
 	})
 
 	t.Run("child", func(t *testing.T) {
-		tx := m.Txn(m.Txn(context.TODO()))
+		tx := m.Txn(m.Txn(context.TODO()).Context())
 		assert.False(t, tx.root)
 		assert.Nil(t, tx.Commit())
 		assert.Nil(t, tx.Rollback())

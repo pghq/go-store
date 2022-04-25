@@ -9,7 +9,7 @@ import (
 
 // List Retrieve a listing of values
 func (tx Txn) List(table string, query database.Query, v interface{}) error {
-	span := trail.StartSpan(tx, "Database.List")
+	span := trail.StartSpan(tx.Context(), "Database.List")
 	defer span.Finish()
 
 	decoder, ok := v.(DocumentDecoder)

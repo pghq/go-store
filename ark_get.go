@@ -9,7 +9,7 @@ import (
 
 // Get Retrieve a value
 func (tx Txn) Get(table string, query database.Query, v interface{}) error {
-	span := trail.StartSpan(tx, "Database.Get")
+	span := trail.StartSpan(tx.Context(), "Database.Get")
 	defer span.Finish()
 
 	decoder, ok := v.(DocumentDecoder)
