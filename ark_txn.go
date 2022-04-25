@@ -15,6 +15,7 @@ type contextKey = struct{}
 func (m *Mapper) Txn(ctx context.Context, opts ...database.TxnOption) Txn {
 	if tx, ok := ctx.Value(contextKey{}).(Txn); ok {
 		tx.root = false
+		tx.ctx = context.WithValue(ctx, contextKey{}, tx)
 		return tx
 	}
 

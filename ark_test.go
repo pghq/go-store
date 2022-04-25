@@ -125,6 +125,7 @@ func TestMapper_Txn(t *testing.T) {
 		assert.False(t, tx.root)
 		assert.Nil(t, tx.Commit())
 		assert.Nil(t, tx.Rollback())
+		assert.NotNil(t, tx.Context())
 	})
 }
 
