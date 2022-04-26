@@ -154,6 +154,7 @@ type Query struct {
 	XEq     map[string]interface{}
 	NotXEq  map[string]interface{}
 	Alias   map[string]string
+	Options []string
 	Tables  []Expression
 	Filters []Expression
 	Fields  []string
@@ -175,6 +176,7 @@ func (q Query) Key(table string) []byte {
 		"tables":  q.Tables,
 		"filters": q.Filters,
 		"fields":  q.Fields,
+		"options": q.Options,
 	}))
 }
 
