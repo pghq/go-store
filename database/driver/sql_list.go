@@ -20,6 +20,7 @@ func (tx txn) List(ctx context.Context, table string, query database.Query, v in
 
 	builder := squirrel.StatementBuilder.
 		Select().
+		Options(query.Options...).
 		From(table).
 		Where(squirrel.Eq(query.Eq)).
 		Where(squirrel.NotEq(query.NotEq)).

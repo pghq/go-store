@@ -20,6 +20,7 @@ func (tx txn) Get(ctx context.Context, table string, query database.Query, v int
 
 	builder := squirrel.StatementBuilder.
 		Select().
+		Options(query.Options...).
 		From(table).
 		Limit(1).
 		OrderBy(query.OrderBy...).
