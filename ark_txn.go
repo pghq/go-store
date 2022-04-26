@@ -73,6 +73,7 @@ type Txn struct {
 	backend database.Txn
 	cache   *ristretto.Cache
 	config  database.TxnConfig
+	done    bool
 }
 
 // Context gets the context of the transaction
@@ -82,22 +83,26 @@ func (tx Txn) Context() context.Context {
 
 // Commit Submit a unit of work
 func (tx Txn) Commit() error {
-	if !tx.root {
+	if tx.done || !tx.root {
 		return nil
 	}
 
 	span := trail.StartSpan(tx.Context(), "Transaction.Commit")
 	defer span.Finish()
+	
+	tx.done = true
 	return tx.backend.Commit(span.Context())
 }
 
 // Rollback Cancel a unit of work
 func (tx Txn) Rollback() error {
-	if !tx.root {
+	if tx.done || !tx.root {
 		return nil
 	}
 
 	span := trail.StartSpan(tx.Context(), "Transaction.Rollback")
 	defer span.Finish()
+
+	tx.done = true
 	return tx.backend.Rollback(span.Context())
 }
