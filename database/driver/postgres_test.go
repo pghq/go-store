@@ -268,6 +268,7 @@ func TestPostgresTxn_Get(t *testing.T) {
 		err := tx.Get(context.TODO(), "tests",
 			database.Query{
 				Fields: []string{"count"},
+				Limit:  1,
 				Alias:  map[string]string{"count": "SELECT count(id) FROM units WHERE tests.id = units.id"},
 			},
 			&dst,

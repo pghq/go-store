@@ -22,7 +22,7 @@ func (tx Txn) List(table string, query database.Query, v interface{}) error {
 			query.Fields = database.AppendFields(query.Fields, v)
 		}
 
-		if query.Limit <= 0 {
+		if query.Limit == 0 {
 			query.Limit = database.DefaultLimit
 		}
 
