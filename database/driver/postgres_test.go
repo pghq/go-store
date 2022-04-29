@@ -164,17 +164,18 @@ func TestPostgresTxn_Update(t *testing.T) {
 
 		assert.Nil(t, tx.Insert(context.TODO(), "tests", map[string]interface{}{"id": "opts:ok"}))
 		query := database.Query{
-			Fields:  []string{"tests.id", "tests.name"},
-			NotEq:   map[string]interface{}{"name": "bar4"},
-			XEq:     map[string]interface{}{"name": "%bar%"},
-			Limit:   1,
-			OrderBy: []string{"name"},
-			Eq:      map[string]interface{}{"name": "bar4"},
-			Gt:      map[string]interface{}{"num": 0},
-			Lt:      map[string]interface{}{"num": 2},
-			Px:      map[string]string{"num": "bar"},
-			Tables:  []database.Expression{database.Expr("LEFT JOIN units ON units.id = tests.id")},
-			Filters: []database.Expression{database.Expr("name = 'bar4'")},
+			Fields:   []string{"tests.id", "tests.name"},
+			NotEq:    map[string]interface{}{"name": "bar4"},
+			XEq:      map[string]interface{}{"name": "%bar%"},
+			Limit:    1,
+			OrderBy:  []string{"name"},
+			Eq:       map[string]interface{}{"name": "bar4"},
+			Gt:       map[string]interface{}{"num": 0},
+			Lt:       map[string]interface{}{"num": 2},
+			Px:       map[string]string{"num": "bar"},
+			Tables:   []database.Expression{database.Expr("LEFT JOIN units ON units.id = tests.id")},
+			Filters:  []database.Expression{database.Expr("name = 'bar4'")},
+			Suffixes: []database.Expression{database.Expr("UNION SELECT units WHERE units.id = ''")},
 		}
 
 		var doc map[string]interface{}
@@ -238,17 +239,18 @@ func TestPostgresTxn_Get(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
 		defer tx.Rollback(context.TODO())
 		query := database.Query{
-			Fields:  []string{"tests.id", "tests.name"},
-			NotEq:   map[string]interface{}{"name": "bar4"},
-			XEq:     map[string]interface{}{"name": "%bar%"},
-			Limit:   1,
-			OrderBy: []string{"name"},
-			Eq:      map[string]interface{}{"name": "bar4"},
-			Gt:      map[string]interface{}{"num": 0},
-			Lt:      map[string]interface{}{"num": 2},
-			Px:      map[string]string{"num": "bar"},
-			Tables:  []database.Expression{database.Expr("LEFT JOIN units ON units.id = tests.id")},
-			Filters: []database.Expression{database.Expr("name = 'bar4'")},
+			Fields:   []string{"tests.id", "tests.name"},
+			NotEq:    map[string]interface{}{"name": "bar4"},
+			XEq:      map[string]interface{}{"name": "%bar%"},
+			Limit:    1,
+			OrderBy:  []string{"name"},
+			Eq:       map[string]interface{}{"name": "bar4"},
+			Gt:       map[string]interface{}{"num": 0},
+			Lt:       map[string]interface{}{"num": 2},
+			Px:       map[string]string{"num": "bar"},
+			Tables:   []database.Expression{database.Expr("LEFT JOIN units ON units.id = tests.id")},
+			Filters:  []database.Expression{database.Expr("name = 'bar4'")},
+			Suffixes: []database.Expression{database.Expr("UNION SELECT units WHERE units.id = ''")},
 		}
 		var doc map[string]interface{}
 		err := tx.Get(context.TODO(), "tests", query, &doc)
@@ -296,20 +298,21 @@ func TestPostgresTxn_Remove(t *testing.T) {
 		tx := postgres.Txn(context.TODO())
 		defer tx.Rollback(context.TODO())
 		query := database.Query{
-			Fields:  []string{"tests.id", "tests.name"},
-			NotEq:   map[string]interface{}{"name": "bar4"},
-			XEq:     map[string]interface{}{"name": "%bar%"},
-			Limit:   1,
-			OrderBy: []string{"name"},
-			Eq:      map[string]interface{}{"id": "remove:foo"},
-			Gt:      map[string]interface{}{"num": 0},
-			Lt:      map[string]interface{}{"num": 2},
-			Px:      map[string]string{"name": "bar"},
-			Tables:  []database.Expression{database.Expr("LEFT JOIN units ON units.id = tests.id")},
-			Filters: []database.Expression{database.Expr("name = 'bar4'")},
+			Fields:   []string{"tests.id", "tests.name"},
+			NotEq:    map[string]interface{}{"name": "bar4"},
+			XEq:      map[string]interface{}{"name": "%bar%"},
+			Limit:    1,
+			OrderBy:  []string{"name"},
+			Eq:       map[string]interface{}{"id": "remove:foo"},
+			Gt:       map[string]interface{}{"num": 0},
+			Lt:       map[string]interface{}{"num": 2},
+			Px:       map[string]string{"name": "bar"},
+			Tables:   []database.Expression{database.Expr("LEFT JOIN units ON units.id = tests.id")},
+			Filters:  []database.Expression{database.Expr("name = 'bar4'")},
+			Suffixes: []database.Expression{database.Expr("")},
 		}
 		err := tx.Remove(context.TODO(), "tests", query)
-		assert.Nil(t, err)
+		assert.False(t, trail.IsFatal(err))
 	})
 }
 
@@ -378,19 +381,20 @@ func TestPostgresTxn_List(t *testing.T) {
 			Name *string `db:"name"`
 		}
 		var d []data
+
 		query := database.Query{
-			Fields:  []string{"tests.id", "tests.name"},
-			NotEq:   map[string]interface{}{"name": "bar4"},
-			XEq:     map[string]interface{}{"name": "%bar%"},
-			Limit:   1,
-			OrderBy: []string{"name"},
-			Eq:      map[string]interface{}{"id": "remove:foo"},
-			Gt:      map[string]interface{}{"num": 0},
-			Lt:      map[string]interface{}{"num": 2},
-			Px:      map[string]string{"name": "bar"},
-			Tables:  []database.Expression{database.Expr("LEFT JOIN units ON units.id = tests.id")},
-			Filters: []database.Expression{database.Expr("name = 'bar4'")},
+			Fields:   []string{"tests.id", "tests.name"},
+			NotEq:    map[string]interface{}{"units.name": "bar4"},
+			XEq:      map[string]interface{}{"units.name": "%bar%"},
+			Eq:       map[string]interface{}{"units.id": "remove:foo"},
+			Gt:       map[string]interface{}{"num": 0},
+			Lt:       map[string]interface{}{"num": 2},
+			Px:       map[string]string{"name": "bar"},
+			Tables:   []database.Expression{database.Expr("LEFT JOIN units ON units.id = tests.id")},
+			Filters:  []database.Expression{database.Expr("name = 'bar4'")},
+			Suffixes: []database.Expression{database.Expr("UNION SELECT id, name FROM units WHERE units.id = ''  ORDER BY name LIMIT 1")},
 		}
+
 		err := tx.List(context.TODO(), "tests", query, &d)
 		assert.NotNil(t, err)
 	})

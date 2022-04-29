@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/Masterminds/squirrel"
 	"io/fs"
 	"regexp"
 	"strings"
@@ -31,11 +32,11 @@ type Driver interface {
 
 // Txn A unit of work performed within a database
 type Txn interface {
-	Get(ctx context.Context, table string, query Query, v interface{}) error
+	Get(ctx context.Context, table string, q Query, v interface{}) error
 	Insert(ctx context.Context, table string, v interface{}) error
-	Update(ctx context.Context, table string, query Query, v interface{}) error
-	Remove(ctx context.Context, table string, query Query) error
-	List(ctx context.Context, table string, query Query, v interface{}) error
+	Update(ctx context.Context, table string, q Query, v interface{}) error
+	Remove(ctx context.Context, table string, q Query) error
+	List(ctx context.Context, table string, q Query, v interface{}) error
 	Commit(ctx context.Context) error
 	Rollback(ctx context.Context) error
 }
@@ -140,49 +141,110 @@ func ViewTTL(o time.Duration) TxnOption {
 	}
 }
 
-// Query Database query
+// Query Database q
 type Query struct {
-	Page    int
-	Limit   int
-	OrderBy []string
-	GroupBy []string
-	Eq      map[string]interface{}
-	Px      map[string]string
-	NotEq   map[string]interface{}
-	Lt      map[string]interface{}
-	Gt      map[string]interface{}
-	XEq     map[string]interface{}
-	NotXEq  map[string]interface{}
-	Alias   map[string]string
-	Options []string
-	Tables  []Expression
-	Filters []Expression
-	Fields  []string
+	Page     int
+	Limit    int
+	OrderBy  []string
+	GroupBy  []string
+	Eq       map[string]interface{}
+	Px       map[string]string
+	NotEq    map[string]interface{}
+	Lt       map[string]interface{}
+	Gt       map[string]interface{}
+	XEq      map[string]interface{}
+	NotXEq   map[string]interface{}
+	Alias    map[string]string
+	Options  []string
+	Tables   []Expression
+	Filters  []Expression
+	Suffixes []Expression
+	Fields   []string
+	Table    string
+	Format   squirrel.PlaceholderFormat
+}
+
+type Expression interface {
+	ToSql() (string, []interface{}, error)
 }
 
 func (q Query) Key(table string) []byte {
 	return []byte(fmt.Sprintf("%s.%+v", table, map[string]interface{}{
-		"page":    q.Page,
-		"limit":   q.Limit,
-		"orderBy": q.OrderBy,
-		"groupBy": q.GroupBy,
-		"eq":      q.Eq,
-		"px":      q.Px,
-		"neq":     q.NotEq,
-		"lt":      q.Lt,
-		"gt":      q.Gt,
-		"xeq":     q.XEq,
-		"nxeq":    q.NotXEq,
-		"tables":  q.Tables,
-		"filters": q.Filters,
-		"fields":  q.Fields,
-		"options": q.Options,
+		"page":     q.Page,
+		"limit":    q.Limit,
+		"orderBy":  q.OrderBy,
+		"groupBy":  q.GroupBy,
+		"eq":       q.Eq,
+		"px":       q.Px,
+		"neq":      q.NotEq,
+		"lt":       q.Lt,
+		"gt":       q.Gt,
+		"xeq":      q.XEq,
+		"nxeq":     q.NotXEq,
+		"tables":   q.Tables,
+		"filters":  q.Filters,
+		"suffixes": q.Suffixes,
+		"fields":   q.Fields,
+		"options":  q.Options,
+		"table":    q.Table,
+		"format":   q.Format,
 	}))
+}
+
+func (q Query) ToSql() (string, []interface{}, error) {
+	format := squirrel.PlaceholderFormat(squirrel.Question)
+	if q.Format != nil {
+		format = q.Format
+	}
+
+	builder := squirrel.StatementBuilder.
+		Select().
+		Options(q.Options...).
+		From(q.Table).
+		OrderBy(q.OrderBy...).
+		GroupBy(q.GroupBy...).
+		Where(squirrel.Eq(q.Eq)).
+		Where(squirrel.NotEq(q.NotEq)).
+		Where(squirrel.Lt(q.Lt)).
+		Where(squirrel.Gt(q.Gt)).
+		Where(squirrel.Like(q.XEq)).
+		Where(squirrel.NotLike(q.NotXEq)).
+		PlaceholderFormat(format)
+
+	if q.Limit > 0 {
+		builder = builder.Limit(uint64(q.Limit))
+	}
+
+	for _, field := range q.Fields {
+		column := interface{}(field)
+		if expr, present := q.Alias[field]; present {
+			column = squirrel.Alias(squirrel.Expr(expr), field)
+		}
+		builder = builder.Column(column)
+	}
+
+	for _, expr := range q.Tables {
+		builder = builder.JoinClause(expr)
+	}
+
+	for k, v := range q.Px {
+		builder = builder.Where(squirrel.ILike(map[string]interface{}{k: fmt.Sprintf("%s%%", v)}))
+	}
+
+	for _, expr := range q.Filters {
+		builder = builder.Where(expr)
+	}
+
+	for _, expr := range q.Suffixes {
+		builder = builder.SuffixExpr(expr)
+	}
+
+	return builder.ToSql()
 }
 
 // Expr shorthand
 func Expr(format string, args ...interface{}) Expression {
-	return Expression{Format: format, Args: args}
+	return expression{Format: format, Args: args}
 }
 
 // AppendFields gets the fields to return
@@ -218,10 +280,14 @@ func AppendFields(slice []string, elems ...interface{}) []string {
 	return newFields
 }
 
-// Expression Printf like formatted expression
-type Expression struct {
+// expression Printf like formatted expression
+type expression struct {
 	Format string
 	Args   []interface{}
+}
+
+func (e expression) ToSql() (string, []interface{}, error) {
+	return squirrel.Expr(e.Format, e.Args...).ToSql()
 }
 
 // ToSnakeCase converts a string to snake_case
