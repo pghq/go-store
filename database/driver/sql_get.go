@@ -16,7 +16,6 @@ func (tx txn) Get(ctx context.Context, table string, query database.Query, v int
 	defer span.Finish()
 
 	query.Format = tx.ph
-	query.Limit = 1
 	query.Table = table
 	stmt, args, err := query.ToSql()
 	if err != nil {

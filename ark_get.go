@@ -22,7 +22,10 @@ func (tx Txn) Get(table string, query database.Query, v interface{}) error {
 			query.Fields = database.AppendFields(query.Fields, v)
 		}
 
-		query.Limit = 1
+		if query.Limit == 0 {
+			query.Limit = 1
+		}
+
 		key := query.Key(table)
 		cv, present := tx.cache.Get(key)
 		span.Tags.Set("CacheHit", fmt.Sprintf("%t", present))
