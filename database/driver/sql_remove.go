@@ -33,7 +33,11 @@ func (tx txn) Remove(ctx context.Context, table string, query database.Query) er
 	}
 
 	for _, expr := range query.Filters {
-		builder = builder.Where(squirrel.Expr(expr.Format, expr.Args...))
+		builder = builder.Where(expr)
+	}
+
+	for _, expr := range query.Suffixes {
+		builder = builder.SuffixExpr(expr)
 	}
 
 	stmt, args, err := builder.ToSql()

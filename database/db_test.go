@@ -1,6 +1,8 @@
 package database
 
 import (
+	"github.com/Masterminds/squirrel"
+	"github.com/pghq/go-tea/trail"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -70,5 +72,30 @@ func TestFields(t *testing.T) {
 		var v int
 		fields := AppendFields(nil, &v)
 		assert.Len(t, fields, 0)
+	})
+}
+
+func TestQuery_ToSql(t *testing.T) {
+	query := Query{
+		Format:   squirrel.Dollar,
+		Fields:   []string{"tests.id", "tests.name"},
+		Alias:    map[string]string{"tests.id": "tests.id"},
+		NotEq:    map[string]interface{}{"name": "bar4"},
+		XEq:      map[string]interface{}{"name": "%bar%"},
+		Limit:    1,
+		OrderBy:  []string{"name"},
+		Table:    "tests",
+		Eq:       map[string]interface{}{"id": "remove:foo"},
+		Gt:       map[string]interface{}{"num": 0},
+		Lt:       map[string]interface{}{"num": 2},
+		Px:       map[string]string{"name": "bar"},
+		Tables:   []Expression{Expr("LEFT JOIN units ON units.id = tests.id")},
+		Filters:  []Expression{Expr("name = 'bar4'")},
+		Suffixes: []Expression{Expr("UNION SELECT id, name FROM units WHERE units.id = ''")},
+	}
+
+	t.Run("ok", func(t *testing.T) {
+		_, _, err := query.ToSql()
+		assert.False(t, trail.IsFatal(err))
 	})
 }
