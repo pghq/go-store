@@ -77,22 +77,22 @@ func TestFields(t *testing.T) {
 
 func TestQuery_ToSql(t *testing.T) {
 	query := Query{
-		Format:           squirrel.Dollar,
-		Fields:           []string{"tests.id"},
-		AdditionalFields: []string{"tests.name"},
-		Alias:            map[string]string{"tests.id": "tests.id"},
-		NotEq:            map[string]interface{}{"name": "bar4"},
-		XEq:              map[string]interface{}{"name": "%bar%"},
-		Limit:            1,
-		OrderBy:          []string{"name"},
-		Table:            "tests",
-		Eq:               map[string]interface{}{"id": "remove:foo"},
-		Gt:               map[string]interface{}{"num": 0},
-		Lt:               map[string]interface{}{"num": 2},
-		Px:               map[string]string{"name": "bar"},
-		Tables:           []Expression{Expr("LEFT JOIN units ON units.id = tests.id")},
-		Filters:          []Expression{Expr("name = 'bar4'")},
-		Suffixes:         []Expression{Expr("UNION SELECT id, name FROM units WHERE units.id = ''")},
+		Format:   squirrel.Dollar,
+		Fields:   []string{"tests.id"},
+		XFields:  []Expression{Expr("tests.name")},
+		Alias:    map[string]string{"tests.id": "tests.id"},
+		NotEq:    map[string]interface{}{"name": "bar4"},
+		XEq:      map[string]interface{}{"name": "%bar%"},
+		Limit:    1,
+		OrderBy:  []string{"name"},
+		Table:    "tests",
+		Eq:       map[string]interface{}{"id": "remove:foo"},
+		Gt:       map[string]interface{}{"num": 0},
+		Lt:       map[string]interface{}{"num": 2},
+		Px:       map[string]string{"name": "bar"},
+		Tables:   []Expression{Expr("LEFT JOIN units ON units.id = tests.id")},
+		Filters:  []Expression{Expr("name = 'bar4'")},
+		Suffixes: []Expression{Expr("UNION SELECT id, name FROM units WHERE units.id = ''")},
 	}
 
 	t.Run("ok", func(t *testing.T) {

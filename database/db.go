@@ -144,26 +144,26 @@ func ViewTTL(o time.Duration) TxnOption {
 
 // Query Database q
 type Query struct {
-	Page             int
-	Limit            int
-	OrderBy          []string
-	GroupBy          []string
-	Eq               map[string]interface{}
-	Px               map[string]string
-	NotEq            map[string]interface{}
-	Lt               map[string]interface{}
-	Gt               map[string]interface{}
-	XEq              map[string]interface{}
-	NotXEq           map[string]interface{}
-	Alias            map[string]string
-	Options          []string
-	Tables           []Expression
-	Filters          []Expression
-	Suffixes         []Expression
-	Fields           []string
-	AdditionalFields []string
-	Table            string
-	Format           squirrel.PlaceholderFormat
+	Page     int
+	Limit    int
+	OrderBy  []string
+	GroupBy  []string
+	Eq       map[string]interface{}
+	Px       map[string]string
+	NotEq    map[string]interface{}
+	Lt       map[string]interface{}
+	Gt       map[string]interface{}
+	XEq      map[string]interface{}
+	NotXEq   map[string]interface{}
+	Alias    map[string]string
+	Options  []string
+	Tables   []Expression
+	Filters  []Expression
+	Suffixes []Expression
+	Fields   []string
+	XFields  []Expression
+	Table    string
+	Format   squirrel.PlaceholderFormat
 }
 
 type Expression interface {
@@ -186,7 +186,8 @@ func (q Query) Key(table string) []byte {
 		"tables":   q.Tables,
 		"filters":  q.Filters,
 		"suffixes": q.Suffixes,
-		"fields":   append(q.Fields, q.AdditionalFields...),
+		"fields":   q.Fields,
+		"xfields":  q.XFields,
 		"options":  q.Options,
 		"table":    q.Table,
 		"format":   q.Format,
@@ -225,9 +226,8 @@ func (q Query) ToSql() (string, []interface{}, error) {
 		builder = builder.Column(column)
 	}
 
-	for _, field := range q.AdditionalFields {
-		column := interface{}(field)
-		builder = builder.Column(column)
+	for _, field := range q.XFields {
+		builder = builder.Column(field)
 	}
 
 	for _, expr := range q.Tables {
