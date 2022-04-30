@@ -78,7 +78,8 @@ func TestFields(t *testing.T) {
 func TestQuery_ToSql(t *testing.T) {
 	query := Query{
 		Format:   squirrel.Dollar,
-		Fields:   []string{"tests.id", "tests.name"},
+		Fields:   []string{"tests.id"},
+		XFields:  []Expression{Expr("tests.name")},
 		Alias:    map[string]string{"tests.id": "tests.id"},
 		NotEq:    map[string]interface{}{"name": "bar4"},
 		XEq:      map[string]interface{}{"name": "%bar%"},

@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"strings"
 	"time"
-	
+
 	"github.com/Masterminds/squirrel"
 )
 
@@ -161,6 +161,7 @@ type Query struct {
 	Filters  []Expression
 	Suffixes []Expression
 	Fields   []string
+	XFields  []Expression
 	Table    string
 	Format   squirrel.PlaceholderFormat
 }
@@ -186,6 +187,7 @@ func (q Query) Key(table string) []byte {
 		"filters":  q.Filters,
 		"suffixes": q.Suffixes,
 		"fields":   q.Fields,
+		"xfields":  q.XFields,
 		"options":  q.Options,
 		"table":    q.Table,
 		"format":   q.Format,
@@ -222,6 +224,10 @@ func (q Query) ToSql() (string, []interface{}, error) {
 			column = squirrel.Alias(squirrel.Expr(expr), field)
 		}
 		builder = builder.Column(column)
+	}
+
+	for _, field := range q.XFields {
+		builder = builder.Column(field)
 	}
 
 	for _, expr := range q.Tables {
