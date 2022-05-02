@@ -309,7 +309,7 @@ func NewTestPostgresDB() (*url.URL, func()) {
 
 	fs := fstest.MapFS{
 		"schema/migrations/00001_test.sql": &fstest.MapFile{
-			Data: []byte("-- +goose Up\nCREATE TABLE IF NOT EXISTS tests (id text unique, name text, num int);\nCREATE TABLE IF NOT EXISTS units (id text);"),
+			Data: []byte("-- +goose Up\nCREATE TABLE tests (id text unique, name text, num int);\nCREATE TABLE units (id text);"),
 		},
 	}
 

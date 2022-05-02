@@ -1,10 +1,10 @@
 package database
 
 import (
-	"github.com/Masterminds/squirrel"
-	"github.com/pghq/go-tea/trail"
 	"testing"
 
+	"github.com/Masterminds/squirrel"
+	"github.com/pghq/go-tea/trail"
 	"github.com/stretchr/testify/assert"
 )
 
