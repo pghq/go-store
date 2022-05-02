@@ -115,17 +115,23 @@ func applyMigration(localhost bool, db *sql.DB, dir fs.ReadDirFS, dialect, migra
 	max := int(math.Max(float64(maxMigrationVersion), float64(len(seeds))))
 	version, _ := goose.GetDBVersion(db)
 	var err error
-	for i := 0; i < max; i++ {
-		if err = goose.UpByOne(db, migrationDirectory); err != nil && err != goose.ErrNoNextVersion {
-			break
-		}
-
-		seedVersion := i + minSeedVersion
-		if seed, present := seeds[seedVersion]; present && seedVersion > int(version) {
-			if err = goose.Up(db, seed, goose.WithNoVersioning(), goose.WithAllowMissing()); err != nil && err != goose.ErrNoNextVersion {
+	if localhost {
+		for i := 0; i < max; i++ {
+			if err = goose.UpTo(db, migrationDirectory, int64(i+1)); err != nil && err != goose.ErrNoNextVersion {
 				break
 			}
+
+			seedVersion := i + minSeedVersion
+			if seed, present := seeds[seedVersion]; present && seedVersion > int(version) {
+				if err = goose.Up(db, seed, goose.WithNoVersioning(), goose.WithAllowMissing()); err != nil && err != goose.ErrNoNextVersion {
+					break
+				}
+			}
 		}
+	}
+
+	if err == nil {
+		err = goose.Up(db, migrationDirectory)
 	}
 
 	if err != nil && err != goose.ErrNoNextVersion {

@@ -38,7 +38,7 @@ func TestNewDB(t *testing.T) {
 			return postgres.backend.SQL(), nil
 		}), database.Migrate(fstest.MapFS{
 			"schema/migrations/00001_test.sql": &fstest.MapFile{
-				Data: []byte("-- +goose Up\nCREATE TABLE IF NOT EXISTS tests (id text primary key, name text, num int);"),
+				Data: []byte("-- +goose Up\nCREATE TABLE tests (id text primary key, name text, num int); create index idx_tests_name ON tests (name);"),
 			},
 			"schema/seed/2/00001_test.sql": &fstest.MapFile{
 				Data: []byte("-- +goose Up\nINSERT INTO tests (id) VALUES ('');"),
@@ -56,6 +56,20 @@ func TestNewDB(t *testing.T) {
 		}))
 		assert.Nil(t, d)
 		assert.NotNil(t, err)
+	})
+
+	t.Run("ok seed", func(t *testing.T) {
+		_, err := NewSQL("postgres", postgres.backend.URL(), database.SQLOpen(func(driverName, dataSourceName string) (*sql.DB, error) {
+			return postgres.backend.SQL(), nil
+		}), database.Migrate(fstest.MapFS{
+			"schema/migrations/00001_test.sql": &fstest.MapFile{
+				Data: []byte("-- +goose Up\nCREATE TABLE tests (id text primary key, name text, num int); create index idx_tests_name ON tests (name);"),
+			},
+			"schema/seed/2/00001_test.sql": &fstest.MapFile{
+				Data: []byte("-- +goose Up\nINSERT INTO tests (id) VALUES ('');"),
+			},
+		}))
+		assert.Nil(t, err)
 	})
 }
 

@@ -433,10 +433,10 @@ func NewTestPostgresDB() (*SQL, func()) {
 
 	fs := fstest.MapFS{
 		"schema/migrations/00001_test.sql": &fstest.MapFile{
-			Data: []byte("-- +goose Up\nCREATE TABLE IF NOT EXISTS tests (id text primary key, name text, num int);"),
+			Data: []byte("-- +goose Up\nCREATE TABLE tests (id text primary key, name text, num int); \n create index idx_tests_name ON tests (name);"),
 		},
 		"schema/migrations/00002_test.sql": &fstest.MapFile{
-			Data: []byte("-- +goose Up\nCREATE TABLE IF NOT EXISTS units (id text);"),
+			Data: []byte("-- +goose Up\nCREATE TABLE units (id text);"),
 		},
 		"schema/seed/1/00001_test.sql": &fstest.MapFile{
 			Data: []byte("-- +goose Up\nINSERT INTO tests (id) VALUES ('seed');"),
