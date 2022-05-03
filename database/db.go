@@ -205,6 +205,7 @@ func (q Query) ToSql() (string, []interface{}, error) {
 		Options(q.Options...).
 		From(q.Table).
 		OrderBy(q.OrderBy...).
+		Offset(uint64(q.Page)).
 		GroupBy(q.GroupBy...).
 		Where(squirrel.Eq(q.Eq)).
 		Where(squirrel.NotEq(q.NotEq)).
