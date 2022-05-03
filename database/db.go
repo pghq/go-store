@@ -205,7 +205,6 @@ func (q Query) ToSql() (string, []interface{}, error) {
 		Options(q.Options...).
 		From(q.Table).
 		OrderBy(q.OrderBy...).
-		Offset(uint64(q.Page)).
 		GroupBy(q.GroupBy...).
 		Where(squirrel.Eq(q.Eq)).
 		Where(squirrel.NotEq(q.NotEq)).
@@ -214,6 +213,10 @@ func (q Query) ToSql() (string, []interface{}, error) {
 		Where(squirrel.Like(q.XEq)).
 		Where(squirrel.NotLike(q.NotXEq)).
 		PlaceholderFormat(format)
+
+	if q.Page > 0 {
+		builder = builder.Offset(uint64(q.Page))
+	}
 
 	if q.Limit > 0 {
 		builder = builder.Limit(uint64(q.Limit))

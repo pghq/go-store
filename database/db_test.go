@@ -84,6 +84,7 @@ func TestQuery_ToSql(t *testing.T) {
 		NotEq:    map[string]interface{}{"name": "bar4"},
 		XEq:      map[string]interface{}{"name": "%bar%"},
 		Limit:    1,
+		Page:     1,
 		OrderBy:  []string{"name"},
 		Table:    "tests",
 		Eq:       map[string]interface{}{"id": "remove:foo"},
