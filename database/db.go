@@ -215,7 +215,7 @@ func (q Query) ToSql() (string, []interface{}, error) {
 		PlaceholderFormat(format)
 
 	if q.Page > 0 {
-		builder = builder.Offset(uint64(q.Page))
+		builder = builder.Offset(uint64(q.Limit * q.Page))
 	}
 
 	if q.Limit > 0 {
