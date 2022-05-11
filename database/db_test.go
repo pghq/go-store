@@ -91,6 +91,7 @@ func TestQuery_ToSql(t *testing.T) {
 		Gt:       map[string]interface{}{"num": 0},
 		Lt:       map[string]interface{}{"num": 2},
 		Px:       map[string]string{"name": "bar"},
+		Having:   []Expression{Expr("name = 'bar4'")},
 		Tables:   []Expression{Expr("LEFT JOIN units ON units.id = tests.id")},
 		Filters:  []Expression{Expr("name = 'bar4'")},
 		Suffixes: []Expression{Expr("UNION SELECT id, name FROM units WHERE units.id = ''")},
