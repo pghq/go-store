@@ -164,6 +164,7 @@ type Query struct {
 	XFields  []Expression
 	Table    string
 	Format   squirrel.PlaceholderFormat
+	Having   []Expression
 }
 
 type Expression interface {
@@ -191,6 +192,7 @@ func (q Query) Key(table string) []byte {
 		"options":  q.Options,
 		"table":    q.Table,
 		"format":   q.Format,
+		"having":   q.Having,
 	}))
 }
 
@@ -248,6 +250,10 @@ func (q Query) ToSql() (string, []interface{}, error) {
 
 	for _, expr := range q.Suffixes {
 		builder = builder.SuffixExpr(expr)
+	}
+
+	for _, expr := range q.Having {
+		builder = builder.Having(expr)
 	}
 
 	return builder.ToSql()
