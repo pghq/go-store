@@ -53,7 +53,7 @@ func NewSQL(dialect string, databaseURL *url.URL, opts ...database.Option) (*SQL
 
 	if config.MigrationFS != nil && config.MigrationDirectory != "" {
 		err := applyMigration(
-			strings.HasPrefix(databaseURL.Host, "localhost"),
+			isLocalhost(databaseURL.Host),
 			db.backend.SQL(),
 			config.MigrationFS,
 			dialect,
@@ -206,4 +206,10 @@ type db interface {
 	SQL() *sql.DB
 	URL() *url.URL
 	placeholder() placeholder
+}
+
+func isLocalhost(host string) bool {
+	hostPort := strings.Split(host, ":")
+	host = hostPort[0]
+	return host == "localhost" || host == "host.docker.internal" || host == "db"
 }
