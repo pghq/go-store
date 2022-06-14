@@ -1,4 +1,4 @@
-package database
+package encode
 
 import (
 	"testing"
@@ -66,25 +66,5 @@ func TestMap(t *testing.T) {
 
 		m, _ := Map(&v, true)
 		assert.Equal(t, map[string]interface{}{"field1": 0, "field2": 0, "Field4": 0}, m)
-	})
-}
-
-func TestCopy(t *testing.T) {
-	t.Parallel()
-
-	t.Run("can not set", func(t *testing.T) {
-		err := Copy(func() {}, "")
-		assert.NotNil(t, err)
-	})
-
-	t.Run("type mismatch", func(t *testing.T) {
-		var v string
-		assert.NotNil(t, Copy(1, &v))
-	})
-
-	t.Run("ok", func(t *testing.T) {
-		var v string
-		assert.Nil(t, Copy("foo", &v))
-		assert.Equal(t, "foo", v)
 	})
 }
