@@ -1,4 +1,4 @@
-package ark
+package store
 
 import (
 	"testing"
