@@ -7,8 +7,8 @@ import (
 	"github.com/pghq/go-tea/trail"
 	"io/fs"
 
-	"github.com/pghq/go-ark/provider"
-	"github.com/pghq/go-ark/provider/sql/internal"
+	"github.com/pghq/go-store/provider"
+	"github.com/pghq/go-store/provider/sql/internal"
 )
 
 // Provider to sql database

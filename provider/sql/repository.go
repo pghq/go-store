@@ -6,8 +6,8 @@ import (
 	"github.com/Masterminds/squirrel"
 	"github.com/pghq/go-tea/trail"
 
-	"github.com/pghq/go-ark/internal/encode"
-	"github.com/pghq/go-ark/provider"
+	"github.com/pghq/go-store/internal/encode"
+	"github.com/pghq/go-store/provider"
 )
 
 type repository Provider

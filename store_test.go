@@ -19,7 +19,7 @@ func TestNew(t *testing.T) {
 	})
 
 	t.Run("ok", func(t *testing.T) {
-		store, _ := New(WithDSN("sqlite3", ":memory:"))
+		store, _ := New(WithDSN("sqlite3", ":memory:"), WithMigration(nil))
 		assert.NotNil(t, store)
 	})
 }

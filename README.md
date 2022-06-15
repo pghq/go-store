@@ -1,12 +1,12 @@
-# go-ark
-Go data mapper providing a familiar API for internally supported database providers.
+# go-store
+High-performance persistence library for internal Go apps.
 
 ## Installation
 
-go-ark may be installed using the go get command:
+go-store may be installed using the go get command:
 
 ```
-go get github.com/pghq/go-ark
+go get github.com/pghq/go-store
 ```
 ## Usage
 
@@ -16,8 +16,8 @@ A typical usage scenario:
 import (
     "context"
     
-    "github.com/pghq/go-ark/database"
-    "github.com/pghq/go-ark"
+    "github.com/pghq/go-store/database"
+    "github.com/pghq/go-store"
 )
 
 //go:embed schema
@@ -42,7 +42,3 @@ if err := tx.Commit(); err != nil{
     panic(err)
 }
 ```
-
-## Supported Providers
-- Postgres
-- Redshift
