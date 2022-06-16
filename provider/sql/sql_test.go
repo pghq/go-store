@@ -61,7 +61,7 @@ func TestProvider_Repository(t *testing.T) {
 	trail.Testing()
 	t.Parallel()
 
-	p, _ := New("sqlite3", "file:repository?mode=memory&cache=shared", WithMigration(fstest.MapFS{
+	p, _ := New("sqlite3", "file:repo?mode=memory&cache=shared", WithMigration(fstest.MapFS{
 		"migrations/00001_test.sql": &fstest.MapFile{
 			Data: []byte("-- +goose Up\nCREATE TABLE tests (id text primary key, name text, num int); create index idx_tests_name ON tests (name);"),
 		},
@@ -74,9 +74,7 @@ func TestProvider_Repository(t *testing.T) {
 		})
 
 		t.Run("bad sql", func(t *testing.T) {
-			assert.NotNil(t, repo.Add(context.TODO(), "tests", map[string]interface{}{
-				"foo": func() {},
-			}))
+			assert.NotNil(t, repo.Add(context.TODO(), "tests", nil))
 		})
 
 		t.Run("ok", func(t *testing.T) {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"io/fs"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/pghq/go-tea/trail"
@@ -47,6 +48,11 @@ func New(dialect string, dsn string, opts ...Option) (*Provider, error) {
 	if err != nil {
 		return nil, trail.Stacktrace(err)
 	}
+
+	// todo: allow consumer to configure
+	db.SetMaxOpenConns(100)
+	db.SetMaxIdleConns(100)
+	db.SetConnMaxLifetime(time.Hour)
 
 	p.db = db
 	if p.migration != nil {

@@ -10,8 +10,8 @@ import (
 // Map Convert an interface to a map using reflection
 // variation of: https://play.golang.org/p/2Qi3thFf--
 // meant to be used for data persistence.
-func Map(v interface{}, transient ...interface{}) (map[string]interface{}, error) {
-	if m, ok := v.(map[string]interface{}); ok {
+func Map(v interface{}) (map[string]interface{}, error) {
+	if m, ok := v.(map[string]interface{}); ok || v == nil{
 		return m, nil
 	}
 
@@ -45,7 +45,7 @@ func Map(v interface{}, transient ...interface{}) (map[string]interface{}, error
 			key = sf.Name
 		}
 
-		if key == "-" || len(transient) == 0 && strings.HasSuffix(key, ",transient") {
+		if key == "-" {
 			continue
 		}
 
