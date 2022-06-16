@@ -3,10 +3,11 @@ package sql
 import (
 	"context"
 	"database/sql"
-	"github.com/jmoiron/sqlx"
-	"github.com/pghq/go-tea/trail"
 	"io/fs"
 
+	"github.com/jmoiron/sqlx"
+	"github.com/pghq/go-tea/trail"
+	
 	"github.com/pghq/go-store/provider"
 	"github.com/pghq/go-store/provider/sql/internal"
 )

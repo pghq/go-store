@@ -2,11 +2,13 @@ package store
 
 import (
 	"context"
+
+	"testing"
+	"testing/fstest"
+	
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/pghq/go-tea/trail"
 	"github.com/stretchr/testify/assert"
-	"testing"
-	"testing/fstest"
 )
 
 func TestNew(t *testing.T) {
