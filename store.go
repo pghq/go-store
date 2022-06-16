@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"reflect"
 	"time"
 
 	"github.com/dgraph-io/ristretto"
@@ -41,10 +42,6 @@ type Store struct {
 
 // Do execute callback in a transaction
 func (s Store) Do(ctx context.Context, fn func(tx Txn) error, opts ...provider.TxOption) error {
-	if err := ctx.Err(); err != nil {
-		return trail.Stacktrace(err)
-	}
-
 	tx, err := begin(ctx, s.provider, s.cache, opts...)
 	if err != nil {
 		return trail.Stacktrace(err)
@@ -111,7 +108,7 @@ func (tx Txn) First(spec provider.Spec, v interface{}) error {
 	cv, present := tx.cache.Get(spec.Id())
 	span.Tags.Set("Repository.CacheHit", fmt.Sprintf("%t", present))
 	if present {
-		return hydrate(cv, &v)
+		return hydrate(v, cv)
 	}
 
 	if err := tx.repo.First(tx.Context(), spec, v); err != nil {
@@ -130,14 +127,14 @@ func (tx Txn) List(spec provider.Spec, v interface{}) error {
 	cv, present := tx.cache.Get(spec.Id())
 	span.Tags.Set("Repository.CacheHit", fmt.Sprintf("%t", present))
 	if present {
-		return hydrate(cv, &v)
+		return hydrate(v, cv)
 	}
 
 	if err := tx.repo.List(tx.Context(), spec, v); err != nil {
 		return trail.Stacktrace(err)
 	}
 
-	defer tx.cache.SetWithTTL(spec.Id(), v, 1, ViewTTL)
+	tx.cache.SetWithTTL(spec.Id(), v, 1, ViewTTL)
 	return nil
 }
 
@@ -233,8 +230,15 @@ func begin(ctx context.Context, provider provider.Provider, cache *ristretto.Cac
 	return tx, nil
 }
 
-// hydrate set the destination to the source value
-func hydrate[S any, D *S](src S, dst D) error {
-	*dst = src
+// hydrate Copies src value to destination
+func hydrate(dst, src interface{}) error {
+	dv := reflect.Indirect(reflect.ValueOf(dst))
+	sv := reflect.Indirect(reflect.ValueOf(src))
+
+	if !dv.CanSet() || dv.Type() != sv.Type() {
+		return trail.NewError("bad hydration")
+	}
+
+	dv.Set(sv)
 	return nil
 }
