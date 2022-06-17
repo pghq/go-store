@@ -3,7 +3,6 @@ package store
 import (
 	"context"
 	"os"
-
 	"testing"
 	"testing/fstest"
 

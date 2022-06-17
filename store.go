@@ -119,7 +119,7 @@ func (tx Txn) First(spec provider.Spec, v interface{}) error {
 	return nil
 }
 
-// List Retrieve a listing of values
+// List retrieves a listing of values
 func (tx Txn) List(spec provider.Spec, v interface{}) error {
 	span := trail.StartSpan(tx.Context(), "Repository.List")
 	defer span.Finish()
@@ -138,7 +138,7 @@ func (tx Txn) List(spec provider.Spec, v interface{}) error {
 	return nil
 }
 
-// Add a value to the repository
+// Add appends a value to the collection
 func (tx Txn) Add(collection string, v interface{}) error {
 	span := trail.StartSpan(tx.Context(), "Repository.Add")
 	defer span.Finish()
@@ -146,7 +146,7 @@ func (tx Txn) Add(collection string, v interface{}) error {
 	return tx.repo.Add(tx.Context(), collection, v)
 }
 
-// Edit update value(s) in the repository
+// Edit updates value(s) in the collection
 func (tx Txn) Edit(collection string, spec provider.Spec, v interface{}) error {
 	span := trail.StartSpan(tx.Context(), "Repository.Edit")
 	defer span.Finish()
@@ -154,7 +154,7 @@ func (tx Txn) Edit(collection string, spec provider.Spec, v interface{}) error {
 	return tx.repo.Edit(tx.Context(), collection, spec, v)
 }
 
-// Remove Delete a value by key
+// Remove deletes values(s) in the collection
 func (tx Txn) Remove(collection string, spec provider.Spec) error {
 	span := trail.StartSpan(tx.Context(), "Repository.Remove")
 	defer span.Finish()
