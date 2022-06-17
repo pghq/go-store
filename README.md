@@ -16,29 +16,21 @@ A typical usage scenario:
 import (
     "context"
     
-    "github.com/pghq/go-store/database"
     "github.com/pghq/go-store"
 )
 
-//go:embed schema
-var schema embed.FS
-
-// Open a postgres connection
-db, err := ark.New("postgres://user:pass@postgres/db", database.Migrate(schema))
+// Create an instance
+db, err := store.New()
 if err != nil{
     panic(err)
 }
 
-// Create a transaction
-tx := db.Txn(context.Background())
-defer tx.Rollback()
+// Add some data
+err := db.Do(context.TODO(), func(tx store.Txn) error {
+    return tx.Add("tests", map[string]interface{}{"id": "1234"})
+})
 
-// Commit some data
-if err := tx.Insert("foos", map[string]interface{}{"id": "foo"}); err != nil{
-    panic(err)
-}
-
-if err := tx.Commit(); err != nil{
+if err != nil{
     panic(err)
 }
 ```

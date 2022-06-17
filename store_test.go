@@ -2,14 +2,27 @@ package store
 
 import (
 	"context"
+	"os"
 
 	"testing"
 	"testing/fstest"
-	
+
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/pghq/go-tea/trail"
 	"github.com/stretchr/testify/assert"
 )
+
+var store *Store
+
+func TestMain(m *testing.M) {
+	trail.Testing()
+	store, _ = New(WithDSN("sqlite3", "file:store.db?mode=memory&cache=shared"), WithMigration(fstest.MapFS{
+		"migrations/00001_test.sql": &fstest.MapFile{
+			Data: []byte("-- +goose Up\nCREATE TABLE tests (id text primary key, name text, num int); create index idx_tests_name ON tests (name);"),
+		},
+	}))
+	os.Exit(m.Run())
+}
 
 func TestNew(t *testing.T) {
 	trail.Testing()
@@ -22,7 +35,7 @@ func TestNew(t *testing.T) {
 	})
 
 	t.Run("ok", func(t *testing.T) {
-		store, _ := New(WithDSN("sqlite3", ":memory:"), WithMigration(nil))
+		store, _ := New(WithDSN("sqlite3", ":memory:"), WithMigration(nil), WithSQL())
 		assert.NotNil(t, store)
 	})
 }
@@ -31,7 +44,6 @@ func TestStore_Do(t *testing.T) {
 	trail.Testing()
 	t.Parallel()
 
-	store, _ := New(WithDSN("sqlite3", ":memory:"), WithMigration(nil))
 	t.Run("bad context", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.TODO(), 1)
 		defer cancel()
@@ -57,12 +69,6 @@ func TestTxn_Add(t *testing.T) {
 	trail.Testing()
 	t.Parallel()
 
-	store, _ := New(WithDSN("sqlite3", "file:add?mode=memory&cache=shared"), WithMigration(fstest.MapFS{
-		"migrations/00001_test.sql": &fstest.MapFile{
-			Data: []byte("-- +goose Up\nCREATE TABLE tests (id text primary key, name text, num int); create index idx_tests_name ON tests (name);"),
-		},
-	}))
-
 	t.Run("ok", func(t *testing.T) {
 		assert.Nil(t, store.Do(context.TODO(), func(tx Txn) error {
 			return tx.Add("tests", map[string]interface{}{"id": "1234"})
@@ -74,19 +80,13 @@ func TestTxn_Edit(t *testing.T) {
 	trail.Testing()
 	t.Parallel()
 
-	store, _ := New(WithDSN("sqlite3", "file:edit?mode=memory&cache=shared"), WithMigration(fstest.MapFS{
-		"migrations/00001_test.sql": &fstest.MapFile{
-			Data: []byte("-- +goose Up\nCREATE TABLE tests (id text primary key, name text, num int); create index idx_tests_name ON tests (name);"),
-		},
-	}))
-
 	_ = store.Do(context.TODO(), func(tx Txn) error {
-		return tx.Add("tests", map[string]interface{}{"id": "1234"})
+		return tx.Add("tests", map[string]interface{}{"id": "edit:1234"})
 	})
 
 	t.Run("ok", func(t *testing.T) {
 		assert.Nil(t, store.Do(context.TODO(), func(tx Txn) error {
-			return tx.Edit(spec("id = '1234'"), map[string]interface{}{"id": "1234"})
+			return tx.Edit("tests", spec("id = 'edit:1234'"), map[string]interface{}{"id": "edit:1234"})
 		}))
 	})
 }
@@ -95,19 +95,13 @@ func TestTxn_Remove(t *testing.T) {
 	trail.Testing()
 	t.Parallel()
 
-	store, _ := New(WithDSN("sqlite3", "file:remove?mode=memory&cache=shared"), WithMigration(fstest.MapFS{
-		"migrations/00001_test.sql": &fstest.MapFile{
-			Data: []byte("-- +goose Up\nCREATE TABLE tests (id text primary key, name text, num int); create index idx_tests_name ON tests (name);"),
-		},
-	}))
-
 	_ = store.Do(context.TODO(), func(tx Txn) error {
-		return tx.Add("tests", map[string]interface{}{"id": "1234"})
+		return tx.Add("tests", map[string]interface{}{"id": "remove:1234"})
 	})
 
 	t.Run("ok", func(t *testing.T) {
 		assert.Nil(t, store.Do(context.TODO(), func(tx Txn) error {
-			return tx.Remove(spec("id = '1234'"))
+			return tx.Remove("tests", spec("id = 'remove:1234'"))
 		}))
 	})
 }
@@ -116,14 +110,8 @@ func TestTxn_First(t *testing.T) {
 	trail.Testing()
 	t.Parallel()
 
-	store, _ := New(WithDSN("sqlite3", "file:first?mode=memory&cache=shared"), WithMigration(fstest.MapFS{
-		"migrations/00001_test.sql": &fstest.MapFile{
-			Data: []byte("-- +goose Up\nCREATE TABLE tests (id text primary key, name text, num int); create index idx_tests_name ON tests (name);"),
-		},
-	}))
-
 	_ = store.Do(context.TODO(), func(tx Txn) error {
-		return tx.Add("tests", map[string]interface{}{"id": "1234"})
+		return tx.Add("tests", map[string]interface{}{"id": "first:1234"})
 	})
 
 	t.Run("bad query", func(t *testing.T) {
@@ -136,27 +124,27 @@ func TestTxn_First(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		var v struct{ Id string }
 		assert.Nil(t, store.Do(context.TODO(), func(tx Txn) error {
-			return tx.First(spec("SELECT id FROM tests WHERE id = '1234'"), &v)
+			return tx.First(spec("SELECT id FROM tests WHERE id = 'first:1234'"), &v)
 		}))
-		assert.Equal(t, "1234", v.Id)
+		assert.Equal(t, "first:1234", v.Id)
 	})
 
 	t.Run("cached", func(t *testing.T) {
 		t.Run("bad cache value", func(t *testing.T) {
 			var v struct{ Id string }
 			assert.NotNil(t, store.Do(context.TODO(), func(tx Txn) error {
-				_ = tx.First(spec("SELECT id FROM tests WHERE id = '1234'"), &v)
-				return tx.First(spec("SELECT id FROM tests WHERE id = '1234'"), func() {})
+				_ = tx.First(spec("SELECT id FROM tests WHERE id = 'first:1234'"), &v)
+				return tx.First(spec("SELECT id FROM tests WHERE id = 'first:1234'"), func() {})
 			}))
 		})
 
 		t.Run("ok", func(t *testing.T) {
 			var v struct{ Id string }
 			assert.Nil(t, store.Do(context.TODO(), func(tx Txn) error {
-				_ = tx.First(spec("SELECT id FROM tests WHERE id = '1234'"), &v)
-				return tx.First(spec("SELECT id FROM tests WHERE id = '1234'"), &v)
+				_ = tx.First(spec("SELECT id FROM tests WHERE id = 'first:1234'"), &v)
+				return tx.First(spec("SELECT id FROM tests WHERE id = 'first:1234'"), &v)
 			}))
-			assert.Equal(t, "1234", v.Id)
+			assert.Equal(t, "first:1234", v.Id)
 		})
 	})
 }
@@ -165,14 +153,8 @@ func TestTxn_List(t *testing.T) {
 	trail.Testing()
 	t.Parallel()
 
-	store, _ := New(WithDSN("sqlite3", "file:list?mode=memory&cache=shared"), WithMigration(fstest.MapFS{
-		"migrations/00001_test.sql": &fstest.MapFile{
-			Data: []byte("-- +goose Up\nCREATE TABLE tests (id text primary key, name text, num int); create index idx_tests_name ON tests (name);"),
-		},
-	}))
-
 	_ = store.Do(context.TODO(), func(tx Txn) error {
-		return tx.Add("tests", map[string]interface{}{"id": "1234"})
+		return tx.Add("tests", map[string]interface{}{"id": "list:1234"})
 	})
 
 	t.Run("bad query", func(t *testing.T) {
@@ -185,27 +167,27 @@ func TestTxn_List(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		var v []struct{ Id string }
 		assert.Nil(t, store.Do(context.TODO(), func(tx Txn) error {
-			return tx.List(spec("SELECT id FROM tests WHERE id = '1234'"), &v)
+			return tx.List(spec("SELECT id FROM tests WHERE id = 'list:1234'"), &v)
 		}))
-		assert.Equal(t, "1234", v[0].Id)
+		assert.Equal(t, "list:1234", v[0].Id)
 	})
 
 	t.Run("cached", func(t *testing.T) {
 		t.Run("bad cache value", func(t *testing.T) {
 			var v []struct{ Id string }
 			assert.NotNil(t, store.Do(context.TODO(), func(tx Txn) error {
-				_ = tx.List(spec("SELECT id FROM tests WHERE id = '1234'"), &v)
-				return tx.List(spec("SELECT id FROM tests WHERE id = '1234'"), func() {})
+				_ = tx.List(spec("SELECT id FROM tests WHERE id = 'list:1234'"), &v)
+				return tx.List(spec("SELECT id FROM tests WHERE id = 'list:1234'"), func() {})
 			}))
 		})
 
 		t.Run("ok", func(t *testing.T) {
 			var v []struct{ Id string }
 			assert.Nil(t, store.Do(context.TODO(), func(tx Txn) error {
-				_ = tx.List(spec("SELECT id FROM tests WHERE id = '1234'"), &v)
-				return tx.List(spec("SELECT id FROM tests WHERE id = '1234'"), &v)
+				_ = tx.List(spec("SELECT id FROM tests WHERE id = 'list:1234'"), &v)
+				return tx.List(spec("SELECT id FROM tests WHERE id = 'list:1234'"), &v)
 			}))
-			assert.Equal(t, "1234", v[0].Id)
+			assert.Equal(t, "list:1234", v[0].Id)
 		})
 	})
 }
@@ -214,10 +196,6 @@ type spec string
 
 func (s spec) Id() interface{} {
 	return string(s)
-}
-
-func (s spec) Collection() string {
-	return "tests"
 }
 
 func (s spec) ToSql() (string, []interface{}, error) {

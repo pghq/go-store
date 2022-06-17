@@ -50,14 +50,14 @@ func (r repository) Add(ctx context.Context, collection string, v interface{}) e
 	return trail.Stacktrace(err)
 }
 
-func (r repository) Edit(ctx context.Context, spec provider.Spec, v interface{}) error {
+func (r repository) Edit(ctx context.Context, collection string, spec provider.Spec, v interface{}) error {
 	data, err := encode.Map(v)
 	if err != nil {
 		return trail.Stacktrace(err)
 	}
 
 	builder := squirrel.StatementBuilder.
-		Update(spec.Collection()).
+		Update(collection).
 		Where(spec).
 		SetMap(data)
 
@@ -70,9 +70,9 @@ func (r repository) Edit(ctx context.Context, spec provider.Spec, v interface{})
 	return trail.Stacktrace(err)
 }
 
-func (r repository) Remove(ctx context.Context, spec provider.Spec) error {
+func (r repository) Remove(ctx context.Context, collection string, spec provider.Spec) error {
 	builder := squirrel.StatementBuilder.
-		Delete(spec.Collection()).
+		Delete(collection).
 		Where(spec)
 
 	stmt, args, err := builder.ToSql()

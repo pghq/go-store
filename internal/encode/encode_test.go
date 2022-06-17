@@ -45,7 +45,7 @@ func TestMap(t *testing.T) {
 			Field4: 4,
 		}
 
-		m, _ := Map(&v, true)
+		m, _ := Map(&v)
 		assert.Equal(t, map[string]interface{}{"field1": 1, "field2": 2, "Field4": 4}, m)
 	})
 
@@ -64,7 +64,7 @@ func TestMap(t *testing.T) {
 			Field4: 4,
 		}}
 
-		m, _ := Map(&v, true)
+		m, _ := Map(&v)
 		assert.Equal(t, map[string]interface{}{"field1": 0, "field2": 0, "Field4": 0}, m)
 	})
 }

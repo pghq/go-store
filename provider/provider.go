@@ -21,14 +21,13 @@ type Repository interface {
 	First(ctx context.Context, spec Spec, v interface{}) error
 	List(ctx context.Context, spec Spec, v interface{}) error
 	Add(ctx context.Context, collection string, v interface{}) error
-	Edit(ctx context.Context, spec Spec, v interface{}) error
-	Remove(ctx context.Context, spec Spec) error
+	Edit(ctx context.Context, collection string, spec Spec, v interface{}) error
+	Remove(ctx context.Context, collection string, spec Spec) error
 }
 
 // Spec for querying objects
 type Spec interface {
 	Id() interface{}
-	Collection() string
 	ToSql() (string, []interface{}, error)
 }
 

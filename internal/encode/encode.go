@@ -11,7 +11,7 @@ import (
 // variation of: https://play.golang.org/p/2Qi3thFf--
 // meant to be used for data persistence.
 func Map(v interface{}) (map[string]interface{}, error) {
-	if m, ok := v.(map[string]interface{}); ok || v == nil{
+	if m, ok := v.(map[string]interface{}); ok || v == nil {
 		return m, nil
 	}
 

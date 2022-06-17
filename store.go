@@ -77,7 +77,7 @@ func New(opts ...Option) (*Store, error) {
 		opt(&conf)
 	}
 
-	prov, err := sql.New(conf.Dialect, conf.DSN, sql.WithMigration(conf.Migration))
+	prov, err := sql.New(conf.Dialect, conf.DSN, conf.Migration, conf.SQLOptions...)
 	if err != nil {
 		return nil, trail.Stacktrace(err)
 	}
@@ -147,20 +147,20 @@ func (tx Txn) Add(collection string, v interface{}) error {
 }
 
 // Edit update value(s) in the repository
-func (tx Txn) Edit(spec provider.Spec, v interface{}) error {
+func (tx Txn) Edit(collection string, spec provider.Spec, v interface{}) error {
 	span := trail.StartSpan(tx.Context(), "Repository.Edit")
 	defer span.Finish()
 
-	return tx.repo.Edit(tx.Context(), spec, v)
+	return tx.repo.Edit(tx.Context(), collection, spec, v)
 }
 
 // Remove Delete a value by key
-func (tx Txn) Remove(spec provider.Spec) error {
+func (tx Txn) Remove(collection string, spec provider.Spec) error {
 	span := trail.StartSpan(tx.Context(), "Repository.Remove")
 	defer span.Finish()
 
 	tx.cache.Del(spec.Id())
-	return tx.repo.Remove(tx.Context(), spec)
+	return tx.repo.Remove(tx.Context(), collection, spec)
 }
 
 // commit submit a unit of work
@@ -183,9 +183,10 @@ func (tx *Txn) rollback() {
 
 // Config a configuration for the store
 type Config struct {
-	Dialect   string
-	DSN       string
-	Migration fs.ReadDirFS
+	Dialect    string
+	DSN        string
+	Migration  fs.ReadDirFS
+	SQLOptions []sql.Option
 }
 
 // Option A store configuration option
@@ -195,6 +196,13 @@ type Option func(conf *Config)
 func WithMigration(fs fs.ReadDirFS) Option {
 	return func(conf *Config) {
 		conf.Migration = fs
+	}
+}
+
+// WithSQL Use custom sql options
+func WithSQL(opts ...sql.Option) Option {
+	return func(conf *Config) {
+		conf.SQLOptions = opts
 	}
 }
 

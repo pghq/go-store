@@ -8,15 +8,14 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/pghq/go-tea/trail"
-	
+
 	"github.com/pghq/go-store/provider"
 	"github.com/pghq/go-store/provider/sql/internal"
 )
 
 // Provider to sql database
 type Provider struct {
-	db        *sqlx.DB
-	migration fs.FS
+	db *sqlx.DB
 }
 
 func (p Provider) Repository() provider.Repository {
@@ -38,27 +37,25 @@ func (p Provider) Begin(ctx context.Context, opts ...provider.TxOption) (provide
 }
 
 // New creates a new sql database provider
-func New(dialect string, dsn string, opts ...Option) (*Provider, error) {
+func New(dialect string, dsn string, migrations fs.FS, opts ...Option) (*Provider, error) {
 	p := Provider{}
-	for _, opt := range opts {
-		opt(&p)
-	}
-
 	db, err := sqlx.ConnectContext(context.Background(), dialect, dsn)
 	if err != nil {
 		return nil, trail.Stacktrace(err)
 	}
 
-	// todo: allow consumer to configure
 	db.SetMaxOpenConns(100)
 	db.SetMaxIdleConns(100)
 	db.SetConnMaxLifetime(time.Hour)
+	for _, opt := range opts {
+		opt(db)
+	}
 
 	p.db = db
-	if p.migration != nil {
+	if migrations != nil {
 		err := internal.Apply(internal.Config{
 			DB:      db.DB,
-			FS:      p.migration,
+			FS:      migrations,
 			Dialect: dialect,
 		})
 
@@ -71,11 +68,32 @@ func New(dialect string, dsn string, opts ...Option) (*Provider, error) {
 }
 
 // Option A sql provider option
-type Option func(*Provider)
+type Option func(db *sqlx.DB)
 
-// WithMigration Use database migration
-func WithMigration(fs fs.ReadDirFS) Option {
-	return func(provider *Provider) {
-		provider.migration = fs
+// WithMaxOpenConns configure sql with custom max open connections
+func WithMaxOpenConns(n int) Option {
+	return func(db *sqlx.DB) {
+		db.SetMaxOpenConns(n)
+	}
+}
+
+// WithMaxIdleConns configure SQL with custom max idle connections
+func WithMaxIdleConns(n int) Option {
+	return func(db *sqlx.DB) {
+		db.SetMaxIdleConns(n)
+	}
+}
+
+// WithConnMaxLifetime configure SQL with custom max connection lifetime
+func WithConnMaxLifetime(d time.Duration) Option {
+	return func(db *sqlx.DB) {
+		db.SetConnMaxLifetime(d)
+	}
+}
+
+// WithConnMaxIdleTime configure SQL with custom max connection lifetime
+func WithConnMaxIdleTime(d time.Duration) Option {
+	return func(db *sqlx.DB) {
+		db.SetConnMaxIdleTime(d)
 	}
 }
