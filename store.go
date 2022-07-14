@@ -27,22 +27,22 @@ import (
 	"github.com/pghq/go-store/provider/sql"
 )
 
-const (
-	// ViewTTL time to live for cached results
-	ViewTTL = 100 * time.Millisecond
-)
-
 type contextKey = struct{}
 
 // Store an abstraction over database persistence
 type Store struct {
-	provider provider.Provider
-	cache    *ristretto.Cache
+	db    provider.Provider
+	cache *ristretto.Cache
+}
+
+// Begin a transaction
+func (s Store) Begin(ctx context.Context, opts ...provider.TxOption) (Txn, error) {
+	return begin(ctx, &s, opts...)
 }
 
 // Do execute callback in a transaction
 func (s Store) Do(ctx context.Context, fn func(tx Txn) error, opts ...provider.TxOption) error {
-	tx, err := begin(ctx, s.provider, s.cache, opts...)
+	tx, err := begin(ctx, &s, opts...)
 	if err != nil {
 		return trail.Stacktrace(err)
 	}
@@ -55,15 +55,99 @@ func (s Store) Do(ctx context.Context, fn func(tx Txn) error, opts ...provider.T
 	return tx.commit()
 }
 
+// Batch read
+func (s Store) Batch(ctx context.Context, opts ...provider.TxOption) error {
+	panic("not implemented")
+}
+
+// First retrieve the first value matching the spec
+func (s Store) First(ctx context.Context, spec provider.Spec, v interface{}, opts ...QueryOption) error {
+	span := trail.StartSpan(ctx, "Store.First")
+	defer span.Finish()
+
+	conf := QueryConfig{}
+	for _, opt := range opts {
+		opt(&conf)
+	}
+
+	cv, present := s.cache.Get(spec.Id())
+	span.Tags.Set("Store.CacheHit", fmt.Sprintf("%t", present))
+	if present {
+		return hydrate(v, cv)
+	}
+
+	if err := s.db.Repository().First(ctx, spec, v); err != nil {
+		return trail.Stacktrace(err)
+	}
+
+	if conf.QueryTTL != 0 {
+		s.cache.SetWithTTL(spec.Id(), v, 1, conf.QueryTTL)
+	}
+
+	return nil
+}
+
+// List retrieves a listing of values
+func (s Store) List(ctx context.Context, spec provider.Spec, v interface{}, opts ...QueryOption) error {
+	span := trail.StartSpan(ctx, "Store.List")
+	defer span.Finish()
+
+	conf := QueryConfig{}
+	for _, opt := range opts {
+		opt(&conf)
+	}
+
+	cv, present := s.cache.Get(spec.Id())
+	span.Tags.Set("Store.CacheHit", fmt.Sprintf("%t", present))
+	if present {
+		return hydrate(v, cv)
+	}
+
+	if err := s.db.Repository().List(ctx, spec, v); err != nil {
+		return trail.Stacktrace(err)
+	}
+
+	if conf.QueryTTL != 0 {
+		s.cache.SetWithTTL(spec.Id(), v, 1, conf.QueryTTL)
+	}
+
+	return nil
+}
+
+// Add appends a value to the collection
+func (s Store) Add(ctx context.Context, collection string, v interface{}) error {
+	span := trail.StartSpan(ctx, "Store.Add")
+	defer span.Finish()
+
+	return s.db.Repository().Add(ctx, collection, v)
+}
+
+// Edit updates value(s) in the collection
+func (s Store) Edit(ctx context.Context, collection string, spec provider.Spec, v interface{}) error {
+	span := trail.StartSpan(ctx, "Store.Edit")
+	defer span.Finish()
+
+	return s.db.Repository().Edit(ctx, collection, spec, v)
+}
+
+// Remove deletes values(s) in the collection
+func (s Store) Remove(ctx context.Context, collection string, spec provider.Spec) error {
+	span := trail.StartSpan(ctx, "Store.Remove")
+	defer span.Finish()
+
+	s.cache.Del(spec.Id())
+	return s.db.Repository().Remove(ctx, collection, spec)
+}
+
 // NewStore creates a new store instance
-func NewStore(provider provider.Provider) *Store {
+func NewStore(db provider.Provider) *Store {
 	s := Store{}
 	s.cache, _ = ristretto.NewCache(&ristretto.Config{
 		NumCounters: 1e7,
 		MaxCost:     1 << 30,
 		BufferItems: 64,
 	})
-	s.provider = provider
+	s.db = db
 	return &s
 }
 
@@ -89,8 +173,7 @@ func New(opts ...Option) (*Store, error) {
 type Txn struct {
 	ctx   context.Context
 	uow   provider.UnitOfWork
-	repo  provider.Repository
-	cache *ristretto.Cache
+	store *Store
 	root  bool
 	done  bool
 }
@@ -101,66 +184,28 @@ func (tx Txn) Context() context.Context {
 }
 
 // First retrieve the first value matching the spec
-func (tx Txn) First(spec provider.Spec, v interface{}) error {
-	span := trail.StartSpan(tx.Context(), "Repository.First")
-	defer span.Finish()
-
-	cv, present := tx.cache.Get(spec.Id())
-	span.Tags.Set("Repository.CacheHit", fmt.Sprintf("%t", present))
-	if present {
-		return hydrate(v, cv)
-	}
-
-	if err := tx.repo.First(tx.Context(), spec, v); err != nil {
-		return trail.Stacktrace(err)
-	}
-
-	tx.cache.SetWithTTL(spec.Id(), v, 1, ViewTTL)
-	return nil
+func (tx Txn) First(spec provider.Spec, v interface{}, opts ...QueryOption) error {
+	return tx.store.First(tx.Context(), spec, v, opts...)
 }
 
 // List retrieves a listing of values
-func (tx Txn) List(spec provider.Spec, v interface{}) error {
-	span := trail.StartSpan(tx.Context(), "Repository.List")
-	defer span.Finish()
-
-	cv, present := tx.cache.Get(spec.Id())
-	span.Tags.Set("Repository.CacheHit", fmt.Sprintf("%t", present))
-	if present {
-		return hydrate(v, cv)
-	}
-
-	if err := tx.repo.List(tx.Context(), spec, v); err != nil {
-		return trail.Stacktrace(err)
-	}
-
-	tx.cache.SetWithTTL(spec.Id(), v, 1, ViewTTL)
-	return nil
+func (tx Txn) List(spec provider.Spec, v interface{}, opts ...QueryOption) error {
+	return tx.store.List(tx.Context(), spec, v, opts...)
 }
 
 // Add appends a value to the collection
 func (tx Txn) Add(collection string, v interface{}) error {
-	span := trail.StartSpan(tx.Context(), "Repository.Add")
-	defer span.Finish()
-
-	return tx.repo.Add(tx.Context(), collection, v)
+	return tx.store.Add(tx.Context(), collection, v)
 }
 
 // Edit updates value(s) in the collection
 func (tx Txn) Edit(collection string, spec provider.Spec, v interface{}) error {
-	span := trail.StartSpan(tx.Context(), "Repository.Edit")
-	defer span.Finish()
-
-	return tx.repo.Edit(tx.Context(), collection, spec, v)
+	return tx.store.Edit(tx.Context(), collection, spec, v)
 }
 
 // Remove deletes values(s) in the collection
 func (tx Txn) Remove(collection string, spec provider.Spec) error {
-	span := trail.StartSpan(tx.Context(), "Repository.Remove")
-	defer span.Finish()
-
-	tx.cache.Del(spec.Id())
-	return tx.repo.Remove(tx.Context(), collection, spec)
+	return tx.store.Remove(tx.Context(), collection, spec)
 }
 
 // commit submit a unit of work
@@ -214,24 +259,37 @@ func WithDSN(dialect, dsn string) Option {
 	}
 }
 
+// QueryConfig configuration for store queries
+type QueryConfig struct {
+	QueryTTL time.Duration
+}
+
+// QueryOption for customizing store queries
+type QueryOption func(conf *QueryConfig)
+
+// QueryTTL custom duration of time to cache queries for
+func QueryTTL(duration time.Duration) QueryOption {
+	return func(conf *QueryConfig) {
+		conf.QueryTTL = duration
+	}
+}
+
 // begin create instance of a read/write database transaction
-func begin(ctx context.Context, provider provider.Provider, cache *ristretto.Cache, opts ...provider.TxOption) (Txn, error) {
+func begin(ctx context.Context, store *Store, opts ...provider.TxOption) (Txn, error) {
 	if tx, ok := ctx.Value(contextKey{}).(Txn); ok {
 		tx.root = false
 		tx.ctx = context.WithValue(ctx, contextKey{}, tx)
 		return tx, nil
 	}
 
-	uow, err := provider.Begin(ctx, opts...)
+	uow, err := store.db.Begin(ctx, opts...)
 	if err != nil {
 		return Txn{}, trail.Stacktrace(err)
 	}
 
 	tx := Txn{
-		cache: cache,
-		uow:   uow,
-		repo:  provider.Repository(),
-		root:  true,
+		uow:  uow,
+		root: true,
 	}
 
 	tx.ctx = context.WithValue(ctx, contextKey{}, tx)
