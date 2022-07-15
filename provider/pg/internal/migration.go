@@ -5,26 +5,22 @@ import (
 	"fmt"
 	"io/fs"
 
+	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/pghq/go-tea/trail"
 	"github.com/pressly/goose/v3"
 )
 
-// Config is a configuration for migrations.
-type Config struct {
-	DB      *sql.DB
-	FS      fs.FS
-	Dialect string
-}
-
 // Apply migration
-func Apply(conf Config) error {
-	goose.SetLogger(gooseLogger{})
-	goose.SetBaseFS(conf.FS)
-	_ = goose.SetDialect(conf.Dialect)
+func Apply(db *sql.DB, fs fs.FS) error {
+	if fs != nil {
+		goose.SetLogger(gooseLogger{})
+		goose.SetBaseFS(fs)
+		_ = goose.SetDialect("pgx")
 
-	if err := goose.Up(conf.DB, "migrations"); err != nil {
-		_ = goose.Down(conf.DB, "migrations")
-		return trail.Stacktrace(err)
+		if err := goose.Up(db, "migrations"); err != nil {
+			_ = goose.Down(db, "migrations")
+			return trail.Stacktrace(err)
+		}
 	}
 
 	return nil
