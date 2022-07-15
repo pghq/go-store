@@ -37,11 +37,16 @@ type Store struct {
 
 // Begin a transaction
 func (s Store) Begin(ctx context.Context, opts ...provider.TxOption) (Txn, error) {
+	span := trail.StartSpan(ctx, "Store.Begin")
+	defer span.Finish()
 	return begin(ctx, &s, opts...)
 }
 
 // Do execute callback in a transaction
 func (s Store) Do(ctx context.Context, fn func(tx Txn) error, opts ...provider.TxOption) error {
+	span := trail.StartSpan(ctx, "Store.Do")
+	defer span.Finish()
+
 	tx, err := s.Begin(ctx, opts...)
 	if err != nil {
 		return trail.Stacktrace(err)
