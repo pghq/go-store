@@ -18,11 +18,12 @@ type UnitOfWork interface {
 
 // Repository abstraction for a collection of objects.
 type Repository interface {
-	First(ctx context.Context, spec Spec, v interface{}) error
-	List(ctx context.Context, spec Spec, v interface{}) error
+	One(ctx context.Context, spec Spec, v interface{}) error
+	All(ctx context.Context, spec Spec, v interface{}) error
 	Add(ctx context.Context, collection string, v interface{}) error
 	Edit(ctx context.Context, collection string, spec Spec, v interface{}) error
 	Remove(ctx context.Context, collection string, spec Spec) error
+	BatchQuery(ctx context.Context, query BatchQuery) error
 }
 
 // Spec for querying objects

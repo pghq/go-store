@@ -1,4 +1,4 @@
-package provider
+package pgtest
 
 import (
 	"testing"
@@ -7,13 +7,15 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestWithReadOnly(t *testing.T) {
+func TestStart(t *testing.T) {
 	trail.Testing()
 	t.Parallel()
 
 	t.Run("ok", func(t *testing.T) {
-		conf := TxConfig{}
-		WithReadOnly(true)(&conf)
-		assert.True(t, conf.ReadOnly)
+		dsn, cleanup, err := Start()
+		assert.Nil(t, err)
+		assert.NotEmpty(t, dsn)
+		assert.NotNil(t, cleanup)
+		cleanup()
 	})
 }
