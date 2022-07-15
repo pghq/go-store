@@ -42,7 +42,7 @@ func (s Store) Begin(ctx context.Context, opts ...provider.TxOption) (Txn, error
 
 // Do execute callback in a transaction
 func (s Store) Do(ctx context.Context, fn func(tx Txn) error, opts ...provider.TxOption) error {
-	tx, err := begin(ctx, &s, opts...)
+	tx, err := s.Begin(ctx, opts...)
 	if err != nil {
 		return trail.Stacktrace(err)
 	}
@@ -238,6 +238,11 @@ func (tx Txn) Remove(collection string, spec provider.Spec) error {
 	return tx.store.Remove(tx.Context(), collection, spec)
 }
 
+// BatchQuery performs a batch query op within a transaction
+func (tx Txn) BatchQuery(query provider.BatchQuery, opts ...QueryOption) error {
+	return tx.store.BatchQuery(tx.Context(), query, opts...)
+}
+
 // commit submit a unit of work
 func (tx *Txn) commit() error {
 	if tx.done || !tx.root {
@@ -258,7 +263,6 @@ func (tx *Txn) rollback() {
 
 // Config a configuration for the store
 type Config struct {
-	Dialect   string
 	DSN       string
 	Migration fs.ReadDirFS
 	PgOptions []pg.Option
@@ -282,9 +286,8 @@ func WithPg(opts ...pg.Option) Option {
 }
 
 // WithDSN Use dsn
-func WithDSN(dialect, dsn string) Option {
+func WithDSN(dsn string) Option {
 	return func(conf *Config) {
-		conf.Dialect = dialect
 		conf.DSN = dsn
 	}
 }
@@ -318,8 +321,9 @@ func begin(ctx context.Context, store *Store, opts ...provider.TxOption) (Txn, e
 	}
 
 	tx := Txn{
-		uow:  uow,
-		root: true,
+		uow:   uow,
+		store: store,
+		root:  true,
 	}
 
 	tx.ctx = context.WithValue(ctx, contextKey{}, tx)

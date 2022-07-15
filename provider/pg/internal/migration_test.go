@@ -20,7 +20,11 @@ func TestApply(t *testing.T) {
 	})
 
 	t.Run("ok", func(t *testing.T) {
-		dsn, cleanup := pgtest.Start()
+		dsn, cleanup, err := pgtest.Start()
+		if err != nil {
+			panic(err)
+		}
+
 		defer cleanup()
 
 		db, _ := sql.Open("pgx", dsn)

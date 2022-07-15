@@ -22,8 +22,12 @@ var (
 func TestMain(m *testing.M) {
 	trail.Testing()
 	var cleanup func() error
-	dsn, cleanup = pgtest.Start()
 	var err error
+	dsn, cleanup, err = pgtest.Start()
+	if err != nil {
+		panic(err)
+	}
+
 	db, err = New(dsn, fstest.MapFS{
 		"migrations/00001_test.sql": &fstest.MapFile{
 			Data: []byte("-- +goose Up\nCREATE TABLE tests (id text primary key, name text, num int); \n create index idx_tests_name ON tests (name);"),

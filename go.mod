@@ -8,7 +8,6 @@ require (
 	github.com/georgysavva/scany v1.0.0
 	github.com/jackc/pgconn v1.12.1
 	github.com/jackc/pgx/v4 v4.16.1
-	github.com/mattn/go-sqlite3 v2.0.3+incompatible
 	github.com/ory/dockertest/v3 v3.9.1
 	github.com/pghq/go-tea v0.1.33
 	github.com/pressly/goose/v3 v3.5.3

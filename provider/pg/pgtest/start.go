@@ -5,17 +5,15 @@ import (
 	"fmt"
 	"time"
 
+	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
+	"github.com/pghq/go-tea/trail"
 )
 
 // Start a test database
-func Start() (string, func() error) {
+func Start() (string, func() error, error) {
 	pool, err := dockertest.NewPool("")
-	if err != nil {
-		panic(err)
-	}
-
 	opts := dockertest.RunOptions{
 		Repository: "postgres",
 		Tag:        "12",
@@ -27,31 +25,34 @@ func Start() (string, func() error) {
 		},
 	}
 
-	resource, err := pool.RunWithOptions(&opts, func(config *docker.HostConfig) {
-		config.AutoRemove = true
-		config.RestartPolicy = docker.RestartPolicy{Name: "no"}
-	})
-
-	if err != nil {
-		panic(err)
+	var resource *dockertest.Resource
+	if err == nil {
+		resource, err = pool.RunWithOptions(&opts, func(config *docker.HostConfig) {
+			config.AutoRemove = true
+			config.RestartPolicy = docker.RestartPolicy{Name: "no"}
+		})
 	}
 
-	if err = resource.Expire(60); err != nil {
-		panic(err)
+	if err == nil {
+		err = resource.Expire(60)
 	}
 
-	pool.MaxWait = 60 * time.Second
-	dsn := fmt.Sprintf("postgres://postgres:secret@%s/db?sslmode=disable", resource.GetHostPort("5432/tcp"))
-	conn, err := sql.Open("pgx", dsn)
-	if err != nil {
-		panic(err)
+	var dsn string
+	var cleanup func() error
+	var conn *sql.DB
+
+	if err == nil {
+		pool.MaxWait = 60 * time.Second
+		dsn = fmt.Sprintf("postgres://postgres:secret@%s/db?sslmode=disable", resource.GetHostPort("5432/tcp"))
+		conn, err = sql.Open("pgx", dsn)
 	}
 
-	if err = pool.Retry(conn.Ping); err != nil {
-		panic(err)
+	if err == nil {
+		err = pool.Retry(conn.Ping)
+		cleanup = func() error {
+			return pool.Purge(resource)
+		}
 	}
 
-	return dsn, func() error {
-		return pool.Purge(resource)
-	}
+	return dsn, cleanup, trail.Stacktrace(err)
 }

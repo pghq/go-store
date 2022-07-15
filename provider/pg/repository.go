@@ -31,7 +31,7 @@ func (r repository) BatchQuery(ctx context.Context, query provider.BatchQuery) e
 			if err != nil {
 				return trail.Stacktrace(err)
 			}
-			queue.Queue(sql, args)
+			queue.Queue(sql, args...)
 		}
 	}
 
@@ -46,6 +46,10 @@ func (r repository) BatchQuery(ctx context.Context, query provider.BatchQuery) e
 			}
 
 			if err := handler(ctx, batchResults{res}, item.Value, ""); err != nil {
+				if trail.IsError(err, pgx.ErrNoRows) {
+					err = ErrNotFound
+				}
+
 				return trail.Stacktrace(err)
 			}
 		}
