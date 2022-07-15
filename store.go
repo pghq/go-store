@@ -24,7 +24,7 @@ import (
 	"github.com/pghq/go-tea/trail"
 
 	"github.com/pghq/go-store/provider"
-	"github.com/pghq/go-store/provider/sql"
+	"github.com/pghq/go-store/provider/pg"
 )
 
 type contextKey = struct{}
@@ -55,14 +55,44 @@ func (s Store) Do(ctx context.Context, fn func(tx Txn) error, opts ...provider.T
 	return tx.commit()
 }
 
-// Batch read
-func (s Store) Batch(ctx context.Context, opts ...provider.TxOption) error {
-	panic("not implemented")
+// BatchQuery query
+func (s Store) BatchQuery(ctx context.Context, query provider.BatchQuery, opts ...QueryOption) error {
+	span := trail.StartSpan(ctx, "Store.BatchQuery")
+	defer span.Finish()
+
+	conf := QueryConfig{}
+	for _, opt := range opts {
+		opt(&conf)
+	}
+
+	for _, item := range query {
+		cv, present := s.cache.Get(item.Spec.Id())
+		if present {
+			if err := hydrate(item.Value, cv); err != nil {
+				return trail.Stacktrace(err)
+			}
+			item.Skip = true
+		}
+	}
+
+	if err := s.db.Repository().BatchQuery(ctx, query); err != nil {
+		return trail.Stacktrace(err)
+	}
+
+	if conf.QueryTTL != 0 {
+		for _, item := range query {
+			if !item.Skip {
+				s.cache.SetWithTTL(item.Spec.Id(), item.Value, 1, conf.QueryTTL)
+			}
+		}
+	}
+
+	return nil
 }
 
-// First retrieve the first value matching the spec
-func (s Store) First(ctx context.Context, spec provider.Spec, v interface{}, opts ...QueryOption) error {
-	span := trail.StartSpan(ctx, "Store.First")
+// One retrieve the first value matching the spec
+func (s Store) One(ctx context.Context, spec provider.Spec, v interface{}, opts ...QueryOption) error {
+	span := trail.StartSpan(ctx, "Store.One")
 	defer span.Finish()
 
 	conf := QueryConfig{}
@@ -76,7 +106,7 @@ func (s Store) First(ctx context.Context, spec provider.Spec, v interface{}, opt
 		return hydrate(v, cv)
 	}
 
-	if err := s.db.Repository().First(ctx, spec, v); err != nil {
+	if err := s.db.Repository().One(ctx, spec, v); err != nil {
 		return trail.Stacktrace(err)
 	}
 
@@ -87,9 +117,9 @@ func (s Store) First(ctx context.Context, spec provider.Spec, v interface{}, opt
 	return nil
 }
 
-// List retrieves a listing of values
-func (s Store) List(ctx context.Context, spec provider.Spec, v interface{}, opts ...QueryOption) error {
-	span := trail.StartSpan(ctx, "Store.List")
+// All retrieves a listing of values
+func (s Store) All(ctx context.Context, spec provider.Spec, v interface{}, opts ...QueryOption) error {
+	span := trail.StartSpan(ctx, "Store.All")
 	defer span.Finish()
 
 	conf := QueryConfig{}
@@ -103,7 +133,7 @@ func (s Store) List(ctx context.Context, spec provider.Spec, v interface{}, opts
 		return hydrate(v, cv)
 	}
 
-	if err := s.db.Repository().List(ctx, spec, v); err != nil {
+	if err := s.db.Repository().All(ctx, spec, v); err != nil {
 		return trail.Stacktrace(err)
 	}
 
@@ -161,12 +191,12 @@ func New(opts ...Option) (*Store, error) {
 		opt(&conf)
 	}
 
-	prov, err := sql.New(conf.Dialect, conf.DSN, conf.Migration, conf.SQLOptions...)
+	db, err := pg.New(conf.DSN, conf.Migration, conf.PgOptions...)
 	if err != nil {
 		return nil, trail.Stacktrace(err)
 	}
 
-	return NewStore(prov), nil
+	return NewStore(db), nil
 }
 
 // Txn A unit of work
@@ -183,14 +213,14 @@ func (tx Txn) Context() context.Context {
 	return tx.ctx
 }
 
-// First retrieve the first value matching the spec
-func (tx Txn) First(spec provider.Spec, v interface{}, opts ...QueryOption) error {
-	return tx.store.First(tx.Context(), spec, v, opts...)
+// One retrieve the first value matching the spec
+func (tx Txn) One(spec provider.Spec, v interface{}, opts ...QueryOption) error {
+	return tx.store.One(tx.Context(), spec, v, opts...)
 }
 
-// List retrieves a listing of values
-func (tx Txn) List(spec provider.Spec, v interface{}, opts ...QueryOption) error {
-	return tx.store.List(tx.Context(), spec, v, opts...)
+// All retrieves a listing of values
+func (tx Txn) All(spec provider.Spec, v interface{}, opts ...QueryOption) error {
+	return tx.store.All(tx.Context(), spec, v, opts...)
 }
 
 // Add appends a value to the collection
@@ -228,10 +258,10 @@ func (tx *Txn) rollback() {
 
 // Config a configuration for the store
 type Config struct {
-	Dialect    string
-	DSN        string
-	Migration  fs.ReadDirFS
-	SQLOptions []sql.Option
+	Dialect   string
+	DSN       string
+	Migration fs.ReadDirFS
+	PgOptions []pg.Option
 }
 
 // Option A store configuration option
@@ -244,10 +274,10 @@ func WithMigration(fs fs.ReadDirFS) Option {
 	}
 }
 
-// WithSQL Use custom sql options
-func WithSQL(opts ...sql.Option) Option {
+// WithPg Use custom pg options
+func WithPg(opts ...pg.Option) Option {
 	return func(conf *Config) {
-		conf.SQLOptions = opts
+		conf.PgOptions = opts
 	}
 }
 

@@ -5,9 +5,10 @@ import (
 	"testing"
 	"testing/fstest"
 
-	_ "github.com/mattn/go-sqlite3"
 	"github.com/pghq/go-tea/trail"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/pghq/go-store/provider/pg/pgtest"
 )
 
 func TestApply(t *testing.T) {
@@ -15,18 +16,17 @@ func TestApply(t *testing.T) {
 	t.Parallel()
 
 	t.Run("bad migration", func(t *testing.T) {
-		assert.NotNil(t, Apply(Config{}))
+		assert.NotNil(t, Apply(nil, fstest.MapFS{}))
 	})
 
 	t.Run("ok", func(t *testing.T) {
-		db, _ := sql.Open("sqlite3", ":memory:")
-		assert.Nil(t, Apply(Config{
-			Dialect: "sqlite3",
-			DB:      db,
-			FS: fstest.MapFS{
-				"migrations/00001_test.sql": &fstest.MapFile{
-					Data: []byte("-- +goose Up\nCREATE TABLE tests (id text primary key, name text, num int); create index idx_tests_name ON tests (name);"),
-				},
+		dsn, cleanup := pgtest.Start()
+		defer cleanup()
+
+		db, _ := sql.Open("pgx", dsn)
+		assert.Nil(t, Apply(db, fstest.MapFS{
+			"migrations/00001_test.sql": &fstest.MapFile{
+				Data: []byte("-- +goose Up\nCREATE TABLE tests (id text primary key, name text, num int); create index idx_tests_name ON tests (name);"),
 			},
 		}))
 	})

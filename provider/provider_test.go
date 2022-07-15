@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestOptions(t *testing.T) {
+func TestWithReadOnly(t *testing.T) {
 	trail.Testing()
 	t.Parallel()
 
