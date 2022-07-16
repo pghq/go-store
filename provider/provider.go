@@ -2,7 +2,11 @@ package provider
 
 import (
 	"context"
+
+	"github.com/Masterminds/squirrel"
 )
+
+var _ Spec = spec{}
 
 // Provider provides instances of transactions and repositories.
 type Provider interface {
@@ -44,5 +48,26 @@ type TxOption func(conf *TxConfig)
 func WithReadOnly(flag bool) TxOption {
 	return func(conf *TxConfig) {
 		conf.ReadOnly = flag
+	}
+}
+
+type spec struct {
+	id      interface{}
+	sqlizer squirrel.Sqlizer
+}
+
+func (s spec) Id() interface{} {
+	return s.id
+}
+
+func (s spec) ToSql() (string, []interface{}, error) {
+	return s.sqlizer.ToSql()
+}
+
+// NewSpec is a helper for creating a spec
+func NewSpec(id interface{}, sqlizer squirrel.Sqlizer) Spec {
+	return spec{
+		id:      id,
+		sqlizer: sqlizer,
 	}
 }
