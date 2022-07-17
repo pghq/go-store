@@ -11,7 +11,7 @@ func TestBatchQuery_One(t *testing.T) {
 
 	t.Run("ok", func(t *testing.T) {
 		batch := BatchQuery{}
-		batch.One(nil, nil)
+		batch.One(nil, nil, WithBatchItemOptional(true))
 		assert.NotEmpty(t, batch)
 	})
 }
@@ -21,7 +21,7 @@ func TestBatchQuery_All(t *testing.T) {
 
 	t.Run("ok", func(t *testing.T) {
 		batch := BatchQuery{}
-		batch.All(nil, nil)
+		batch.All(nil, nil, WithBatchItemOptional(true))
 		assert.NotEmpty(t, batch)
 	})
 }
