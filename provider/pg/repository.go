@@ -50,7 +50,9 @@ func (r repository) BatchQuery(ctx context.Context, query provider.BatchQuery) e
 					err = ErrNotFound
 				}
 
-				return trail.Stacktrace(err)
+				if !item.Optional || trail.IsFatal(err) {
+					return trail.Stacktrace(err)
+				}
 			}
 		}
 	}
