@@ -40,12 +40,23 @@ func (r repository) BatchQuery(ctx context.Context, query provider.BatchQuery) e
 
 	for _, item := range query {
 		if !item.Skip {
-			handler := pgxscan.Select
-			if item.One {
-				handler = pgxscan.Get
+			var handler func() error
+			if item.Value == nil {
+				handler = func() error {
+					_, err := res.Exec()
+					return err
+				}
+			} else if item.One {
+				handler = func() error {
+					return pgxscan.Get(ctx, batchResults{res}, item.Value, "")
+				}
+			} else {
+				handler = func() error {
+					return pgxscan.Select(ctx, batchResults{res}, item.Value, "")
+				}
 			}
 
-			if err := handler(ctx, batchResults{res}, item.Value, ""); err != nil {
+			if err := handler(); err != nil {
 				if trail.IsError(err, pgx.ErrNoRows) {
 					err = ErrNotFound
 				}

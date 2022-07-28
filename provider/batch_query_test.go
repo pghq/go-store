@@ -6,6 +6,16 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestBatchQuery_Do(t *testing.T) {
+	t.Parallel()
+
+	t.Run("ok", func(t *testing.T) {
+		batch := BatchQuery{}
+		batch.Do(nil, WithBatchItemOptional(true))
+		assert.NotEmpty(t, batch)
+	})
+}
+
 func TestBatchQuery_One(t *testing.T) {
 	t.Parallel()
 

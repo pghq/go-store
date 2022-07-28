@@ -27,6 +27,19 @@ func (b *BatchQuery) One(spec Spec, v interface{}, opts ...BatchQueryOption) {
 	*b = append(*b, &item)
 }
 
+// Do append a query expecting a single result
+func (b *BatchQuery) Do(spec Spec, opts ...BatchQueryOption) {
+	item := BatchQueryItem{
+		Spec: spec,
+	}
+
+	for _, opt := range opts {
+		opt(&item)
+	}
+
+	*b = append(*b, &item)
+}
+
 // All append a query expecting multiple results
 func (b *BatchQuery) All(spec Spec, v interface{}, opts ...BatchQueryOption) {
 	item := BatchQueryItem{
