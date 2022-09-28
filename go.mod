@@ -6,6 +6,7 @@ require (
 	github.com/Masterminds/squirrel v1.5.2
 	github.com/dgraph-io/ristretto v0.1.0
 	github.com/georgysavva/scany v1.0.0
+	github.com/gobeam/stringy v0.0.5
 	github.com/jackc/pgconn v1.12.1
 	github.com/jackc/pgx/v4 v4.16.1
 	github.com/ory/dockertest/v3 v3.9.1

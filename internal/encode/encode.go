@@ -5,6 +5,8 @@ import (
 	"strings"
 
 	"github.com/pghq/go-tea/trail"
+
+	"github.com/gobeam/stringy"
 )
 
 // Map Convert an interface to a map using reflection
@@ -42,7 +44,7 @@ func Map(v interface{}) (map[string]interface{}, error) {
 		sf := t.Field(i)
 		key := sf.Tag.Get("db")
 		if key == "" {
-			key = sf.Name
+			key = stringy.New(sf.Name).SnakeCase().ToLower()
 		}
 
 		if key == "-" {

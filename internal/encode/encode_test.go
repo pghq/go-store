@@ -32,21 +32,21 @@ func TestMap(t *testing.T) {
 
 	t.Run("struct pointer", func(t *testing.T) {
 		type value struct {
-			Field1 int `db:"field1"`
-			Field2 int `db:"field2,transient"`
-			Field3 int `db:"-"`
-			Field4 int
+			Field1    int `db:"field1"`
+			Field2    int `db:"field2,transient"`
+			Field3    int `db:"-"`
+			FieldFour int
 		}
 
 		v := value{
-			Field1: 1,
-			Field2: 2,
-			Field3: 3,
-			Field4: 4,
+			Field1:    1,
+			Field2:    2,
+			Field3:    3,
+			FieldFour: 4,
 		}
 
 		m, _ := Map(&v)
-		assert.Equal(t, map[string]interface{}{"field1": 1, "field2": 2, "Field4": 4}, m)
+		assert.Equal(t, map[string]interface{}{"field1": 1, "field2": 2, "field_four": 4}, m)
 	})
 
 	t.Run("struct slice", func(t *testing.T) {
@@ -65,6 +65,6 @@ func TestMap(t *testing.T) {
 		}}
 
 		m, _ := Map(&v)
-		assert.Equal(t, map[string]interface{}{"field1": 0, "field2": 0, "Field4": 0}, m)
+		assert.Equal(t, map[string]interface{}{"field1": 0, "field2": 0, "field4": 0}, m)
 	})
 }

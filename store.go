@@ -20,11 +20,11 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/dgraph-io/ristretto"
-	"github.com/pghq/go-tea/trail"
-
 	"github.com/pghq/go-store/provider"
 	"github.com/pghq/go-store/provider/pg"
+
+	"github.com/dgraph-io/ristretto"
+	"github.com/pghq/go-tea/trail"
 )
 
 type contextKey = struct{}
