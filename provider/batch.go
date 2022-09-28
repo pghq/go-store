@@ -1,7 +1,7 @@
 package provider
 
-// BatchQueryItem a single batch query
-type BatchQueryItem struct {
+// BatchItem a single batch query
+type BatchItem struct {
 	Spec     Spec
 	Value    interface{}
 	One      bool
@@ -9,12 +9,12 @@ type BatchQueryItem struct {
 	Optional bool
 }
 
-// BatchQuery a list of batch query items
-type BatchQuery []*BatchQueryItem
+// Batch a list of batch query items
+type Batch []*BatchItem
 
 // One append a query expecting a single result
-func (b *BatchQuery) One(spec Spec, v interface{}, opts ...BatchQueryOption) {
-	item := BatchQueryItem{
+func (b *Batch) One(spec Spec, v interface{}, opts ...BatchOption) {
+	item := BatchItem{
 		Spec:  spec,
 		Value: v,
 		One:   true,
@@ -28,8 +28,8 @@ func (b *BatchQuery) One(spec Spec, v interface{}, opts ...BatchQueryOption) {
 }
 
 // Do append a query expecting a single result
-func (b *BatchQuery) Do(spec Spec, opts ...BatchQueryOption) {
-	item := BatchQueryItem{
+func (b *Batch) Do(spec Spec, opts ...BatchOption) {
+	item := BatchItem{
 		Spec: spec,
 	}
 
@@ -41,8 +41,8 @@ func (b *BatchQuery) Do(spec Spec, opts ...BatchQueryOption) {
 }
 
 // All append a query expecting multiple results
-func (b *BatchQuery) All(spec Spec, v interface{}, opts ...BatchQueryOption) {
-	item := BatchQueryItem{
+func (b *Batch) All(spec Spec, v interface{}, opts ...BatchOption) {
+	item := BatchItem{
 		Spec:  spec,
 		Value: v,
 	}
@@ -54,12 +54,12 @@ func (b *BatchQuery) All(spec Spec, v interface{}, opts ...BatchQueryOption) {
 	*b = append(*b, &item)
 }
 
-// BatchQueryOption for custom query configuration
-type BatchQueryOption func(item *BatchQueryItem)
+// BatchOption for custom query configuration
+type BatchOption func(item *BatchItem)
 
 // WithBatchItemOptional marks the item as optional ignoring client errors
-func WithBatchItemOptional(flag bool) BatchQueryOption {
-	return func(item *BatchQueryItem) {
+func WithBatchItemOptional(flag bool) BatchOption {
+	return func(item *BatchItem) {
 		item.Optional = flag
 	}
 }

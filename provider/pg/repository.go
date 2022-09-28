@@ -2,9 +2,9 @@ package pg
 
 import (
 	"context"
-
 	"github.com/Masterminds/squirrel"
 	"github.com/georgysavva/scany/pgxscan"
+	"github.com/jackc/pgconn"
 	"github.com/jackc/pgx/v4"
 	"github.com/pghq/go-tea/trail"
 
@@ -23,9 +23,9 @@ var (
 
 type repository Provider
 
-func (r repository) BatchQuery(ctx context.Context, query provider.BatchQuery) error {
+func (r repository) Batch(ctx context.Context, batch provider.Batch) error {
 	queue := pgx.Batch{}
-	for _, item := range query {
+	for _, item := range batch {
 		if !item.Skip {
 			sql, args, err := item.Spec.ToSql()
 			if err != nil {
@@ -38,7 +38,7 @@ func (r repository) BatchQuery(ctx context.Context, query provider.BatchQuery) e
 	res := r.db.SendBatch(ctx, &queue)
 	defer res.Close()
 
-	for _, item := range query {
+	for _, item := range batch {
 		if !item.Skip {
 			var handler func() error
 			if item.Value == nil {
@@ -77,7 +77,7 @@ func (r repository) One(ctx context.Context, spec provider.Spec, v interface{}) 
 		return trail.Stacktrace(err)
 	}
 
-	if err = pgxscan.Get(ctx, r.db, v, stmt, args...); trail.IsError(err, pgx.ErrNoRows) {
+	if err = pgxscan.Get(ctx, r.conn(ctx), v, stmt, args...); trail.IsError(err, pgx.ErrNoRows) {
 		err = ErrNotFound
 	}
 
@@ -90,7 +90,7 @@ func (r repository) All(ctx context.Context, spec provider.Spec, v interface{}) 
 		return trail.Stacktrace(err)
 	}
 
-	return pgxscan.Select(ctx, r.db, v, stmt, args...)
+	return pgxscan.Select(ctx, r.conn(ctx), v, stmt, args...)
 }
 
 func (r repository) Add(ctx context.Context, collection string, v interface{}) error {
@@ -109,7 +109,7 @@ func (r repository) Add(ctx context.Context, collection string, v interface{}) e
 		return trail.Stacktrace(err)
 	}
 
-	if _, err = r.db.Exec(ctx, stmt, args...); internal.IsErrorCode(err, internal.ErrCodeUniqueViolation) {
+	if _, err = r.conn(ctx).Exec(ctx, stmt, args...); internal.IsErrorCode(err, internal.ErrCodeUniqueViolation) {
 		err = ErrUnique
 	}
 
@@ -133,7 +133,7 @@ func (r repository) Edit(ctx context.Context, collection string, spec provider.S
 		return trail.Stacktrace(err)
 	}
 
-	if _, err = r.db.Exec(ctx, stmt, args...); internal.IsErrorCode(err, internal.ErrCodeUniqueViolation) {
+	if _, err = r.conn(ctx).Exec(ctx, stmt, args...); internal.IsErrorCode(err, internal.ErrCodeUniqueViolation) {
 		err = ErrUnique
 	}
 
@@ -151,7 +151,7 @@ func (r repository) Remove(ctx context.Context, collection string, spec provider
 		return trail.Stacktrace(err)
 	}
 
-	_, err = r.db.Exec(ctx, stmt, args...)
+	_, err = r.conn(ctx).Exec(ctx, stmt, args...)
 	return trail.Stacktrace(err)
 }
 
@@ -161,4 +161,20 @@ type batchResults struct {
 
 func (b batchResults) Query(_ context.Context, _ string, _ ...interface{}) (pgx.Rows, error) {
 	return b.BatchResults.Query()
+}
+
+func (r repository) conn(ctx context.Context) conn {
+	uow, ok := provider.UnitOfWorkValue(ctx)
+	if ok {
+		if tx, ok := uow.Tx().(pgx.Tx); ok {
+			return tx
+		}
+	}
+
+	return r.db
+}
+
+type conn interface {
+	pgxscan.Querier
+	Exec(ctx context.Context, sql string, args ...interface{}) (pgconn.CommandTag, error)
 }

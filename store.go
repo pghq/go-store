@@ -27,7 +27,7 @@ import (
 	"github.com/pghq/go-tea/trail"
 )
 
-type contextKey = struct{}
+type contextKey struct{}
 
 // Store an abstraction over database persistence
 type Store struct {
@@ -60,9 +60,9 @@ func (s Store) Do(ctx context.Context, fn func(tx Txn) error, opts ...provider.T
 	return tx.commit()
 }
 
-// BatchQuery query
-func (s Store) BatchQuery(ctx context.Context, query provider.BatchQuery, opts ...QueryOption) error {
-	span := trail.StartSpan(ctx, "Store.BatchQuery")
+// Batch query
+func (s Store) Batch(ctx context.Context, batch provider.Batch, opts ...QueryOption) error {
+	span := trail.StartSpan(ctx, "Store.Batch")
 	defer span.Finish()
 
 	conf := QueryConfig{}
@@ -70,7 +70,7 @@ func (s Store) BatchQuery(ctx context.Context, query provider.BatchQuery, opts .
 		opt(&conf)
 	}
 
-	for _, item := range query {
+	for _, item := range batch {
 		cv, present := s.cache.Get(item.Spec.Id())
 		if present {
 			if err := hydrate(item.Value, cv); err != nil {
@@ -80,12 +80,12 @@ func (s Store) BatchQuery(ctx context.Context, query provider.BatchQuery, opts .
 		}
 	}
 
-	if err := s.db.Repository().BatchQuery(ctx, query); err != nil {
+	if err := s.db.Repository().Batch(ctx, batch); err != nil {
 		return trail.Stacktrace(err)
 	}
 
 	if conf.QueryTTL != 0 {
-		for _, item := range query {
+		for _, item := range batch {
 			if !item.Skip {
 				s.cache.SetWithTTL(item.Spec.Id(), item.Value, 1, conf.QueryTTL)
 			}
@@ -243,9 +243,9 @@ func (tx Txn) Remove(collection string, spec provider.Spec) error {
 	return tx.store.Remove(tx.Context(), collection, spec)
 }
 
-// BatchQuery performs a batch query op within a transaction
-func (tx Txn) BatchQuery(query provider.BatchQuery, opts ...QueryOption) error {
-	return tx.store.BatchQuery(tx.Context(), query, opts...)
+// Batch performs a batch query op within a transaction
+func (tx Txn) Batch(batch provider.Batch, opts ...QueryOption) error {
+	return tx.store.Batch(tx.Context(), batch, opts...)
 }
 
 // commit submit a unit of work
@@ -331,7 +331,7 @@ func begin(ctx context.Context, store *Store, opts ...provider.TxOption) (Txn, e
 		root:  true,
 	}
 
-	tx.ctx = context.WithValue(ctx, contextKey{}, tx)
+	tx.ctx = provider.WithUnitOfWork(context.WithValue(ctx, contextKey{}, tx), uow)
 	return tx, nil
 }
 

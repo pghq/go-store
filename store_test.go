@@ -216,7 +216,7 @@ func TestTxn_All(t *testing.T) {
 	})
 }
 
-func TestTxn_BatchQuery(t *testing.T) {
+func TestTxn_Batch(t *testing.T) {
 	trail.Testing()
 	t.Parallel()
 
@@ -227,18 +227,18 @@ func TestTxn_BatchQuery(t *testing.T) {
 	t.Run("bad query", func(t *testing.T) {
 		var v []map[string]interface{}
 		assert.NotNil(t, store.Do(context.TODO(), func(tx Txn) error {
-			batch := provider.BatchQuery{}
+			batch := provider.Batch{}
 			batch.One(spec("= '1234'"), &v)
-			return tx.BatchQuery(batch)
+			return tx.Batch(batch)
 		}))
 	})
 
 	t.Run("ok", func(t *testing.T) {
 		var v []struct{ Id string }
 		assert.Nil(t, store.Do(context.TODO(), func(tx Txn) error {
-			batch := provider.BatchQuery{}
+			batch := provider.Batch{}
 			batch.All(spec("SELECT id FROM tests WHERE id = 'batch.query:1234'"), &v)
-			return tx.BatchQuery(batch)
+			return tx.Batch(batch)
 		}))
 		assert.Equal(t, "batch.query:1234", v[0].Id)
 	})
@@ -247,25 +247,25 @@ func TestTxn_BatchQuery(t *testing.T) {
 		t.Run("bad cache value", func(t *testing.T) {
 			var v []struct{ Id string }
 			assert.NotNil(t, store.Do(context.TODO(), func(tx Txn) error {
-				batch := provider.BatchQuery{}
+				batch := provider.Batch{}
 				batch.All(spec("SELECT id FROM tests WHERE id = 'batch.query:1234'"), &v)
-				_ = tx.BatchQuery(batch, QueryTTL(time.Minute))
+				_ = tx.Batch(batch, QueryTTL(time.Minute))
 				tx.store.cache.Wait()
 
-				batch = provider.BatchQuery{}
+				batch = provider.Batch{}
 				batch.All(spec("SELECT id FROM tests WHERE id = 'batch.query:1234'"), func() {})
-				return tx.BatchQuery(batch, QueryTTL(time.Minute))
+				return tx.Batch(batch, QueryTTL(time.Minute))
 			}))
 		})
 
 		t.Run("ok", func(t *testing.T) {
 			var v []struct{ Id string }
 			assert.Nil(t, store.Do(context.TODO(), func(tx Txn) error {
-				batch := provider.BatchQuery{}
+				batch := provider.Batch{}
 				batch.All(spec("SELECT id FROM tests WHERE id = 'batch.query:1234'"), &v)
-				_ = tx.BatchQuery(batch, QueryTTL(time.Minute))
+				_ = tx.Batch(batch, QueryTTL(time.Minute))
 				tx.store.cache.Wait()
-				return tx.BatchQuery(batch, QueryTTL(time.Minute))
+				return tx.Batch(batch, QueryTTL(time.Minute))
 			}))
 			assert.Equal(t, "batch.query:1234", v[0].Id)
 		})

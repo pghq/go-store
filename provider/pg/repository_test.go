@@ -51,7 +51,7 @@ func TestRepository_All(t *testing.T) {
 	})
 }
 
-func TestRepository_BatchQuery(t *testing.T) {
+func TestRepository_Batch(t *testing.T) {
 	trail.Testing()
 	t.Parallel()
 
@@ -59,20 +59,20 @@ func TestRepository_BatchQuery(t *testing.T) {
 	_ = repo.Add(context.TODO(), "tests", map[string]interface{}{"id": "batch.query:1234"})
 
 	t.Run("bad sql", func(t *testing.T) {
-		batch := provider.BatchQuery{}
+		batch := provider.Batch{}
 		batch.One(spec(""), nil)
-		assert.NotNil(t, repo.BatchQuery(context.TODO(), batch))
+		assert.NotNil(t, repo.Batch(context.TODO(), batch))
 	})
 
 	t.Run("not found", func(t *testing.T) {
-		batch := provider.BatchQuery{}
+		batch := provider.Batch{}
 		var one struct{ Id string }
 		batch.One(spec("SELECT id FROM tests WHERE id = 'batch.query:foo'"), &one)
-		assert.NotNil(t, repo.BatchQuery(context.TODO(), batch))
+		assert.NotNil(t, repo.Batch(context.TODO(), batch))
 	})
 
 	t.Run("ok", func(t *testing.T) {
-		batch := provider.BatchQuery{}
+		batch := provider.Batch{}
 		var all []struct{ Id string }
 		batch.All(spec("SELECT id FROM tests WHERE id = 'batch.query:1234'"), &all)
 
@@ -81,7 +81,7 @@ func TestRepository_BatchQuery(t *testing.T) {
 
 		batch.Do(spec("INSERT INTO tests (id) VALUES ('batch.query.insert:1234')"))
 
-		assert.Nil(t, repo.BatchQuery(context.TODO(), batch))
+		assert.Nil(t, repo.Batch(context.TODO(), batch))
 		assert.NotEmpty(t, all)
 		assert.NotEqual(t, "", one.Id)
 	})

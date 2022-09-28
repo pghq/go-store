@@ -113,6 +113,10 @@ type unitOfWork struct {
 	tx pgx.Tx
 }
 
+func (u unitOfWork) Tx() interface{} {
+	return u.tx
+}
+
 func (u unitOfWork) Commit(ctx context.Context) error {
 	return u.tx.Commit(ctx)
 }

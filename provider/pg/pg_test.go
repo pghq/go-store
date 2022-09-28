@@ -89,8 +89,12 @@ func TestProvider_Begin(t *testing.T) {
 		uow, err := db.Begin(context.TODO(), provider.WithReadOnly(true))
 		assert.Nil(t, err)
 		assert.NotNil(t, uow)
+		assert.NotNil(t, uow.Tx())
 		defer uow.Rollback(context.TODO())
 		assert.Nil(t, uow.Commit(context.TODO()))
+
+		ctx := provider.WithUnitOfWork(context.TODO(), uow)
+		assert.NotNil(t, db.Repository().(repository).conn(ctx))
 	})
 }
 

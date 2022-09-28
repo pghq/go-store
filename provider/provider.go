@@ -16,6 +16,7 @@ type Provider interface {
 
 // UnitOfWork to do
 type UnitOfWork interface {
+	Tx() interface{}
 	Commit(ctx context.Context) error
 	Rollback(ctx context.Context)
 }
@@ -27,7 +28,7 @@ type Repository interface {
 	Add(ctx context.Context, collection string, v interface{}) error
 	Edit(ctx context.Context, collection string, spec Spec, v interface{}) error
 	Remove(ctx context.Context, collection string, spec Spec) error
-	BatchQuery(ctx context.Context, query BatchQuery) error
+	Batch(ctx context.Context, batch Batch) error
 }
 
 // Spec for querying objects
