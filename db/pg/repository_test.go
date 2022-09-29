@@ -16,12 +16,12 @@ func TestRepository_Add(t *testing.T) {
 	t.Parallel()
 
 	repo := pg.Repository()
-	t.Run("bad data encode", func(t *testing.T) {
+	t.Run("bad data enc", func(t *testing.T) {
 		assert.NotNil(t, repo.Add(context.TODO(), "tests", func() {}))
 	})
 
 	t.Run("bad sql", func(t *testing.T) {
-		assert.NotNil(t, repo.Add(context.TODO(), "", nil))
+		assert.NotNil(t, repo.Add(context.TODO(), "", struct{}{}))
 	})
 
 	t.Run("ok", func(t *testing.T) {
@@ -94,12 +94,12 @@ func TestRepository_Edit(t *testing.T) {
 
 	repo := pg.Repository()
 	_ = repo.Add(context.TODO(), "tests", map[string]interface{}{"id": "edit:1234"})
-	t.Run("bad data encode", func(t *testing.T) {
+	t.Run("bad data enc", func(t *testing.T) {
 		assert.NotNil(t, repo.Edit(context.TODO(), "", spec(""), func() {}))
 	})
 
 	t.Run("bad sql", func(t *testing.T) {
-		assert.NotNil(t, repo.Edit(context.TODO(), "", spec(""), nil))
+		assert.NotNil(t, repo.Edit(context.TODO(), "", spec(""), struct{}{}))
 	})
 
 	t.Run("unique violation error", func(t *testing.T) {

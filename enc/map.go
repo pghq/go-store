@@ -1,10 +1,8 @@
-package encode
+package enc
 
 import (
 	"reflect"
 	"strings"
-
-	"github.com/pghq/go-tea/trail"
 
 	"github.com/gobeam/stringy"
 )
@@ -12,13 +10,13 @@ import (
 // Map Convert an interface to a map using reflection
 // variation of: https://play.golang.org/p/2Qi3thFf--
 // meant to be used for data persistence.
-func Map(v interface{}) (map[string]interface{}, error) {
+func Map(v interface{}, ignoreKeys ...string) map[string]interface{} {
 	if m, ok := v.(map[string]interface{}); ok || v == nil {
-		return m, nil
+		return m
 	}
 
 	if m, ok := v.(*map[string]interface{}); ok {
-		return *m, nil
+		return *m
 	}
 
 	rv := reflect.Indirect(reflect.ValueOf(v))
@@ -35,11 +33,16 @@ func Map(v interface{}) (map[string]interface{}, error) {
 	}
 
 	if rv.Kind() != reflect.Struct {
-		return nil, trail.NewErrorf("item of type %T is not a struct", v)
+		return nil
 	}
 
 	item := make(map[string]interface{})
 	t := rv.Type()
+	ignore := make(map[string]struct{}, len(ignoreKeys))
+	for _, key := range ignoreKeys {
+		ignore[key] = struct{}{}
+	}
+
 	for i := 0; i < rv.NumField(); i++ {
 		sf := t.Field(i)
 		key := sf.Tag.Get("db")
@@ -47,12 +50,13 @@ func Map(v interface{}) (map[string]interface{}, error) {
 			key = stringy.New(sf.Name).SnakeCase().ToLower()
 		}
 
-		if key == "-" {
+		_, ignoreKey := ignore[key]
+		if key == "-" || ignoreKey {
 			continue
 		}
 
 		item[strings.Split(key, ",")[0]] = rv.Field(i).Interface()
 	}
 
-	return item, nil
+	return item
 }

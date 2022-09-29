@@ -1,4 +1,4 @@
-package encode
+package enc
 
 import (
 	"testing"
@@ -10,24 +10,24 @@ func TestMap(t *testing.T) {
 	t.Parallel()
 
 	t.Run("map", func(t *testing.T) {
-		m, _ := Map(map[string]interface{}{"id": "foo"})
+		m := Map(map[string]interface{}{"id": "foo"})
 		assert.Equal(t, map[string]interface{}{"id": "foo"}, m)
 	})
 
 	t.Run("map pointer", func(t *testing.T) {
-		m, _ := Map(&map[string]interface{}{"id": "foo"})
+		m := Map(&map[string]interface{}{"id": "foo"})
 		assert.Equal(t, map[string]interface{}{"id": "foo"}, m)
 	})
 
 	t.Run("pointer to map pointer", func(t *testing.T) {
 		pm := &map[string]interface{}{"id": "foo"}
-		_, err := Map(&pm)
-		assert.NotNil(t, err)
+		m := Map(&pm)
+		assert.Nil(t, m)
 	})
 
 	t.Run("unrecognized type", func(t *testing.T) {
-		_, err := Map(func() {})
-		assert.NotNil(t, err)
+		m := Map(func() {})
+		assert.Nil(t, m)
 	})
 
 	t.Run("struct pointer", func(t *testing.T) {
@@ -36,6 +36,7 @@ func TestMap(t *testing.T) {
 			Field2    int `db:"field2,transient"`
 			Field3    int `db:"-"`
 			FieldFour int
+			Ignore    func()
 		}
 
 		v := value{
@@ -45,7 +46,7 @@ func TestMap(t *testing.T) {
 			FieldFour: 4,
 		}
 
-		m, _ := Map(&v)
+		m := Map(&v, "ignore")
 		assert.Equal(t, map[string]interface{}{"field1": 1, "field2": 2, "field_four": 4}, m)
 	})
 
@@ -64,7 +65,7 @@ func TestMap(t *testing.T) {
 			Field4: 4,
 		}}
 
-		m, _ := Map(&v)
+		m := Map(&v)
 		assert.Equal(t, map[string]interface{}{"field1": 0, "field2": 0, "field4": 0}, m)
 	})
 }

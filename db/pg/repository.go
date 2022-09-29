@@ -2,11 +2,10 @@ package pg
 
 import (
 	"context"
+	"github.com/pghq/go-store/enc"
 
 	"github.com/pghq/go-store/db"
 	"github.com/pghq/go-store/db/pg/internal"
-	"github.com/pghq/go-store/internal/encode"
-
 	"github.com/pghq/go-tea/trail"
 
 	"github.com/Masterminds/squirrel"
@@ -21,6 +20,9 @@ var (
 
 	// ErrUnique is return for write ops that violate unique constraint
 	ErrUnique = trail.NewErrorConflict("an item already exists matching your request")
+
+	// ErrBadValue is returned for encoding errors
+	ErrBadValue = trail.NewError("bad value")
 )
 
 type repository Provider
@@ -96,9 +98,9 @@ func (r repository) All(ctx context.Context, spec db.Spec, v interface{}) error 
 }
 
 func (r repository) Add(ctx context.Context, collection string, v interface{}) error {
-	data, err := encode.Map(v)
-	if err != nil {
-		return trail.Stacktrace(err)
+	data := enc.Map(v)
+	if data == nil {
+		return ErrBadValue
 	}
 
 	builder := squirrel.StatementBuilder.
@@ -119,9 +121,9 @@ func (r repository) Add(ctx context.Context, collection string, v interface{}) e
 }
 
 func (r repository) Edit(ctx context.Context, collection string, spec db.Spec, v interface{}) error {
-	data, err := encode.Map(v)
-	if err != nil {
-		return trail.Stacktrace(err)
+	data := enc.Map(v)
+	if data == nil {
+		return ErrBadValue
 	}
 
 	builder := squirrel.StatementBuilder.
