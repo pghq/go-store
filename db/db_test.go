@@ -19,18 +19,18 @@ func TestWithReadOnly(t *testing.T) {
 	})
 }
 
-func TestNewSpec(t *testing.T) {
+func TestDo(t *testing.T) {
 	trail.Testing()
 	t.Parallel()
 
 	t.Run("ok", func(t *testing.T) {
-		spec := NewSpec("spec", squirrel.Expr("SELECT * from specs"))
-		assert.NotNil(t, spec)
-		assert.Equal(t, "spec", spec.Id())
-		_, _, err := spec.ToSql()
+		deed := Do("spec", squirrel.Expr("SELECT * from specs"))
+		assert.NotNil(t, deed)
+		assert.Equal(t, "spec", deed.Id())
+		_, _, err := deed.ToSql()
 		assert.Nil(t, err)
 
-		def := DeferSpec(func() Spec { return spec })
+		def := Defer(deed.Id(), func() squirrel.Sqlizer { return deed })
 		assert.NotNil(t, def)
 		assert.Equal(t, "spec", def.Id())
 		_, _, err = def.ToSql()
