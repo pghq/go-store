@@ -15,6 +15,7 @@ func Apply(db *sql.DB, fs fs.FS) error {
 	if fs != nil {
 		goose.SetLogger(gooseLogger{})
 		goose.SetBaseFS(fs)
+		goose.SetTableName("migrations")
 		_ = goose.SetDialect("pgx")
 
 		if err := goose.Up(db, "migrations"); err != nil {
