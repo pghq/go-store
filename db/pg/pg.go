@@ -10,8 +10,8 @@ import (
 	"github.com/jackc/pgx/v4/stdlib"
 	"github.com/pghq/go-tea/trail"
 
-	"github.com/pghq/go-store/provider"
-	"github.com/pghq/go-store/provider/pg/internal"
+	"github.com/pghq/go-store/db"
+	"github.com/pghq/go-store/db/pg/internal"
 )
 
 // Provider to sql database
@@ -19,12 +19,12 @@ type Provider struct {
 	db *pgxpool.Pool
 }
 
-func (p Provider) Repository() provider.Repository {
+func (p Provider) Repository() db.Repository {
 	return repository(p)
 }
 
-func (p Provider) Begin(ctx context.Context, opts ...provider.TxOption) (provider.UnitOfWork, error) {
-	conf := provider.TxConfig{}
+func (p Provider) Begin(ctx context.Context, opts ...db.TxOption) (db.UnitOfWork, error) {
+	conf := db.TxConfig{}
 	for _, opt := range opts {
 		opt(&conf)
 	}
@@ -42,7 +42,7 @@ func (p Provider) Begin(ctx context.Context, opts ...provider.TxOption) (provide
 	return unitOfWork{tx: tx}, nil
 }
 
-// New creates a new pg database provider
+// New creates a new pg database db
 func New(dsn string, migrations fs.FS, opts ...Option) (*Provider, error) {
 	conf := ProviderConfig{
 		MaxConns:        100,
@@ -85,7 +85,7 @@ type ProviderConfig struct {
 	ConnectTimeout  time.Duration
 }
 
-// Option A sql provider option
+// Option A sql db option
 type Option func(conf *ProviderConfig)
 
 // WithMaxConns configure pg with custom max connections

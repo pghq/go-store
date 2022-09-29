@@ -8,7 +8,7 @@ import (
 	"github.com/pghq/go-tea/trail"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/pghq/go-store/provider/pg/pgtest"
+	"github.com/pghq/go-store/db/pg/pgtest"
 )
 
 func TestApply(t *testing.T) {

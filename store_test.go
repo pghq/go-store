@@ -10,8 +10,8 @@ import (
 	"github.com/pghq/go-tea/trail"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/pghq/go-store/provider"
-	"github.com/pghq/go-store/provider/pg/pgtest"
+	"github.com/pghq/go-store/db"
+	"github.com/pghq/go-store/db/pg/pgtest"
 )
 
 var (
@@ -227,7 +227,7 @@ func TestTxn_Batch(t *testing.T) {
 	t.Run("bad query", func(t *testing.T) {
 		var v []map[string]interface{}
 		assert.NotNil(t, store.Do(context.TODO(), func(tx Txn) error {
-			batch := provider.Batch{}
+			batch := db.Batch{}
 			batch.One(spec("= '1234'"), &v)
 			return tx.Batch(batch)
 		}))
@@ -236,7 +236,7 @@ func TestTxn_Batch(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		var v []struct{ Id string }
 		assert.Nil(t, store.Do(context.TODO(), func(tx Txn) error {
-			batch := provider.Batch{}
+			batch := db.Batch{}
 			batch.All(spec("SELECT id FROM tests WHERE id = 'batch.query:1234'"), &v)
 			return tx.Batch(batch)
 		}))
@@ -247,12 +247,12 @@ func TestTxn_Batch(t *testing.T) {
 		t.Run("bad cache value", func(t *testing.T) {
 			var v []struct{ Id string }
 			assert.NotNil(t, store.Do(context.TODO(), func(tx Txn) error {
-				batch := provider.Batch{}
+				batch := db.Batch{}
 				batch.All(spec("SELECT id FROM tests WHERE id = 'batch.query:1234'"), &v)
 				_ = tx.Batch(batch, QueryTTL(time.Minute))
 				tx.store.cache.Wait()
 
-				batch = provider.Batch{}
+				batch = db.Batch{}
 				batch.All(spec("SELECT id FROM tests WHERE id = 'batch.query:1234'"), func() {})
 				return tx.Batch(batch, QueryTTL(time.Minute))
 			}))
@@ -261,7 +261,7 @@ func TestTxn_Batch(t *testing.T) {
 		t.Run("ok", func(t *testing.T) {
 			var v []struct{ Id string }
 			assert.Nil(t, store.Do(context.TODO(), func(tx Txn) error {
-				batch := provider.Batch{}
+				batch := db.Batch{}
 				batch.All(spec("SELECT id FROM tests WHERE id = 'batch.query:1234'"), &v)
 				_ = tx.Batch(batch, QueryTTL(time.Minute))
 				tx.store.cache.Wait()

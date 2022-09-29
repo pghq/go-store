@@ -1,4 +1,4 @@
-package provider
+package db
 
 // BatchItem a single batch query
 type BatchItem struct {

@@ -2,15 +2,17 @@ package pg
 
 import (
 	"context"
+
+	"github.com/pghq/go-store/db"
+	"github.com/pghq/go-store/db/pg/internal"
+	"github.com/pghq/go-store/internal/encode"
+
+	"github.com/pghq/go-tea/trail"
+
 	"github.com/Masterminds/squirrel"
 	"github.com/georgysavva/scany/pgxscan"
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgx/v4"
-	"github.com/pghq/go-tea/trail"
-
-	"github.com/pghq/go-store/internal/encode"
-	"github.com/pghq/go-store/provider"
-	"github.com/pghq/go-store/provider/pg/internal"
 )
 
 var (
@@ -23,7 +25,7 @@ var (
 
 type repository Provider
 
-func (r repository) Batch(ctx context.Context, batch provider.Batch) error {
+func (r repository) Batch(ctx context.Context, batch db.Batch) error {
 	queue := pgx.Batch{}
 	for _, item := range batch {
 		if !item.Skip {
@@ -35,7 +37,7 @@ func (r repository) Batch(ctx context.Context, batch provider.Batch) error {
 		}
 	}
 
-	res := r.db.SendBatch(ctx, &queue)
+	res := r.conn(ctx).SendBatch(ctx, &queue)
 	defer res.Close()
 
 	for _, item := range batch {
@@ -71,7 +73,7 @@ func (r repository) Batch(ctx context.Context, batch provider.Batch) error {
 	return nil
 }
 
-func (r repository) One(ctx context.Context, spec provider.Spec, v interface{}) error {
+func (r repository) One(ctx context.Context, spec db.Spec, v interface{}) error {
 	stmt, args, err := spec.ToSql()
 	if err != nil {
 		return trail.Stacktrace(err)
@@ -84,7 +86,7 @@ func (r repository) One(ctx context.Context, spec provider.Spec, v interface{}) 
 	return trail.Stacktrace(err)
 }
 
-func (r repository) All(ctx context.Context, spec provider.Spec, v interface{}) error {
+func (r repository) All(ctx context.Context, spec db.Spec, v interface{}) error {
 	stmt, args, err := spec.ToSql()
 	if err != nil {
 		return trail.Stacktrace(err)
@@ -116,7 +118,7 @@ func (r repository) Add(ctx context.Context, collection string, v interface{}) e
 	return trail.Stacktrace(err)
 }
 
-func (r repository) Edit(ctx context.Context, collection string, spec provider.Spec, v interface{}) error {
+func (r repository) Edit(ctx context.Context, collection string, spec db.Spec, v interface{}) error {
 	data, err := encode.Map(v)
 	if err != nil {
 		return trail.Stacktrace(err)
@@ -140,7 +142,7 @@ func (r repository) Edit(ctx context.Context, collection string, spec provider.S
 	return trail.Stacktrace(err)
 }
 
-func (r repository) Remove(ctx context.Context, collection string, spec provider.Spec) error {
+func (r repository) Remove(ctx context.Context, collection string, spec db.Spec) error {
 	builder := squirrel.StatementBuilder.
 		PlaceholderFormat(squirrel.Dollar).
 		Delete(collection).
@@ -164,7 +166,7 @@ func (b batchResults) Query(_ context.Context, _ string, _ ...interface{}) (pgx.
 }
 
 func (r repository) conn(ctx context.Context) conn {
-	uow, ok := provider.UnitOfWorkValue(ctx)
+	uow, ok := db.UnitOfWorkValue(ctx)
 	if ok {
 		if tx, ok := uow.Tx().(pgx.Tx); ok {
 			return tx
@@ -176,5 +178,6 @@ func (r repository) conn(ctx context.Context) conn {
 
 type conn interface {
 	pgxscan.Querier
+	SendBatch(ctx context.Context, b *pgx.Batch) pgx.BatchResults
 	Exec(ctx context.Context, sql string, args ...interface{}) (pgconn.CommandTag, error)
 }

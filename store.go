@@ -20,8 +20,8 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/pghq/go-store/provider"
-	"github.com/pghq/go-store/provider/pg"
+	"github.com/pghq/go-store/db"
+	"github.com/pghq/go-store/db/pg"
 
 	"github.com/dgraph-io/ristretto"
 	"github.com/pghq/go-tea/trail"
@@ -31,19 +31,19 @@ type contextKey struct{}
 
 // Store an abstraction over database persistence
 type Store struct {
-	db    provider.Provider
+	db    db.DB
 	cache *ristretto.Cache
 }
 
 // Begin a transaction
-func (s Store) Begin(ctx context.Context, opts ...provider.TxOption) (Txn, error) {
+func (s Store) Begin(ctx context.Context, opts ...db.TxOption) (Txn, error) {
 	span := trail.StartSpan(ctx, "Store.Begin")
 	defer span.Finish()
 	return begin(ctx, &s, opts...)
 }
 
 // Do execute callback in a transaction
-func (s Store) Do(ctx context.Context, fn func(tx Txn) error, opts ...provider.TxOption) error {
+func (s Store) Do(ctx context.Context, fn func(tx Txn) error, opts ...db.TxOption) error {
 	span := trail.StartSpan(ctx, "Store.Do")
 	defer span.Finish()
 
@@ -61,7 +61,7 @@ func (s Store) Do(ctx context.Context, fn func(tx Txn) error, opts ...provider.T
 }
 
 // Batch query
-func (s Store) Batch(ctx context.Context, batch provider.Batch, opts ...QueryOption) error {
+func (s Store) Batch(ctx context.Context, batch db.Batch, opts ...QueryOption) error {
 	span := trail.StartSpan(ctx, "Store.Batch")
 	defer span.Finish()
 
@@ -96,7 +96,7 @@ func (s Store) Batch(ctx context.Context, batch provider.Batch, opts ...QueryOpt
 }
 
 // One retrieve the first value matching the spec
-func (s Store) One(ctx context.Context, spec provider.Spec, v interface{}, opts ...QueryOption) error {
+func (s Store) One(ctx context.Context, spec db.Spec, v interface{}, opts ...QueryOption) error {
 	span := trail.StartSpan(ctx, "Store.One")
 	defer span.Finish()
 
@@ -123,7 +123,7 @@ func (s Store) One(ctx context.Context, spec provider.Spec, v interface{}, opts 
 }
 
 // All retrieves a listing of values
-func (s Store) All(ctx context.Context, spec provider.Spec, v interface{}, opts ...QueryOption) error {
+func (s Store) All(ctx context.Context, spec db.Spec, v interface{}, opts ...QueryOption) error {
 	span := trail.StartSpan(ctx, "Store.All")
 	defer span.Finish()
 
@@ -158,7 +158,7 @@ func (s Store) Add(ctx context.Context, collection string, v interface{}) error 
 }
 
 // Edit updates value(s) in the collection
-func (s Store) Edit(ctx context.Context, collection string, spec provider.Spec, v interface{}) error {
+func (s Store) Edit(ctx context.Context, collection string, spec db.Spec, v interface{}) error {
 	span := trail.StartSpan(ctx, "Store.Edit")
 	defer span.Finish()
 
@@ -166,7 +166,7 @@ func (s Store) Edit(ctx context.Context, collection string, spec provider.Spec, 
 }
 
 // Remove deletes values(s) in the collection
-func (s Store) Remove(ctx context.Context, collection string, spec provider.Spec) error {
+func (s Store) Remove(ctx context.Context, collection string, spec db.Spec) error {
 	span := trail.StartSpan(ctx, "Store.Remove")
 	defer span.Finish()
 
@@ -175,7 +175,7 @@ func (s Store) Remove(ctx context.Context, collection string, spec provider.Spec
 }
 
 // NewStore creates a new store instance
-func NewStore(db provider.Provider) *Store {
+func NewStore(db db.DB) *Store {
 	s := Store{}
 	s.cache, _ = ristretto.NewCache(&ristretto.Config{
 		NumCounters: 1e7,
@@ -207,7 +207,7 @@ func New(opts ...Option) (*Store, error) {
 // Txn A unit of work
 type Txn struct {
 	ctx   context.Context
-	uow   provider.UnitOfWork
+	uow   db.UnitOfWork
 	store *Store
 	root  bool
 	done  bool
@@ -219,12 +219,12 @@ func (tx Txn) Context() context.Context {
 }
 
 // One retrieve the first value matching the spec
-func (tx Txn) One(spec provider.Spec, v interface{}, opts ...QueryOption) error {
+func (tx Txn) One(spec db.Spec, v interface{}, opts ...QueryOption) error {
 	return tx.store.One(tx.Context(), spec, v, opts...)
 }
 
 // All retrieves a listing of values
-func (tx Txn) All(spec provider.Spec, v interface{}, opts ...QueryOption) error {
+func (tx Txn) All(spec db.Spec, v interface{}, opts ...QueryOption) error {
 	return tx.store.All(tx.Context(), spec, v, opts...)
 }
 
@@ -234,17 +234,17 @@ func (tx Txn) Add(collection string, v interface{}) error {
 }
 
 // Edit updates value(s) in the collection
-func (tx Txn) Edit(collection string, spec provider.Spec, v interface{}) error {
+func (tx Txn) Edit(collection string, spec db.Spec, v interface{}) error {
 	return tx.store.Edit(tx.Context(), collection, spec, v)
 }
 
 // Remove deletes values(s) in the collection
-func (tx Txn) Remove(collection string, spec provider.Spec) error {
+func (tx Txn) Remove(collection string, spec db.Spec) error {
 	return tx.store.Remove(tx.Context(), collection, spec)
 }
 
 // Batch performs a batch query op within a transaction
-func (tx Txn) Batch(batch provider.Batch, opts ...QueryOption) error {
+func (tx Txn) Batch(batch db.Batch, opts ...QueryOption) error {
 	return tx.store.Batch(tx.Context(), batch, opts...)
 }
 
@@ -313,7 +313,7 @@ func QueryTTL(duration time.Duration) QueryOption {
 }
 
 // begin create instance of a read/write database transaction
-func begin(ctx context.Context, store *Store, opts ...provider.TxOption) (Txn, error) {
+func begin(ctx context.Context, store *Store, opts ...db.TxOption) (Txn, error) {
 	if tx, ok := ctx.Value(contextKey{}).(Txn); ok {
 		tx.root = false
 		tx.ctx = context.WithValue(ctx, contextKey{}, tx)
@@ -331,7 +331,7 @@ func begin(ctx context.Context, store *Store, opts ...provider.TxOption) (Txn, e
 		root:  true,
 	}
 
-	tx.ctx = provider.WithUnitOfWork(context.WithValue(ctx, contextKey{}, tx), uow)
+	tx.ctx = db.WithUnitOfWork(context.WithValue(ctx, contextKey{}, tx), uow)
 	return tx, nil
 }
 

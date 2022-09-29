@@ -4,17 +4,18 @@ import (
 	"context"
 	"testing"
 
-	"github.com/pghq/go-tea/trail"
-	"github.com/stretchr/testify/assert"
+	"github.com/pghq/go-store/db"
 
-	"github.com/pghq/go-store/provider"
+	"github.com/pghq/go-tea/trail"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestRepository_Add(t *testing.T) {
 	trail.Testing()
 	t.Parallel()
 
-	repo := db.Repository()
+	repo := pg.Repository()
 	t.Run("bad data encode", func(t *testing.T) {
 		assert.NotNil(t, repo.Add(context.TODO(), "tests", func() {}))
 	})
@@ -38,7 +39,7 @@ func TestRepository_All(t *testing.T) {
 	trail.Testing()
 	t.Parallel()
 
-	repo := db.Repository()
+	repo := pg.Repository()
 	_ = repo.Add(context.TODO(), "tests", map[string]interface{}{"id": "all:1234"})
 	t.Run("bad sql", func(t *testing.T) {
 		assert.NotNil(t, repo.All(context.TODO(), spec(""), nil))
@@ -55,24 +56,24 @@ func TestRepository_Batch(t *testing.T) {
 	trail.Testing()
 	t.Parallel()
 
-	repo := db.Repository()
+	repo := pg.Repository()
 	_ = repo.Add(context.TODO(), "tests", map[string]interface{}{"id": "batch.query:1234"})
 
 	t.Run("bad sql", func(t *testing.T) {
-		batch := provider.Batch{}
+		batch := db.Batch{}
 		batch.One(spec(""), nil)
 		assert.NotNil(t, repo.Batch(context.TODO(), batch))
 	})
 
 	t.Run("not found", func(t *testing.T) {
-		batch := provider.Batch{}
+		batch := db.Batch{}
 		var one struct{ Id string }
 		batch.One(spec("SELECT id FROM tests WHERE id = 'batch.query:foo'"), &one)
 		assert.NotNil(t, repo.Batch(context.TODO(), batch))
 	})
 
 	t.Run("ok", func(t *testing.T) {
-		batch := provider.Batch{}
+		batch := db.Batch{}
 		var all []struct{ Id string }
 		batch.All(spec("SELECT id FROM tests WHERE id = 'batch.query:1234'"), &all)
 
@@ -91,7 +92,7 @@ func TestRepository_Edit(t *testing.T) {
 	trail.Testing()
 	t.Parallel()
 
-	repo := db.Repository()
+	repo := pg.Repository()
 	_ = repo.Add(context.TODO(), "tests", map[string]interface{}{"id": "edit:1234"})
 	t.Run("bad data encode", func(t *testing.T) {
 		assert.NotNil(t, repo.Edit(context.TODO(), "", spec(""), func() {}))
@@ -121,7 +122,7 @@ func TestRepository_One(t *testing.T) {
 	trail.Testing()
 	t.Parallel()
 
-	repo := db.Repository()
+	repo := pg.Repository()
 	_ = repo.Add(context.TODO(), "tests", map[string]interface{}{"id": "one:1234"})
 	t.Run("bad sql", func(t *testing.T) {
 		assert.NotNil(t, repo.One(context.TODO(), spec(""), nil))
@@ -145,7 +146,7 @@ func TestRepository_Remove(t *testing.T) {
 	trail.Testing()
 	t.Parallel()
 
-	repo := db.Repository()
+	repo := pg.Repository()
 	_ = repo.Add(context.TODO(), "tests", map[string]interface{}{"id": "remove:1234"})
 	t.Run("bad sql", func(t *testing.T) {
 		assert.NotNil(t, repo.Remove(context.TODO(), "", spec("")))

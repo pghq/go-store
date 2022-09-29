@@ -7,16 +7,17 @@ import (
 	"testing/fstest"
 	"time"
 
-	"github.com/pghq/go-tea/trail"
-	"github.com/stretchr/testify/assert"
+	"github.com/pghq/go-store/db"
+	"github.com/pghq/go-store/db/pg/pgtest"
 
-	"github.com/pghq/go-store/provider"
-	"github.com/pghq/go-store/provider/pg/pgtest"
+	"github.com/pghq/go-tea/trail"
+
+	"github.com/stretchr/testify/assert"
 )
 
 var (
 	dsn string
-	db  *Provider
+	pg  *Provider
 )
 
 func TestMain(m *testing.M) {
@@ -28,7 +29,7 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 
-	db, err = New(dsn, fstest.MapFS{
+	pg, err = New(dsn, fstest.MapFS{
 		"migrations/00001_test.sql": &fstest.MapFile{
 			Data: []byte("-- +goose Up\nCREATE TABLE tests (id text primary key, name text, num int); \n create index idx_tests_name ON tests (name);"),
 		},
@@ -81,20 +82,20 @@ func TestProvider_Begin(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.TODO(), 1)
 		defer cancel()
 
-		_, err := db.Begin(ctx)
+		_, err := pg.Begin(ctx)
 		assert.NotNil(t, err)
 	})
 
 	t.Run("ok", func(t *testing.T) {
-		uow, err := db.Begin(context.TODO(), provider.WithReadOnly(true))
+		uow, err := pg.Begin(context.TODO(), db.WithReadOnly(true))
 		assert.Nil(t, err)
 		assert.NotNil(t, uow)
 		assert.NotNil(t, uow.Tx())
 		defer uow.Rollback(context.TODO())
 		assert.Nil(t, uow.Commit(context.TODO()))
 
-		ctx := provider.WithUnitOfWork(context.TODO(), uow)
-		assert.NotNil(t, db.Repository().(repository).conn(ctx))
+		ctx := db.WithUnitOfWork(context.TODO(), uow)
+		assert.NotNil(t, pg.Repository().(repository).conn(ctx))
 	})
 }
 
@@ -103,6 +104,6 @@ func TestProvider_Repository(t *testing.T) {
 	t.Parallel()
 
 	t.Run("ok", func(t *testing.T) {
-		assert.NotNil(t, db.Repository())
+		assert.NotNil(t, pg.Repository())
 	})
 }

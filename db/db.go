@@ -1,4 +1,4 @@
-package provider
+package db
 
 import (
 	"context"
@@ -8,8 +8,8 @@ import (
 
 var _ Spec = spec{}
 
-// Provider provides instances of transactions and repositories.
-type Provider interface {
+// DB provides instances of transactions and repositories.
+type DB interface {
 	Repository() Repository
 	Begin(ctx context.Context, opts ...TxOption) (UnitOfWork, error)
 }
