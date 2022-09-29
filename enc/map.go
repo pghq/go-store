@@ -51,7 +51,7 @@ func Map(v interface{}, ignoreKeys ...string) map[string]interface{} {
 		}
 
 		_, ignoreKey := ignore[key]
-		if key == "-" || ignoreKey {
+		if key == "-" || ignoreKey || !rv.Field(i).CanInterface() {
 			continue
 		}
 
