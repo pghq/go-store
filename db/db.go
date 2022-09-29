@@ -72,3 +72,31 @@ func NewSpec(id interface{}, sqlizer squirrel.Sqlizer) Spec {
 		sqlizer: sqlizer,
 	}
 }
+
+type deferSpec struct {
+	fn   func() Spec
+	spec *Spec
+}
+
+func (d *deferSpec) Spec() Spec {
+	if d.spec != nil {
+		return *d.spec
+	}
+
+	s := d.fn()
+	d.spec = &s
+	return *d.spec
+}
+
+func (d *deferSpec) Id() interface{} {
+	return d.Spec().Id()
+}
+
+func (d *deferSpec) ToSql() (string, []interface{}, error) {
+	return d.Spec().ToSql()
+}
+
+// DeferSpec creates a deferred execution spec
+func DeferSpec(fn func() Spec) Spec {
+	return &deferSpec{fn: fn}
+}

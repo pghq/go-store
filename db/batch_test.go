@@ -11,7 +11,7 @@ func TestBatch_Do(t *testing.T) {
 
 	t.Run("ok", func(t *testing.T) {
 		batch := Batch{}
-		batch.Do(nil, WithBatchItemOptional(true))
+		batch.Do(nil, Optional(true))
 		assert.NotEmpty(t, batch)
 	})
 }
@@ -21,7 +21,7 @@ func TestBatch_One(t *testing.T) {
 
 	t.Run("ok", func(t *testing.T) {
 		batch := Batch{}
-		batch.One(nil, nil, WithBatchItemOptional(true))
+		batch.One(nil, nil, Optional(true))
 		assert.NotEmpty(t, batch)
 	})
 }
@@ -31,7 +31,7 @@ func TestBatch_All(t *testing.T) {
 
 	t.Run("ok", func(t *testing.T) {
 		batch := Batch{}
-		batch.All(nil, nil, WithBatchItemOptional(true))
+		batch.All(nil, nil, Optional(true))
 		assert.NotEmpty(t, batch)
 	})
 }

@@ -29,5 +29,11 @@ func TestNewSpec(t *testing.T) {
 		assert.Equal(t, "spec", spec.Id())
 		_, _, err := spec.ToSql()
 		assert.Nil(t, err)
+
+		def := DeferSpec(func() Spec { return spec })
+		assert.NotNil(t, def)
+		assert.Equal(t, "spec", def.Id())
+		_, _, err = def.ToSql()
+		assert.Nil(t, err)
 	})
 }

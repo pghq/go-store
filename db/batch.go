@@ -7,6 +7,7 @@ type BatchItem struct {
 	One      bool
 	Skip     bool
 	Optional bool
+	Defer    bool
 }
 
 // Batch a list of batch query items
@@ -57,8 +58,8 @@ func (b *Batch) All(spec Spec, v interface{}, opts ...BatchOption) {
 // BatchOption for custom query configuration
 type BatchOption func(item *BatchItem)
 
-// WithBatchItemOptional marks the item as optional ignoring client errors
-func WithBatchItemOptional(flag bool) BatchOption {
+// Optional marks the item as optional ignoring client errors
+func Optional(flag bool) BatchOption {
 	return func(item *BatchItem) {
 		item.Optional = flag
 	}
