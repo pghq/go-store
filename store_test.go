@@ -107,7 +107,7 @@ func TestTxn_Edit(t *testing.T) {
 
 	t.Run("ok", func(t *testing.T) {
 		assert.Nil(t, store.Do(context.TODO(), func(tx Txn) error {
-			return tx.Edit("tests", spec("id = 'edit:1234'"), map[string]interface{}{"id": "edit:1234"})
+			return tx.Edit("tests", db.Sql("id = 'edit:1234'"), map[string]interface{}{"id": "edit:1234"})
 		}))
 	})
 }
@@ -122,7 +122,7 @@ func TestTxn_Remove(t *testing.T) {
 
 	t.Run("ok", func(t *testing.T) {
 		assert.Nil(t, store.Do(context.TODO(), func(tx Txn) error {
-			return tx.Remove("tests", spec("id = 'remove:1234'"))
+			return tx.Remove("tests", db.Sql("id = 'remove:1234'"))
 		}))
 	})
 }
@@ -138,14 +138,14 @@ func TestTxn_One(t *testing.T) {
 	t.Run("bad query", func(t *testing.T) {
 		var v map[string]interface{}
 		assert.NotNil(t, store.Do(context.TODO(), func(tx Txn) error {
-			return tx.One(spec("= '1234'"), &v)
+			return tx.One(db.Sql("= '1234'"), &v)
 		}))
 	})
 
 	t.Run("ok", func(t *testing.T) {
 		var v struct{ Id string }
 		assert.Nil(t, store.Do(context.TODO(), func(tx Txn) error {
-			return tx.One(spec("SELECT id FROM tests WHERE id = 'one:1234'"), &v)
+			return tx.One(db.Sql("SELECT id FROM tests WHERE id = 'one:1234'"), &v)
 		}))
 		assert.Equal(t, "one:1234", v.Id)
 	})
@@ -154,18 +154,18 @@ func TestTxn_One(t *testing.T) {
 		t.Run("bad cache value", func(t *testing.T) {
 			var v struct{ Id string }
 			assert.NotNil(t, store.Do(context.TODO(), func(tx Txn) error {
-				_ = tx.One(spec("SELECT id FROM tests WHERE id = 'one:1234'"), &v, QueryTTL(time.Minute))
+				_ = tx.One(db.Sql("SELECT id FROM tests WHERE id = 'one:1234'"), &v, QueryTTL(time.Minute))
 				tx.store.cache.Wait()
-				return tx.One(spec("SELECT id FROM tests WHERE id = 'one:1234'"), func() {}, QueryTTL(time.Minute))
+				return tx.One(db.Sql("SELECT id FROM tests WHERE id = 'one:1234'"), func() {}, QueryTTL(time.Minute))
 			}))
 		})
 
 		t.Run("ok", func(t *testing.T) {
 			var v struct{ Id string }
 			assert.Nil(t, store.Do(context.TODO(), func(tx Txn) error {
-				_ = tx.One(spec("SELECT id FROM tests WHERE id = 'one:1234'"), &v, QueryTTL(time.Minute))
+				_ = tx.One(db.Sql("SELECT id FROM tests WHERE id = 'one:1234'"), &v, QueryTTL(time.Minute))
 				tx.store.cache.Wait()
-				return tx.One(spec("SELECT id FROM tests WHERE id = 'one:1234'"), &v, QueryTTL(time.Minute))
+				return tx.One(db.Sql("SELECT id FROM tests WHERE id = 'one:1234'"), &v, QueryTTL(time.Minute))
 			}))
 			assert.Equal(t, "one:1234", v.Id)
 		})
@@ -183,14 +183,14 @@ func TestTxn_All(t *testing.T) {
 	t.Run("bad query", func(t *testing.T) {
 		var v []map[string]interface{}
 		assert.NotNil(t, store.Do(context.TODO(), func(tx Txn) error {
-			return tx.All(spec("= '1234'"), &v)
+			return tx.All(db.Sql("= '1234'"), &v)
 		}))
 	})
 
 	t.Run("ok", func(t *testing.T) {
 		var v []struct{ Id string }
 		assert.Nil(t, store.Do(context.TODO(), func(tx Txn) error {
-			return tx.All(spec("SELECT id FROM tests WHERE id = 'all:1234'"), &v)
+			return tx.All(db.Sql("SELECT id FROM tests WHERE id = 'all:1234'"), &v)
 		}))
 		assert.Equal(t, "all:1234", v[0].Id)
 	})
@@ -199,17 +199,17 @@ func TestTxn_All(t *testing.T) {
 		t.Run("bad cache value", func(t *testing.T) {
 			var v []struct{ Id string }
 			assert.NotNil(t, store.Do(context.TODO(), func(tx Txn) error {
-				_ = tx.All(spec("SELECT id FROM tests WHERE id = 'all:1234'"), &v, QueryTTL(time.Minute))
+				_ = tx.All(db.Sql("SELECT id FROM tests WHERE id = 'all:1234'"), &v, QueryTTL(time.Minute))
 				tx.store.cache.Wait()
-				return tx.All(spec("SELECT id FROM tests WHERE id = 'all:1234'"), func() {}, QueryTTL(time.Minute))
+				return tx.All(db.Sql("SELECT id FROM tests WHERE id = 'all:1234'"), func() {}, QueryTTL(time.Minute))
 			}))
 		})
 
 		t.Run("ok", func(t *testing.T) {
 			var v []struct{ Id string }
 			assert.Nil(t, store.Do(context.TODO(), func(tx Txn) error {
-				_ = tx.All(spec("SELECT id FROM tests WHERE id = 'all:1234'"), &v, QueryTTL(time.Minute))
-				return tx.All(spec("SELECT id FROM tests WHERE id = 'all:1234'"), &v, QueryTTL(time.Minute))
+				_ = tx.All(db.Sql("SELECT id FROM tests WHERE id = 'all:1234'"), &v, QueryTTL(time.Minute))
+				return tx.All(db.Sql("SELECT id FROM tests WHERE id = 'all:1234'"), &v, QueryTTL(time.Minute))
 			}))
 			assert.Equal(t, "all:1234", v[0].Id)
 		})
@@ -228,7 +228,7 @@ func TestTxn_Batch(t *testing.T) {
 		var v []map[string]interface{}
 		assert.NotNil(t, store.Do(context.TODO(), func(tx Txn) error {
 			batch := db.Batch{}
-			batch.One(spec("= '1234'"), &v)
+			batch.One(db.Sql("= '1234'"), &v)
 			return tx.Batch(batch)
 		}))
 	})
@@ -237,7 +237,7 @@ func TestTxn_Batch(t *testing.T) {
 		var v []struct{ Id string }
 		assert.Nil(t, store.Do(context.TODO(), func(tx Txn) error {
 			batch := db.Batch{}
-			batch.All(spec("SELECT id FROM tests WHERE id = 'batch.query:1234'"), &v)
+			batch.All(db.Sql("SELECT id FROM tests WHERE id = 'batch.query:1234'"), &v)
 			return tx.Batch(batch)
 		}))
 		assert.Equal(t, "batch.query:1234", v[0].Id)
@@ -248,12 +248,12 @@ func TestTxn_Batch(t *testing.T) {
 			var v []struct{ Id string }
 			assert.NotNil(t, store.Do(context.TODO(), func(tx Txn) error {
 				batch := db.Batch{}
-				batch.All(spec("SELECT id FROM tests WHERE id = 'batch.query:1234'"), &v)
+				batch.All(db.Sql("SELECT id FROM tests WHERE id = 'batch.query:1234'"), &v)
 				_ = tx.Batch(batch, QueryTTL(time.Minute))
 				tx.store.cache.Wait()
 
 				batch = db.Batch{}
-				batch.All(spec("SELECT id FROM tests WHERE id = 'batch.query:1234'"), func() {})
+				batch.All(db.Sql("SELECT id FROM tests WHERE id = 'batch.query:1234'"), func() {})
 				return tx.Batch(batch, QueryTTL(time.Minute))
 			}))
 		})
@@ -262,7 +262,7 @@ func TestTxn_Batch(t *testing.T) {
 			var v []struct{ Id string }
 			assert.Nil(t, store.Do(context.TODO(), func(tx Txn) error {
 				batch := db.Batch{}
-				batch.All(spec("SELECT id FROM tests WHERE id = 'batch.query:1234'"), &v)
+				batch.All(db.Sql("SELECT id FROM tests WHERE id = 'batch.query:1234'"), &v)
 				_ = tx.Batch(batch, QueryTTL(time.Minute))
 				tx.store.cache.Wait()
 				return tx.Batch(batch, QueryTTL(time.Minute))
@@ -270,14 +270,4 @@ func TestTxn_Batch(t *testing.T) {
 			assert.Equal(t, "batch.query:1234", v[0].Id)
 		})
 	})
-}
-
-type spec string
-
-func (s spec) Id() interface{} {
-	return string(s)
-}
-
-func (s spec) ToSql() (string, []interface{}, error) {
-	return string(s), nil, nil
 }

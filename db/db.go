@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/Masterminds/squirrel"
 )
@@ -65,12 +66,18 @@ func (s spec) ToSql() (string, []interface{}, error) {
 	return s.sqlizer.ToSql()
 }
 
-// Do is a helper for creating a spec
-func Do(id interface{}, sqlizer squirrel.Sqlizer) Spec {
+// Sqlizer is a helper for creating a spec
+func Sqlizer(sqlizer squirrel.Sqlizer) Spec {
+	sql, args, _ := sqlizer.ToSql()
 	return spec{
-		id:      id,
+		id:      fmt.Sprintf("%s %+v", sql, args),
 		sqlizer: sqlizer,
 	}
+}
+
+// Sql is a helper for creating a spec from an sql literal
+func Sql(literal string, args ...interface{}) Spec {
+	return sqlLiteral{sql: literal, args: args}
 }
 
 type deferSpec struct {
@@ -89,4 +96,18 @@ func (d *deferSpec) ToSql() (string, []interface{}, error) {
 // Defer creates a deferred execution spec
 func Defer(id interface{}, fn func() squirrel.Sqlizer) Spec {
 	return &deferSpec{id: id, fn: fn}
+}
+
+// sqlLiteral sqlizer
+type sqlLiteral struct {
+	sql  string
+	args []interface{}
+}
+
+func (s sqlLiteral) Id() interface{} {
+	return fmt.Sprintf("%s %+v", s.sql, s.args)
+}
+
+func (s sqlLiteral) ToSql() (string, []interface{}, error) {
+	return s.sql, s.args, nil
 }

@@ -61,11 +61,11 @@ func (s Store) Do(ctx context.Context, fn func(tx Txn) error, opts ...db.TxOptio
 }
 
 // Batch query
-func (s Store) Batch(ctx context.Context, batch db.Batch, opts ...QueryOption) error {
+func (s Store) Batch(ctx context.Context, batch db.Batch, opts ...BatchOption) error {
 	span := trail.StartSpan(ctx, "Store.Batch")
 	defer span.Finish()
 
-	conf := QueryConfig{}
+	conf := BatchConfig{}
 	for _, opt := range opts {
 		opt(&conf)
 	}
@@ -96,11 +96,11 @@ func (s Store) Batch(ctx context.Context, batch db.Batch, opts ...QueryOption) e
 }
 
 // One retrieve the first value matching the spec
-func (s Store) One(ctx context.Context, spec db.Spec, v interface{}, opts ...QueryOption) error {
+func (s Store) One(ctx context.Context, spec db.Spec, v interface{}, opts ...BatchOption) error {
 	span := trail.StartSpan(ctx, "Store.One")
 	defer span.Finish()
 
-	conf := QueryConfig{}
+	conf := BatchConfig{}
 	for _, opt := range opts {
 		opt(&conf)
 	}
@@ -123,11 +123,11 @@ func (s Store) One(ctx context.Context, spec db.Spec, v interface{}, opts ...Que
 }
 
 // All retrieves a listing of values
-func (s Store) All(ctx context.Context, spec db.Spec, v interface{}, opts ...QueryOption) error {
+func (s Store) All(ctx context.Context, spec db.Spec, v interface{}, opts ...BatchOption) error {
 	span := trail.StartSpan(ctx, "Store.All")
 	defer span.Finish()
 
-	conf := QueryConfig{}
+	conf := BatchConfig{}
 	for _, opt := range opts {
 		opt(&conf)
 	}
@@ -196,12 +196,12 @@ func New(opts ...Option) (*Store, error) {
 		opt(&conf)
 	}
 
-	db, err := pg.New(conf.DSN, conf.Migration, conf.PgOptions...)
+	provider, err := pg.New(conf.DSN, conf.Migration, conf.PgOptions...)
 	if err != nil {
 		return nil, trail.Stacktrace(err)
 	}
 
-	return NewStore(db), nil
+	return NewStore(provider), nil
 }
 
 // Txn A unit of work
@@ -214,37 +214,37 @@ type Txn struct {
 }
 
 // Context gets the context of the transaction
-func (tx Txn) Context() context.Context {
+func (tx *Txn) Context() context.Context {
 	return tx.ctx
 }
 
 // One retrieve the first value matching the spec
-func (tx Txn) One(spec db.Spec, v interface{}, opts ...QueryOption) error {
+func (tx *Txn) One(spec db.Spec, v interface{}, opts ...BatchOption) error {
 	return tx.store.One(tx.Context(), spec, v, opts...)
 }
 
 // All retrieves a listing of values
-func (tx Txn) All(spec db.Spec, v interface{}, opts ...QueryOption) error {
+func (tx *Txn) All(spec db.Spec, v interface{}, opts ...BatchOption) error {
 	return tx.store.All(tx.Context(), spec, v, opts...)
 }
 
 // Add appends a value to the collection
-func (tx Txn) Add(collection string, v interface{}) error {
+func (tx *Txn) Add(collection string, v interface{}) error {
 	return tx.store.Add(tx.Context(), collection, v)
 }
 
 // Edit updates value(s) in the collection
-func (tx Txn) Edit(collection string, spec db.Spec, v interface{}) error {
+func (tx *Txn) Edit(collection string, spec db.Spec, v interface{}) error {
 	return tx.store.Edit(tx.Context(), collection, spec, v)
 }
 
 // Remove deletes values(s) in the collection
-func (tx Txn) Remove(collection string, spec db.Spec) error {
+func (tx *Txn) Remove(collection string, spec db.Spec) error {
 	return tx.store.Remove(tx.Context(), collection, spec)
 }
 
 // Batch performs a batch query op within a transaction
-func (tx Txn) Batch(batch db.Batch, opts ...QueryOption) error {
+func (tx *Txn) Batch(batch db.Batch, opts ...BatchOption) error {
 	return tx.store.Batch(tx.Context(), batch, opts...)
 }
 
@@ -297,17 +297,17 @@ func WithDSN(dsn string) Option {
 	}
 }
 
-// QueryConfig configuration for store queries
-type QueryConfig struct {
+// BatchConfig configuration for store batch operations
+type BatchConfig struct {
 	QueryTTL time.Duration
 }
 
-// QueryOption for customizing store queries
-type QueryOption func(conf *QueryConfig)
+// BatchOption for customizing store batch operations
+type BatchOption func(conf *BatchConfig)
 
 // QueryTTL custom duration of time to cache queries for
-func QueryTTL(duration time.Duration) QueryOption {
-	return func(conf *QueryConfig) {
+func QueryTTL(duration time.Duration) BatchOption {
+	return func(conf *BatchConfig) {
 		conf.QueryTTL = duration
 	}
 }

@@ -24,15 +24,21 @@ func TestDo(t *testing.T) {
 	t.Parallel()
 
 	t.Run("ok", func(t *testing.T) {
-		deed := Do("spec", squirrel.Expr("SELECT * from specs"))
+		deed := Sqlizer(squirrel.Expr("SELECT * from specs"))
 		assert.NotNil(t, deed)
-		assert.Equal(t, "spec", deed.Id())
+		assert.Equal(t, "SELECT * from specs []", deed.Id())
 		_, _, err := deed.ToSql()
+		assert.Nil(t, err)
+
+		literal := Sql("SELECT * from specs")
+		assert.NotNil(t, literal)
+		assert.Equal(t, "SELECT * from specs []", literal.Id())
+		_, _, err = literal.ToSql()
 		assert.Nil(t, err)
 
 		def := Defer(deed.Id(), func() squirrel.Sqlizer { return deed })
 		assert.NotNil(t, def)
-		assert.Equal(t, "spec", def.Id())
+		assert.Equal(t, "SELECT * from specs []", def.Id())
 		_, _, err = def.ToSql()
 		assert.Nil(t, err)
 	})

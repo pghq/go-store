@@ -79,7 +79,6 @@ func TestRepository_Batch(t *testing.T) {
 
 		var one struct{ Id string }
 		batch.One(spec("SELECT id FROM tests WHERE id = 'batch.query:1234'"), &one)
-
 		batch.Do(spec("INSERT INTO tests (id) VALUES ('batch.query.insert:1234')"))
 
 		assert.Nil(t, repo.Batch(context.TODO(), batch))

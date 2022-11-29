@@ -1,5 +1,11 @@
 package db
 
+import (
+	"github.com/Masterminds/squirrel"
+
+	"github.com/pghq/go-store/enc"
+)
+
 // BatchItem a single batch query
 type BatchItem struct {
 	Spec     Spec
@@ -12,6 +18,37 @@ type BatchItem struct {
 
 // Batch a list of batch query items
 type Batch []*BatchItem
+
+// Add an item
+func (b *Batch) Add(collection string, v interface{}, opts ...BatchOption) {
+	builder := squirrel.StatementBuilder.
+		PlaceholderFormat(squirrel.Dollar).
+		Insert(collection).
+		SetMap(enc.Map(v))
+
+	item := BatchItem{Spec: Sqlizer(builder)}
+	for _, opt := range opts {
+		opt(&item)
+	}
+
+	*b = append(*b, &item)
+}
+
+// Edit an item
+func (b *Batch) Edit(collection string, spec Spec, v interface{}, opts ...BatchOption) {
+	builder := squirrel.StatementBuilder.
+		PlaceholderFormat(squirrel.Dollar).
+		Update(collection).
+		Where(spec).
+		SetMap(enc.Map(v))
+
+	item := BatchItem{Spec: Sqlizer(builder)}
+	for _, opt := range opts {
+		opt(&item)
+	}
+
+	*b = append(*b, &item)
+}
 
 // One append a query expecting a single result
 func (b *Batch) One(spec Spec, v interface{}, opts ...BatchOption) {
